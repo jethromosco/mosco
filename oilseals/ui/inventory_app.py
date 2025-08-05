@@ -2,13 +2,16 @@ import tkinter as tk
 from tkinter import ttk
 from database import connect_db
 from admin.admin_panel import AdminPanel
-from ui.transaction_window import TransactionWindow
+from .transaction_window import TransactionWindow
 
-class InventoryApp:
-    def __init__(self, root):
-        self.root = root
+class InventoryApp(tk.Frame):
+    def __init__(self, parent, controller=None):
+        super().__init__(parent)
+        self.controller = controller
+        self.root = controller.root if controller else self.winfo_toplevel()
+
         self.root.title("Oil Seal Inventory Manager")
-        self.root.geometry("1050x640")
+        self.root.attributes("-fullscreen", True)
 
         self.search_vars = {
             "type": tk.StringVar(),
@@ -26,7 +29,16 @@ class InventoryApp:
         self.refresh_product_list()
 
     def create_widgets(self):
-        search_frame = tk.Frame(self.root)
+        # Top bar with Back button
+        topbar = tk.Frame(self)
+        topbar.pack(fill=tk.X)
+        if self.controller:
+            tk.Button(topbar, text="← Back", command=self.controller.go_back).pack(side=tk.LEFT, padx=10, pady=5)
+        else:
+            tk.Button(topbar, text="← Back", command=self.master.destroy).pack(side=tk.LEFT, padx=10, pady=5)
+
+
+        search_frame = tk.Frame(self)
         search_frame.pack(pady=5)
 
         self.inch_labels = {}
@@ -37,14 +49,13 @@ class InventoryApp:
             entry.grid(row=0, column=idx * 2 + 1)
             var.trace_add("write", lambda *args: self.refresh_product_list())
 
-            # Create inch conversion label below ID, OD, TH only
             if key in ["id", "od", "th"]:
                 label = tk.Label(search_frame, text="", fg="gray", font=("Arial", 8))
                 label.grid(row=1, column=idx * 2 + 1)
                 self.inch_labels[key] = label
                 var.trace_add("write", lambda *args, k=key: self.update_inch_label(k))
 
-        filter_frame = tk.Frame(self.root)
+        filter_frame = tk.Frame(self)
         filter_frame.pack(pady=5)
 
         tk.Label(filter_frame, text="Sort by:").pack(side=tk.LEFT)
@@ -55,10 +66,8 @@ class InventoryApp:
         ttk.Combobox(filter_frame, textvariable=self.stock_filter, values=["All", "In Stock", "Low Stock", "Out of Stock"], state="readonly", width=12).pack(side=tk.LEFT, padx=5)
         self.stock_filter.trace_add("write", lambda *args: self.refresh_product_list())
 
-        tk.Button(self.root, text="Manage Database", command=self.open_admin_panel).pack(pady=5)
-
         columns = ("type", "size", "brand", "part_no", "origin", "notes", "qty", "price")
-        self.tree = ttk.Treeview(self.root, columns=columns, show="headings")
+        self.tree = ttk.Treeview(self, columns=columns, show="headings")
         for col in columns:
             self.tree.heading(col, text=col.upper())
             self.tree.column(col, anchor="center", width=100)
@@ -142,5 +151,16 @@ class InventoryApp:
             "quantity": item[6],
             "price": float(item[7].replace("₱", ""))
         }
-        TransactionWindow(self.root, details, self)
 
+        if self.controller:
+            self.controller.show_transaction_window(details, self)
+        else:
+            # fallback to old method if no controller
+            win = tk.Toplevel(self)
+            TransactionWindow(win, details, self)
+
+    def go_home(self):
+        if self.controller:
+            self.controller.show_home()
+        else:
+            self.root.destroy()

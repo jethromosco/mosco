@@ -4,6 +4,13 @@ from tkcalendar import DateEntry
 from datetime import datetime
 from database import connect_db
 
+# Helper to center a window on the screen
+def center_window(win, width, height):
+    win.update_idletasks()
+    x = (win.winfo_screenwidth() // 2) - (width // 2)
+    y = (win.winfo_screenheight() // 2) - (height // 2)
+    win.geometry(f"{width}x{height}+{x}+{y}")
+
 class TransactionTab:
     def __init__(self, notebook, main_app):
         self.main_app = main_app
@@ -149,7 +156,7 @@ class TransactionTab:
     def transaction_form(self, mode, values=None):
         form = tk.Toplevel(self.frame)
         form.title(f"{mode} Transaction")
-        form.geometry("250x440")
+        center_window(form, 250, 440)  # <- Centered form window
         form.resizable(False, False)
 
         field_order = ["Type", "ID", "OD", "TH", "Brand", "Name", "Quantity", "Price"]

@@ -3,12 +3,19 @@ from tkinter import ttk, messagebox
 from admin.transaction_tab import TransactionTab
 from database import connect_db
 
+# Center window helper
+def center_window(win, width, height):
+    win.update_idletasks()
+    x = (win.winfo_screenwidth() // 2) - (width // 2)
+    y = (win.winfo_screenheight() // 2) - (height // 2)
+    win.geometry(f"{width}x{height}+{x}+{y}")
+
 class AdminPanel:
     def __init__(self, parent, main_app):
         self.main_app = main_app
         self.win = tk.Toplevel(parent)
         self.win.title("Manage Database")
-        self.win.geometry("950x500")
+        center_window(self.win, 950, 500)
 
         self.tabs = ttk.Notebook(self.win)
         self.tabs.pack(fill=tk.BOTH, expand=True)
@@ -94,6 +101,8 @@ class AdminPanel:
     def product_form(self, title, values=None):
         form = tk.Toplevel(self.win)
         form.title(title)
+        center_window(form, 300, 350)  # <- Center the product form
+
         labels = ["type", "id", "od", "th", "brand", "part_no", "country_of_origin", "notes", "price"]
         vars = [tk.StringVar(value=str(v) if values else "") for v in (values or [""]*9)]
 

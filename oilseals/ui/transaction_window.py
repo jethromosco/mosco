@@ -5,35 +5,42 @@ from database import connect_db
 from PIL import Image, ImageTk
 import os
 
-class TransactionWindow:
-    def __init__(self, parent, details, main_app):
-        self.details = details
-        self.main_app = main_app
-        self.window = tk.Toplevel(parent)
-        self.window.title("Transactions")
-        self.window.geometry("880x600")
+class TransactionWindow(tk.Frame):
+    def __init__(self, parent, details, controller):
+        super().__init__(parent)
+        self.controller = controller
+        self.details = None
+        self.main_app = None
 
-        self.srp_var = tk.StringVar(value=f"₱{details['price']:.2f}")
+        self.configure(bg="white")
+
+        self.srp_var = tk.StringVar()
         self.location_var = tk.StringVar()
         self.notes_var = tk.StringVar()
         self.edit_mode = False
-
-        self.image_path, self.image_ext = self.get_existing_image_path()
+        self.image_path = ""
+        self.image_ext = ""
         self.image_thumbnail = None
 
-        # Top header row
-        header = tk.Frame(self.window)
+        # Header
+        header = tk.Frame(self, bg="white")
         header.pack(fill=tk.X, pady=5, padx=10)
 
-        # STOCK should go FAR RIGHT
-        self.stock_label = tk.Label(header, font=("Arial", 14, "bold underline"), cursor="hand2")
+        # Static Back to InventoryApp
+        if self.controller:
+            back_button = tk.Button(header, text="← Back", command=self.controller.show_inventory_app)
+        else:
+            back_button = tk.Button(header, text="← Back", command=self.master.destroy)
+
+        back_button.pack(side=tk.LEFT, padx=(0, 10))
+
+        self.stock_label = tk.Label(header, font=("Arial", 14, "bold underline"), cursor="hand2", bg="white")
         self.stock_label.pack(side=tk.RIGHT, padx=(0, 10))
         self.stock_label.bind("<Button-1>", self.open_stock_settings)
 
-        # PHOTO beside it (to the LEFT of STOCK)
-        photo_frame = tk.Frame(header, width=60, height=60)
+        photo_frame = tk.Frame(header, width=60, height=60, bg="white")
         photo_frame.pack_propagate(False)
-        photo_frame.pack(side=tk.RIGHT, padx=(0, 5))  # Appears left of STOCK
+        photo_frame.pack(side=tk.RIGHT, padx=(0, 5))
 
         self.photo_label = tk.Label(photo_frame, bg="#ddd", relief="ridge", cursor="hand2")
         self.photo_label.pack(fill=tk.BOTH, expand=True)
@@ -42,34 +49,36 @@ class TransactionWindow:
         self.upload_button = tk.Button(photo_frame, text="Upload", command=self.upload_photo)
         self.upload_button.pack()
 
-        self.header_label = tk.Label(header, font=("Arial", 16, "bold"))
+        self.header_label = tk.Label(header, font=("Arial", 16, "bold"), bg="white")
         self.header_label.pack(side=tk.LEFT)
 
-        sub = tk.Frame(self.window)
+        sub = tk.Frame(self, bg="white")
         sub.pack(fill=tk.X, padx=10, pady=(0, 5))
 
-        tk.Label(sub, text="LOC:").pack(side=tk.LEFT, padx=(0, 2))
+        tk.Label(sub, text="LOC:", bg="white").pack(side=tk.LEFT, padx=(0, 2))
         self.location_entry = tk.Entry(sub, textvariable=self.location_var, width=12, state="readonly", relief="flat")
         self.location_entry.pack(side=tk.LEFT, padx=(0, 10))
 
-        tk.Label(sub, text="NOTES:").pack(side=tk.LEFT, padx=(0, 2))
+        tk.Label(sub, text="NOTES:", bg="white").pack(side=tk.LEFT, padx=(0, 2))
         self.notes_entry = tk.Entry(sub, textvariable=self.notes_var, state="readonly", relief="flat")
         self.notes_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
 
-        right_frame = tk.Frame(sub)
+        right_frame = tk.Frame(sub, bg="white")
         right_frame.pack(side=tk.RIGHT)
 
         self.edit_btn = tk.Button(right_frame, text="Edit", command=self.toggle_edit_mode)
         self.edit_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.save_status_label = tk.Label(right_frame, text="", fg="green", bg="white", font=("Arial", 10, "italic"))
+        self.save_status_label.pack(side=tk.LEFT, padx=(10, 0))
 
-        tk.Label(right_frame, text="SRP:", font=("Arial", 14, "bold")).pack(side=tk.LEFT, padx=(0, 2))
-        self.srp_display = tk.Label(right_frame, textvariable=self.srp_var, font=("Arial", 14, "bold"))
+        tk.Label(right_frame, text="SRP:", font=("Arial", 14, "bold"), bg="white").pack(side=tk.LEFT, padx=(0, 2))
+        self.srp_display = tk.Label(right_frame, textvariable=self.srp_var, font=("Arial", 14, "bold"), bg="white")
         self.srp_display.pack(side=tk.LEFT)
 
         self.srp_entry = tk.Entry(right_frame, textvariable=self.srp_var, width=10)
 
         self.tree = ttk.Treeview(
-            self.window,
+            self,
             columns=("date", "qty_restock", "cost", "name", "qty", "price", "stock"),
             show="headings",
             height=20
@@ -93,6 +102,16 @@ class TransactionWindow:
         self.tree.tag_configure("blue", foreground="blue")
         self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+
+    def show_save_status(self, message="Saved!", duration=2000):
+        self.save_status_label.config(text=message)
+        self.after(duration, lambda: self.save_status_label.config(text=""))
+
+    def set_details(self, details, main_app):
+        self.details = details
+        self.main_app = main_app
+        self.srp_var.set(f"₱{details['price']:.2f}")
+        self.image_path, self.image_ext = self.get_existing_image_path()
         self.load_location()
         self.load_transactions()
         self.load_photo()
@@ -101,7 +120,6 @@ class TransactionWindow:
         photos_dir = os.path.join(os.path.dirname(__file__), "..", "photos")
         os.makedirs(photos_dir, exist_ok=True)
         base = f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}"
-
         for ext in [".jpg", ".jpeg", ".png"]:
             full_path = os.path.join(photos_dir, base + ext)
             if os.path.exists(full_path):
@@ -125,6 +143,7 @@ class TransactionWindow:
             self.srp_entry.pack_forget()
             self.srp_display.pack(side=tk.LEFT)
             self.edit_btn.config(text="Edit")
+            self.show_save_status()  # ← Show the "Saved!" message
         self.edit_mode = not self.edit_mode
 
     def load_location(self):
@@ -171,6 +190,7 @@ class TransactionWindow:
                      self.details["th"], self.details["part_no"]))
         conn.commit()
         conn.close()
+        self.main_app.refresh_product_list()
 
     def load_transactions(self):
         conn = connect_db()
@@ -200,8 +220,7 @@ class TransactionWindow:
             display_qty = abs(qty) if not is_restock else ""
             tag = "blue" if is_restock else "red"
 
-            self.tree.insert("", tk.END, values=(
-                date_str, qty_restock, cost, name, display_qty, price_str, abs(stock)), tags=(tag,))
+            self.tree.insert("", tk.END, values=(date_str, qty_restock, cost, name, display_qty, price_str, abs(stock)), tags=(tag,))
 
         conn = connect_db()
         cur = conn.cursor()
@@ -228,7 +247,7 @@ class TransactionWindow:
                  f"{self.details['brand']} | {self.details['part_no']} | {self.details['country_of_origin']}")
 
     def open_stock_settings(self, event=None):
-        settings = tk.Toplevel(self.window)
+        settings = tk.Toplevel(self)
         settings.title("Stock Color Settings")
         settings.geometry("250x150")
         settings.resizable(False, False)
@@ -285,8 +304,7 @@ class TransactionWindow:
             return
 
         ext = os.path.splitext(file)[1].lower()
-        allowed_ext = [".jpg", ".jpeg", ".png"]
-        if ext not in allowed_ext:
+        if ext not in [".jpg", ".jpeg", ".png"]:
             messagebox.showerror("Invalid File", "Only .jpg, .jpeg, .png are supported.")
             return
 
@@ -294,9 +312,7 @@ class TransactionWindow:
         filename = f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}{ext}"
         save_path = os.path.join(photos_dir, filename)
 
-        img = Image.open(file)
-        img = img.convert("RGB")
-
+        img = Image.open(file).convert("RGB")
         quality = 95
         while True:
             img.save(save_path, format="JPEG", quality=quality)
@@ -304,7 +320,6 @@ class TransactionWindow:
                 break
             quality -= 5
 
-        # Remove old image if format changed
         for old_ext in [".jpg", ".jpeg", ".png"]:
             old_path = os.path.join(photos_dir, f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}{old_ext}")
             if old_path != save_path and os.path.exists(old_path):
@@ -317,12 +332,13 @@ class TransactionWindow:
         if not os.path.exists(self.image_path):
             return
 
-        top = tk.Toplevel(self.window)
+        top = tk.Toplevel(self)
         top.title("Photo Viewer")
-        top.transient(self.window)
+        top.transient(self)
         top.grab_set()
         top.resizable(False, False)
 
+        # Load and resize the image
         img = Image.open(self.image_path)
         img.thumbnail((800, 800))
         photo = ImageTk.PhotoImage(img)
@@ -331,11 +347,21 @@ class TransactionWindow:
         label.pack(padx=10, pady=10)
         label.bind("<Button-1>", lambda e: top.destroy())
 
+        # Center the window on the screen
+        top.update_idletasks()
+        w = top.winfo_width()
+        h = top.winfo_height()
+        ws = top.winfo_screenwidth()
+        hs = top.winfo_screenheight()
+        x = (ws // 2) - (w // 2)
+        y = (hs // 2) - (h // 2)
+        top.geometry(f"{w}x{h}+{x}+{y}")
+
     def show_photo_menu(self, event=None):
         if not os.path.exists(self.image_path):
             return
 
-        popup = tk.Toplevel(self.window)
+        popup = tk.Toplevel(self)
         popup.overrideredirect(True)
         popup.geometry(f"+{event.x_root}+{event.y_root}")
         popup.attributes("-topmost", True)
