@@ -1,10 +1,9 @@
-import tkinter as tk
+# oilseals/main.py
 from ui.inventory_app import InventoryApp
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = InventoryApp(root)
-    root.mainloop()
+class OilSealPage(InventoryApp):
+    def __init__(self, master, controller):
+        super().__init__(master, controller)
 
 
 ## CHECK TRANSACTION TAB ADD EDIT DELETE IF WORKING PROPERLY /

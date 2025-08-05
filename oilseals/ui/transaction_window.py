@@ -7,6 +7,9 @@ import os
 
 class TransactionWindow:
     def __init__(self, parent, details, main_app):
+        # At the top of TransactionWindow.__init__
+        self.window.attributes('-fullscreen', True)
+        self.window.bind("<Escape>", lambda e: self.window.attributes('-fullscreen', False))
         self.details = details
         self.main_app = main_app
         self.window = tk.Toplevel(parent)
@@ -24,6 +27,8 @@ class TransactionWindow:
         # Top header row
         header = tk.Frame(self.window)
         header.pack(fill=tk.X, pady=5, padx=10)
+        back_btn = tk.Button(header, text="🔙 Back", command=self.window.destroy)
+        back_btn.pack(side=tk.LEFT, padx=(0, 10))
 
         # STOCK should go FAR RIGHT
         self.stock_label = tk.Label(header, font=("Arial", 14, "bold underline"), cursor="hand2")
