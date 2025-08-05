@@ -1,14 +1,14 @@
-# ui/inventory_app.py
 import tkinter as tk
 from tkinter import ttk
 from database import connect_db
+from admin.admin_panel import AdminPanel
 from ui.transaction_window import TransactionWindow
 
-class InventoryApp(tk.Frame):
-    def __init__(self, master, controller):
-        super().__init__(master)
-        self.controller = controller
-        self.root = master  # Needed for Toplevel fallback or passing to TransactionWindow
+class InventoryApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Oil Seal Inventory Manager")
+        self.root.geometry("1050x640")
 
         self.search_vars = {
             "type": tk.StringVar(),
@@ -26,24 +26,25 @@ class InventoryApp(tk.Frame):
         self.refresh_product_list()
 
     def create_widgets(self):
-        tk.Button(self, text="🔙 Back", command=lambda: self.controller.show_frame("HomePage")).pack(anchor="nw", padx=10, pady=10)
-
-        search_frame = tk.Frame(self)
+        search_frame = tk.Frame(self.root)
         search_frame.pack(pady=5)
 
         self.inch_labels = {}
+
         for idx, (key, var) in enumerate(self.search_vars.items()):
             tk.Label(search_frame, text=key.upper()).grid(row=0, column=idx * 2)
             entry = tk.Entry(search_frame, textvariable=var, width=10)
             entry.grid(row=0, column=idx * 2 + 1)
             var.trace_add("write", lambda *args: self.refresh_product_list())
+
+            # Create inch conversion label below ID, OD, TH only
             if key in ["id", "od", "th"]:
                 label = tk.Label(search_frame, text="", fg="gray", font=("Arial", 8))
                 label.grid(row=1, column=idx * 2 + 1)
                 self.inch_labels[key] = label
                 var.trace_add("write", lambda *args, k=key: self.update_inch_label(k))
 
-        filter_frame = tk.Frame(self)
+        filter_frame = tk.Frame(self.root)
         filter_frame.pack(pady=5)
 
         tk.Label(filter_frame, text="Sort by:").pack(side=tk.LEFT)
@@ -54,10 +55,10 @@ class InventoryApp(tk.Frame):
         ttk.Combobox(filter_frame, textvariable=self.stock_filter, values=["All", "In Stock", "Low Stock", "Out of Stock"], state="readonly", width=12).pack(side=tk.LEFT, padx=5)
         self.stock_filter.trace_add("write", lambda *args: self.refresh_product_list())
 
-        tk.Button(self, text="Manage Database", command=self.open_admin_panel).pack(pady=5)
+        tk.Button(self.root, text="Manage Database", command=self.open_admin_panel).pack(pady=5)
 
         columns = ("type", "size", "brand", "part_no", "origin", "notes", "qty", "price")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings")
+        self.tree = ttk.Treeview(self.root, columns=columns, show="headings")
         for col in columns:
             self.tree.heading(col, text=col.upper())
             self.tree.column(col, anchor="center", width=100)
@@ -73,7 +74,6 @@ class InventoryApp(tk.Frame):
             self.inch_labels[key].config(text="")
 
     def open_admin_panel(self):
-        from admin.admin_panel import AdminPanel
         AdminPanel(self.root, self)
 
     def refresh_product_list(self):
