@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 from admin.transaction_tab import TransactionTab
 from database import connect_db
 
-# Center window helper
+# Helper to center any window
 def center_window(win, width, height):
     win.update_idletasks()
     x = (win.winfo_screenwidth() // 2) - (width // 2)
@@ -27,6 +27,7 @@ class AdminPanel:
         frame = tk.Frame(self.tabs)
         self.tabs.add(frame, text="Products")
 
+        # Search bar
         search_frame = tk.Frame(frame)
         search_frame.pack(fill=tk.X, padx=10, pady=5)
         tk.Label(search_frame, text="Search ITEM:").pack(side=tk.LEFT)
@@ -35,24 +36,31 @@ class AdminPanel:
         search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
-        self.prod_tree = ttk.Treeview(frame, columns=("item", "brand", "part_no", "origin", "notes", "price"), show="headings")
-        headers = ["ITEM", "BRAND", "PART_NO", "ORIGIN", "NOTES", "PRICE"]
-        for col, header in zip(self.prod_tree["columns"], headers):
-            self.prod_tree.heading(col, text=header)
+        # Treeview
+        columns = ("item", "brand", "part_no", "origin", "notes", "price")
+        self.headers = ["ITEM", "BRAND", "PART_NO", "ORIGIN", "NOTES", "PRICE"]
+        self.sort_direction = {col: None for col in columns}
+        self.prod_tree = ttk.Treeview(frame, columns=columns, show="headings")
+
+        for col, header in zip(columns, self.headers):
+            self.prod_tree.heading(col, text=header, command=lambda c=col: self.sort_column(c))
             self.prod_tree.column(col, width=120, anchor="center")
+
         self.prod_tree.pack(fill=tk.BOTH, expand=True, pady=10)
 
-        self.refresh_products()
-
+        # Buttons
         btn_frame = tk.Frame(frame)
         btn_frame.pack()
-        tk.Button(btn_frame, text="Add", command=self.add_product).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="Edit", command=self.edit_product).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="Delete", command=self.delete_product).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Add", width=10, command=self.add_product).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Edit", width=10, command=self.edit_product).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Delete", width=10, command=self.delete_product).pack(side=tk.LEFT, padx=5)
+
+        self.refresh_products()
 
     def refresh_products(self):
         for row in self.prod_tree.get_children():
             self.prod_tree.delete(row)
+
         conn = connect_db()
         cur = conn.cursor()
         cur.execute("SELECT type, id, od, th, brand, part_no, country_of_origin, notes, price FROM products ORDER BY type ASC, id ASC, od ASC, th ASC")
@@ -67,13 +75,42 @@ class AdminPanel:
             if keyword in combined:
                 self.prod_tree.insert("", tk.END, values=(item_str, brand, part_no, origin, notes, f"₱{price:.2f}"))
 
+    def sort_column(self, col):
+        if col in ("part_no", "notes"):
+            return
+
+        ascending = self.sort_direction[col] != "asc"
+        self.sort_direction[col] = "asc" if ascending else "desc"
+
+        data = [(self.prod_tree.set(child, col), child) for child in self.prod_tree.get_children()]
+
+        if col == "item":
+            def size_key(val):
+                try:
+                    size_str = val[0].split(" ")[1]
+                    return tuple(map(int, size_str.split("-")))
+                except:
+                    return (0, 0, 0)
+            data.sort(key=lambda x: size_key(x), reverse=not ascending)
+        elif col == "price":
+            data.sort(key=lambda x: float(x[0].replace("₱", "").replace(",", "")), reverse=not ascending)
+        else:
+            data.sort(key=lambda x: x[0].lower(), reverse=not ascending)
+
+        for index, (_, child) in enumerate(data):
+            self.prod_tree.move(child, '', index)
+
+        for c, h in zip(self.prod_tree["columns"], self.headers):
+            arrow = " ↑" if c == col and ascending else " ↓" if c == col else ""
+            self.prod_tree.heading(c, text=h + arrow)
+
     def add_product(self):
         self.product_form("Add Product")
 
     def edit_product(self):
         item = self.prod_tree.focus()
         if not item:
-            return messagebox.showwarning("Select", "Select a product to edit")
+            return messagebox.showwarning("Select", "Select a product to edit", parent=self.win)
         item_str, brand, part_no, origin, notes, price = self.prod_tree.item(item)["values"]
         type_, size = item_str.split(" ")
         id_, od, th = map(int, size.split("-"))
@@ -83,16 +120,16 @@ class AdminPanel:
     def delete_product(self):
         item = self.prod_tree.focus()
         if not item:
-            return messagebox.showwarning("Select", "Select a product to delete")
+            return messagebox.showwarning("Select", "Select a product to delete", parent=self.win)
         values = self.prod_tree.item(item)["values"]
         type_, size = values[0].split(" ")
         id_, od, th = map(int, size.split("-"))
-        part_no = values[2]
-        confirm = messagebox.askyesno("Delete", f"Delete {part_no}?")
+        brand = values[1]
+        confirm = messagebox.askyesno("Confirm Delete", f"Delete {type_} {size} {brand}?", parent=self.win)
         if confirm:
             conn = connect_db()
             cur = conn.cursor()
-            cur.execute("DELETE FROM products WHERE type=? AND id=? AND od=? AND th=? AND part_no=?", (type_, id_, od, th, part_no))
+            cur.execute("DELETE FROM products WHERE type=? AND id=? AND od=? AND th=? AND brand=?", (type_, id_, od, th, brand))
             conn.commit()
             conn.close()
             self.refresh_products()
@@ -101,28 +138,55 @@ class AdminPanel:
     def product_form(self, title, values=None):
         form = tk.Toplevel(self.win)
         form.title(title)
-        center_window(form, 300, 350)  # <- Center the product form
+        form.resizable(False, False)
+        form.grab_set()
 
-        labels = ["type", "id", "od", "th", "brand", "part_no", "country_of_origin", "notes", "price"]
-        vars = [tk.StringVar(value=str(v) if values else "") for v in (values or [""]*9)]
+        container = tk.Frame(form, padx=16, pady=14)
+        container.pack()
 
-        def update_case(*args):
-            vars[0].set(vars[0].get().upper())
-            vars[4].set(vars[4].get().upper())
-            vars[5].set(vars[5].get().upper())
-            if vars[6].get():
-                val = vars[6].get()
-                vars[6].set(val[0].upper() + val[1:].lower() if len(val) > 1 else val.upper())
+        if title.startswith("Edit") and values:
+            item_str = f"{values[0]} {values[1]}-{values[2]}-{values[3]}"
+            tk.Label(container, text=item_str, font=("TkDefaultFont", 10, "bold")).pack(pady=(0, 6))
 
-        for i, label in enumerate(labels):
-            tk.Label(form, text=label.upper()).grid(row=i, column=0, sticky="w", padx=5, pady=2)
-            entry = tk.Entry(form, textvariable=vars[i])
-            entry.grid(row=i, column=1, padx=5, pady=2)
-            vars[i].trace_add("write", update_case)
+        fields = [
+            ("TYPE", 0),
+            ("ID (mm)", 1),
+            ("OD (mm)", 2),
+            ("TH (mm)", 3),
+            ("BRAND", 4),
+            ("PART_NO", 5),
+            ("ORIGIN", 6),
+            ("NOTES", 7),
+            ("PRICE (₱)", 8),
+        ]
+
+        vars = [tk.StringVar(value=str(values[i]) if values else "") for i in range(9)]
+
+        def validate_characters(*_):
+            vars[0].set(''.join(filter(str.isalpha, vars[0].get())).upper())
+            vars[4].set(''.join(filter(str.isalpha, vars[4].get())).upper())
+            vars[6].set(vars[6].get().capitalize())
+
+        def validate_numbers(*_):
+            for i in [1, 2, 3]:
+                vars[i].set(''.join(filter(str.isdigit, vars[i].get())))
+            val = ''.join(c for c in vars[8].get() if c in '0123456789.')
+            vars[8].set(val)
+
+        for i, (label, idx) in enumerate(fields):
+            row = tk.Frame(container)
+            row.pack(fill="x", pady=1)
+            tk.Label(row, text=label, width=12, anchor="w").pack(side="left")
+            tk.Entry(row, textvariable=vars[idx]).pack(side="left", fill="x", expand=True)
+
+        for i in [0, 4, 6]:
+            vars[i].trace_add("write", validate_characters)
+        for i in [1, 2, 3, 8]:
+            vars[i].trace_add("write", validate_numbers)
 
         def save():
             data = [v.get().strip() for v in vars]
-            if not all(data[:5]):
+            if not all(data[i] for i in [0, 1, 2, 3, 4]):
                 return messagebox.showerror("Missing", "Fill all required fields")
             try:
                 data[1] = int(data[1])
@@ -135,13 +199,23 @@ class AdminPanel:
             conn = connect_db()
             cur = conn.cursor()
             if title.startswith("Add"):
-                cur.execute("""INSERT INTO products (type, id, od, th, brand, part_no, country_of_origin, notes, price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", data)
+                cur.execute("""INSERT INTO products (type, id, od, th, brand, part_no, country_of_origin, notes, price)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", data)
             else:
-                cur.execute("""UPDATE products SET type=?, id=?, od=?, th=?, brand=?, country_of_origin=?, notes=?, price=? WHERE part_no=?""", data[:5]+data[6:9]+[data[5]])
+                cur.execute("""UPDATE products SET type=?, id=?, od=?, th=?, brand=?, part_no=?, country_of_origin=?, notes=?, price=?
+                            WHERE type=? AND id=? AND od=? AND th=? AND brand=?""",
+                            data + [data[0], data[1], data[2], data[3], data[4]])
             conn.commit()
             conn.close()
             self.refresh_products()
             self.main_app.refresh_product_list()
             form.destroy()
 
-        tk.Button(form, text="Save", command=save).grid(row=len(labels), column=0, columnspan=2, pady=10)
+        btn_frame = tk.Frame(container, pady=10)
+        btn_frame.pack()
+        tk.Button(btn_frame, text="Save", width=12, command=save).pack()
+
+        form.update_idletasks()
+        w = form.winfo_width()
+        h = form.winfo_height()
+        center_window(form, w, h)
