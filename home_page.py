@@ -34,18 +34,6 @@ class HomePage(tk.Frame):
             if label == "OIL SEALS (mm)":
                 btn.config(command=lambda: self.controller.show_inventory_app())
 
-        # Admin Button
-        manage_btn = ttk.Button(center_frame, text="Admin", command=self.open_admin_panel)
-        manage_btn.pack(pady=(10, 0))
-
         # Exit button
         exit_btn = ttk.Button(center_frame, text="Exit", command=self.controller.root.quit)
         exit_btn.pack(pady=(40, 10))
-
-    def open_admin_panel(self):
-        password = simpledialog.askstring("Admin Access", "Enter password:", show="*")
-        if password == "569656":  # Change this password as needed
-            from admin.admin_panel import AdminPanel
-            AdminPanel(self.controller.root, self.controller.frames["InventoryApp"])
-        else:
-            messagebox.showerror("Access Denied", "Incorrect password.")

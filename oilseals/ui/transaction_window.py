@@ -314,11 +314,15 @@ class TransactionWindow(tk.Frame):
         tk.Button(settings, text="Save", command=save_thresholds).pack(pady=10)
 
     def upload_photo(self):
-        file = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
-        if not file:
+        if self.details["type"].upper() != "SPECIAL":
+            messagebox.showinfo("Not Allowed", "Photo upload is only allowed for SPECIAL type products.")
             return
 
-        ext = os.path.splitext(file)[1].lower()
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
+        if not file_path:
+            return  # User cancelled
+
+        ext = os.path.splitext(file_path)[1].lower()
         if ext not in [".jpg", ".jpeg", ".png"]:
             messagebox.showerror("Invalid File", "Only .jpg, .jpeg, .png are supported.")
             return
@@ -327,7 +331,7 @@ class TransactionWindow(tk.Frame):
         filename = f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}{ext}"
         save_path = os.path.join(photos_dir, filename)
 
-        img = Image.open(file).convert("RGB")
+        img = Image.open(file_path).convert("RGB")
         quality = 95
         while True:
             img.save(save_path, format="JPEG", quality=quality)
@@ -344,42 +348,23 @@ class TransactionWindow(tk.Frame):
         self.load_photo()
 
     def load_photo(self):
+        self.image_path = self.get_photo_path_by_type()
+
         if os.path.exists(self.image_path):
             img = Image.open(self.image_path)
             img.thumbnail((60, 60))
             self.image_thumbnail = ImageTk.PhotoImage(img)
             self.photo_label.config(image=self.image_thumbnail)
-            self.upload_button.pack_forget()
+            if self.details["type"].upper() == "SPECIAL":
+                self.upload_button.pack_forget()
+            else:
+                self.upload_button.pack_forget()  # No upload button for other types
         else:
             self.photo_label.config(image="", bg="#ddd")
-            self.upload_button.pack()
-
-    def show_fullscreen_photo(self):
-        if not os.path.exists(self.image_path):
-            return
-
-        top = tk.Toplevel(self)
-        top.title("Photo Viewer")
-        top.transient(self)
-        top.grab_set()
-        top.resizable(False, False)
-
-        img = Image.open(self.image_path)
-        img.thumbnail((800, 800))
-        photo = ImageTk.PhotoImage(img)
-        label = tk.Label(top, image=photo)
-        label.image = photo
-        label.pack(padx=10, pady=10)
-        label.bind("<Button-1>", lambda e: top.destroy())
-
-        top.update_idletasks()
-        w = top.winfo_width()
-        h = top.winfo_height()
-        ws = top.winfo_screenwidth()
-        hs = top.winfo_screenheight()
-        x = (ws // 2) - (w // 2)
-        y = (hs // 2) - (h // 2)
-        top.geometry(f"{w}x{h}+{x}+{y}")
+            if self.details["type"].upper() == "SPECIAL":
+                self.upload_button.pack()
+            else:
+                self.upload_button.pack_forget()
 
     def show_photo_menu(self, event=None):
         if not os.path.exists(self.image_path):
@@ -401,4 +386,56 @@ class TransactionWindow(tk.Frame):
                 self.load_photo()
 
         tk.Button(popup, text="🔍 View", command=view, width=10).pack()
-        tk.Button(popup, text="🗑 Delete", command=delete, width=10).pack()
+
+        if self.details["type"].upper() == "SPECIAL":
+            tk.Button(popup, text="🗑 Delete", command=delete, width=10).pack()
+
+
+            tk.Button(popup, text="🔍 View", command=view, width=10).pack()
+            tk.Button(popup, text="🗑 Delete", command=delete, width=10).pack()
+
+    def get_photo_path_by_type(self):
+        photos_dir = os.path.join(os.path.dirname(__file__), "..", "photos")
+        # For special type, use current product photo logic
+        if self.details["type"].upper() == "SPECIAL":
+            # Return current product photo path
+            for ext in [".jpg", ".jpeg", ".png"]:
+                path = os.path.join(photos_dir, f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}{ext}")
+                if os.path.exists(path):
+                    return path
+            return ""  # No photo found for special
+        else:
+            # For other types: shared photo by type with .jpg or .png fallback
+            for ext in [".jpg", ".png"]:
+                path = os.path.join(photos_dir, f"{self.details['type'].lower()}{ext}")
+                if os.path.exists(path):
+                    return path
+            # Placeholder fallback path (adjust to your placeholder image location)
+            placeholder = os.path.join(photos_dir, "placeholder.png")
+            return placeholder if os.path.exists(placeholder) else ""
+    def show_fullscreen_photo(self):
+        if not os.path.exists(self.image_path):
+            return  # No photo to show
+
+        top = tk.Toplevel(self)
+        top.title("Photo Viewer")
+        top.transient(self)
+        top.grab_set()
+        top.resizable(False, False)
+
+        img = Image.open(self.image_path)
+        img.thumbnail((800, 800))
+        photo = ImageTk.PhotoImage(img)
+        label = tk.Label(top, image=photo)
+        label.image = photo  # Keep reference so image displays
+        label.pack(padx=10, pady=10)
+        label.bind("<Button-1>", lambda e: top.destroy())  # Click photo to close
+
+        top.update_idletasks()
+        w = top.winfo_width()
+        h = top.winfo_height()
+        ws = top.winfo_screenwidth()
+        hs = top.winfo_screenheight()
+        x = (ws // 2) - (w // 2)
+        y = (hs // 2) - (h // 2)
+        top.geometry(f"{w}x{h}+{x}+{y}")

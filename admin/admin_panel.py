@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from admin.transaction_tab import TransactionTab
 from database import connect_db
+from fractions import Fraction
 
 # Helper to center any window
 def center_window(win, width, height):
@@ -9,6 +10,15 @@ def center_window(win, width, height):
     x = (win.winfo_screenwidth() // 2) - (width // 2)
     y = (win.winfo_screenheight() // 2) - (height // 2)
     win.geometry(f"{width}x{height}+{x}+{y}")
+
+def parse_measurement(value):
+    """Convert a string (fraction or decimal) to float for sorting, keep original for display."""
+    try:
+        if "/" in value:
+            return float(Fraction(value))
+        return float(value)
+    except ValueError:
+        raise ValueError(f"Invalid measurement: {value}")
 
 class AdminPanel:
     def __init__(self, parent, main_app):
@@ -58,22 +68,37 @@ class AdminPanel:
         self.refresh_products()
 
     def refresh_products(self):
-        for row in self.prod_tree.get_children():
-            self.prod_tree.delete(row)
+        self.prod_tree.delete(*self.prod_tree.get_children())
 
         conn = connect_db()
         cur = conn.cursor()
-        cur.execute("SELECT type, id, od, th, brand, part_no, country_of_origin, notes, price FROM products ORDER BY type ASC, id ASC, od ASC, th ASC")
+        cur.execute("""
+            SELECT type, id, od, th, brand, part_no, country_of_origin, notes, price
+            FROM products
+            ORDER BY type ASC, id ASC, od ASC, th ASC
+        """)
         rows = cur.fetchall()
         conn.close()
 
         keyword = self.prod_search_var.get().lower()
         for row in rows:
             type_, id_, od, th, brand, part_no, origin, notes, price = row
-            item_str = f"{type_.upper()} {id_}-{od}-{th}"
-            combined = f"{type_} {id_} {od} {th}".lower()
+
+            # Convert numbers to nice display format
+            def fmt(val):
+                return str(val) if isinstance(val, str) else (str(int(val)) if float(val).is_integer() else str(val))
+
+            id_str = fmt(id_)
+            od_str = fmt(od)
+            th_str = fmt(th)
+
+            item_str = f"{type_.upper()} {id_str}-{od_str}-{th_str}"
+            combined = f"{type_} {id_str} {od_str} {th_str}".lower()
+
             if keyword in combined:
-                self.prod_tree.insert("", tk.END, values=(item_str, brand, part_no, origin, notes, f"₱{price:.2f}"))
+                self.prod_tree.insert("", tk.END,
+                    values=(item_str, brand, part_no, origin, notes, f"₱{price:.2f}")
+                )
 
     def sort_column(self, col):
         if col in ("part_no", "notes"):
@@ -88,7 +113,8 @@ class AdminPanel:
             def size_key(val):
                 try:
                     size_str = val[0].split(" ")[1]
-                    return tuple(map(int, size_str.split("-")))
+                    parts = size_str.split("-")
+                    return tuple(parse_measurement(p) for p in parts)
                 except:
                     return (0, 0, 0)
             data.sort(key=lambda x: size_key(x), reverse=not ascending)
@@ -113,8 +139,8 @@ class AdminPanel:
             return messagebox.showwarning("Select", "Select a product to edit", parent=self.win)
         item_str, brand, part_no, origin, notes, price = self.prod_tree.item(item)["values"]
         type_, size = item_str.split(" ")
-        id_, od, th = map(int, size.split("-"))
-        values = (type_, id_, od, th, brand, part_no, origin, notes, price.replace("₱", ""))
+        id_str, od_str, th_str = size.split("-")
+        values = (type_, id_str, od_str, th_str, brand, part_no, origin, notes, price.replace("₱", ""))
         self.product_form("Edit Product", values)
 
     def delete_product(self):
@@ -123,13 +149,15 @@ class AdminPanel:
             return messagebox.showwarning("Select", "Select a product to delete", parent=self.win)
         values = self.prod_tree.item(item)["values"]
         type_, size = values[0].split(" ")
-        id_, od, th = map(int, size.split("-"))
+        id_str, od_str, th_str = size.split("-")
         brand = values[1]
         confirm = messagebox.askyesno("Confirm Delete", f"Delete {type_} {size} {brand}?", parent=self.win)
         if confirm:
             conn = connect_db()
             cur = conn.cursor()
-            cur.execute("DELETE FROM products WHERE type=? AND id=? AND od=? AND th=? AND brand=?", (type_, id_, od, th, brand))
+            cur.execute("""
+                DELETE FROM products WHERE type=? AND id=? AND od=? AND th=? AND brand=?
+            """, (type_, id_str, od_str, th_str, brand))
             conn.commit()
             conn.close()
             self.refresh_products()
@@ -169,7 +197,9 @@ class AdminPanel:
 
         def validate_numbers(*_):
             for i in [1, 2, 3]:
-                vars[i].set(''.join(filter(str.isdigit, vars[i].get())))
+                val = vars[i].get().strip()
+                allowed_chars = "0123456789./"
+                vars[i].set(''.join(c for c in val if c in allowed_chars))
             val = ''.join(c for c in vars[8].get() if c in '0123456789.')
             vars[8].set(val)
 
@@ -189,22 +219,24 @@ class AdminPanel:
             if not all(data[i] for i in [0, 1, 2, 3, 4]):
                 return messagebox.showerror("Missing", "Fill all required fields")
             try:
-                data[1] = int(data[1])
-                data[2] = int(data[2])
-                data[3] = int(data[3])
-                data[8] = float(data[8])
-            except ValueError:
-                return messagebox.showerror("Invalid", "Check numeric fields")
+                # Keep exactly what was typed for ID, OD, TH
+                data[8] = float(data[8])  # Price must be numeric
+            except ValueError as e:
+                return messagebox.showerror("Invalid", str(e))
 
             conn = connect_db()
             cur = conn.cursor()
             if title.startswith("Add"):
-                cur.execute("""INSERT INTO products (type, id, od, th, brand, part_no, country_of_origin, notes, price)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""", data)
+                cur.execute("""
+                    INSERT INTO products (type, id, od, th, brand, part_no, country_of_origin, notes, price)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, data)
             else:
-                cur.execute("""UPDATE products SET type=?, id=?, od=?, th=?, brand=?, part_no=?, country_of_origin=?, notes=?, price=?
-                            WHERE type=? AND id=? AND od=? AND th=? AND brand=?""",
-                            data + [data[0], data[1], data[2], data[3], data[4]])
+                cur.execute("""
+                    UPDATE products
+                    SET type=?, id=?, od=?, th=?, brand=?, part_no=?, country_of_origin=?, notes=?, price=?
+                    WHERE type=? AND id=? AND od=? AND th=? AND brand=?
+                """, data + [values[0], values[1], values[2], values[3], values[4]])
             conn.commit()
             conn.close()
             self.refresh_products()
