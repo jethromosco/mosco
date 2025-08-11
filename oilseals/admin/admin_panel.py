@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from admin.transaction_tab import TransactionTab
-from database import connect_db
+from oilseals.admin.transaction_tab import TransactionTab
+from ..database import connect_db
 from fractions import Fraction
 
 # Helper to center any window
@@ -21,8 +21,10 @@ def parse_measurement(value):
         raise ValueError(f"Invalid measurement: {value}")
 
 class AdminPanel:
-    def __init__(self, parent, main_app):
+    def __init__(self, parent, main_app, controller, on_close_callback=None):
         self.main_app = main_app
+        self.controller = controller
+        self.on_close_callback = on_close_callback
         self.win = tk.Toplevel(parent)
         self.win.title("Manage Database")
         center_window(self.win, 950, 500)
@@ -31,7 +33,17 @@ class AdminPanel:
         self.tabs.pack(fill=tk.BOTH, expand=True)
 
         self.create_products_tab()
-        TransactionTab(self.tabs, self.main_app)
+        # Pass the controller AND the callback to TransactionTab
+        TransactionTab(self.tabs, main_app, self.controller, on_refresh_callback=self.on_closing)
+        
+        # Add a protocol to call the callback when the window is closed
+        self.win.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        """Callback function to handle window closing and trigger refresh in the main app."""
+        if self.on_close_callback:
+            self.on_close_callback()
+        self.win.destroy()
 
     def create_products_tab(self):
         frame = tk.Frame(self.tabs)
@@ -84,7 +96,6 @@ class AdminPanel:
         for row in rows:
             type_, id_, od, th, brand, part_no, origin, notes, price = row
 
-            # Convert numbers to nice display format
             def fmt(val):
                 return str(val) if isinstance(val, str) else (str(int(val)) if float(val).is_integer() else str(val))
 
@@ -161,7 +172,9 @@ class AdminPanel:
             conn.commit()
             conn.close()
             self.refresh_products()
-            self.main_app.refresh_product_list()
+            # Call the callback after a successful deletion
+            if self.on_close_callback:
+                self.on_close_callback()
 
     def product_form(self, title, values=None):
         form = tk.Toplevel(self.win)
@@ -219,8 +232,7 @@ class AdminPanel:
             if not all(data[i] for i in [0, 1, 2, 3, 4]):
                 return messagebox.showerror("Missing", "Fill all required fields")
             try:
-                # Keep exactly what was typed for ID, OD, TH
-                data[8] = float(data[8])  # Price must be numeric
+                data[8] = float(data[8])
             except ValueError as e:
                 return messagebox.showerror("Invalid", str(e))
 
@@ -240,7 +252,9 @@ class AdminPanel:
             conn.commit()
             conn.close()
             self.refresh_products()
-            self.main_app.refresh_product_list()
+            # Call the callback after a successful save
+            if self.on_close_callback:
+                self.on_close_callback()
             form.destroy()
 
         btn_frame = tk.Frame(container, pady=10)

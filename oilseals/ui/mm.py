@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
-from database import connect_db
+from ..database import connect_db
 from .transaction_window import TransactionWindow
 from fractions import Fraction
+from oilseals.admin.admin_panel import AdminPanel
 
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
@@ -59,7 +60,7 @@ class InventoryApp(tk.Frame):
     def create_widgets(self):
         back_btn = tk.Button(self, text="← Back", anchor="w", padx=10, pady=5)
         if self.controller:
-            back_btn.config(command=self.controller.go_back)
+            back_btn.config(command=lambda: self.controller.show_frame(getattr(self, "return_to", "HomePage")))
         else:
             back_btn.config(command=self.master.destroy)
         back_btn.pack(anchor="nw", padx=10, pady=(10, 0))
@@ -129,8 +130,10 @@ class InventoryApp(tk.Frame):
     def open_admin_panel(self):
         password = simpledialog.askstring("Admin Access", "Enter password:", show="*")
         if password == "569656":
-            from admin.admin_panel import AdminPanel
-            AdminPanel(self.controller.root, self.controller.frames["InventoryApp"])
+            current_frame_name = self.controller.get_current_frame_name()
+            current_frame = self.controller.frames[current_frame_name]
+            # Pass the refresh function as a callback
+            AdminPanel(self.controller.root, current_frame, self.controller, on_close_callback=self.refresh_product_list)
         else:
             messagebox.showerror("Access Denied", "Incorrect password.")
 
@@ -169,7 +172,14 @@ class InventoryApp(tk.Frame):
             return qty > OUT_OF_STOCK
         return True
 
-    def refresh_product_list(self):
+    def refresh_product_list(self, clear_filters=False):
+        if clear_filters:
+            for var in self.search_vars.values():
+                var.set("")
+            self.sort_by.set("Size")
+            self.stock_filter.set("All")
+            self.search_var.set("")
+
         self.tree.delete(*self.tree.get_children())
 
         with connect_db() as conn:
@@ -274,7 +284,8 @@ class InventoryApp(tk.Frame):
         }
 
         if self.controller:
-            self.controller.show_transaction_window(details, self)
+            self.controller.show_transaction_window(details, self, return_to=self.controller.get_current_frame_name())
+
         else:
             win = tk.Toplevel(self)
             TransactionWindow(win, details, self)

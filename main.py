@@ -36,7 +36,7 @@ if __name__ == "__main__":
 # TODO: Refactor homepage so only homepage.py is in the root; all categories are folders
 # TODO: Update imports after moving files/folders
 # TODO: Implement dynamic homepage that lists all categories and links to their inventory apps
-# TODO: Add image upload and display per product type/category
+# TODO: Add image upload and display per product type/category ///
 # TODO: Add a special upload button for products with no type/category
 # TODO: Implement exact search for ID, OD, TH, and PART NO. fields ///
 # TODO: Improve mm-to-inch converter for thickness fields (e.g., 9/10 → 0.354/0.394) ///
@@ -46,4 +46,9 @@ if __name__ == "__main__":
 # TODO: Add README.md and requirements.txt for project documentation and setup
 # TODO: Add basic unit tests for utility functions and database operations
 
-#photo upload button di gumagana kasi may / tsaka isama brand sa file name ng picture
+#photo upload sa special di siguro gagana bc of /
+
+#back button returning to home page instead of previous category hard fix
+
+#everything under ng admin di nagrerrefresh sa mm table sa trans window ok naman don lang talaga sa mm
+# ty (taiwan) NQK and NACTEC 

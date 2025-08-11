@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
-from database import connect_db
+from ..database import connect_db
 from PIL import Image, ImageTk
 from contextlib import contextmanager
 import os
@@ -17,9 +17,10 @@ def db_cursor():
         conn.close()
 
 class TransactionWindow(tk.Frame):
-    def __init__(self, parent, details, controller):
+    def __init__(self, parent, details, controller, return_to):
         super().__init__(parent)
         self.controller = controller
+        self.return_to = return_to  # ← store the page we came from
         self.main_app = None
 
         self.configure(bg="white")
@@ -37,7 +38,8 @@ class TransactionWindow(tk.Frame):
         # Back button (aligned with InventoryApp)
         back_btn = tk.Button(self, text="← Back", anchor="w", padx=10, pady=5)
         if self.controller:
-            back_btn.config(command=self.controller.show_inventory_app)
+            back_btn.config(command=lambda: self.controller.show_frame(self.return_to))
+
         else:
             back_btn.config(command=self.master.destroy)
         back_btn.pack(anchor="nw", padx=10, pady=(10, 0))
@@ -388,10 +390,6 @@ class TransactionWindow(tk.Frame):
         tk.Button(popup, text="🔍 View", command=view, width=10).pack()
 
         if self.details["type"].upper() == "SPECIAL":
-            tk.Button(popup, text="🗑 Delete", command=delete, width=10).pack()
-
-
-            tk.Button(popup, text="🔍 View", command=view, width=10).pack()
             tk.Button(popup, text="🗑 Delete", command=delete, width=10).pack()
 
     def get_photo_path_by_type(self):

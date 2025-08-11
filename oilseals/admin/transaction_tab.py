@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 from datetime import datetime
-from collections import defaultdict, deque
+from collections import defaultdict
 from dataclasses import dataclass
-from database import connect_db
+from ..database import connect_db
 from fractions import Fraction
 
 # ─────────────────────────────────────────────────────────────
@@ -99,8 +99,11 @@ class TransactionRecord:
 class TransactionTab:
     FIELDS = ["Type", "ID", "OD", "TH", "Brand", "Name", "Quantity", "Price"]
 
-    def __init__(self, notebook, main_app):
+    def __init__(self, notebook, main_app, controller, on_refresh_callback=None):
         self.main_app = main_app
+        self.controller = controller
+        # Store the callback function
+        self.on_refresh_callback = on_refresh_callback
         self.frame = tk.Frame(notebook)
         notebook.add(self.frame, text="Transactions")
 
@@ -123,7 +126,7 @@ class TransactionTab:
         tk.Label(control_frame, text="Restock:").pack(side=tk.LEFT, padx=(20, 0))
         self.restock_filter = tk.StringVar(value="All")
         ttk.Combobox(control_frame, textvariable=self.restock_filter,
-                    values=["All", "Restock", "Sale"], width=10, state="readonly").pack(side=tk.LEFT)
+                     values=["All", "Restock", "Sale"], width=10, state="readonly").pack(side=tk.LEFT)
         self.restock_filter.trace_add("write", lambda *args: self.refresh_transactions())
 
         tk.Label(control_frame, text="Date:").pack(side=tk.LEFT, padx=(20, 0))
@@ -318,7 +321,9 @@ class TransactionTab:
             conn.commit()
             conn.close()
             self.refresh_transactions()
-            self.main_app.refresh_product_list()
+            # Call the callback after a successful deletion
+            if self.on_refresh_callback:
+                self.on_refresh_callback()
 
     def transaction_form(self, mode, values=None, rowid=None):
         form = tk.Toplevel(self.frame)
@@ -421,25 +426,27 @@ class TransactionTab:
             cur = conn.cursor()
             # Use raw string values for lookup and insert
             cur.execute("SELECT brand FROM products WHERE type=? AND id=? AND od=? AND th=?",
-                        (type_, raw_id, raw_od, raw_th))
+                         (type_, raw_id, raw_od, raw_th))
             if not cur.fetchone():
                 conn.close()
                 return messagebox.showerror("Product Not Found", "This product does not exist. Please add it first.", parent=form)
 
             if mode == "Add":
                 cur.execute("""INSERT INTO transactions (date, type, id_size, od_size, th_size, name, quantity, price, is_restock)
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                             (date, type_, raw_id, raw_od, raw_th, name, qty, price, is_restock))
 
             else:
                 old_data = self.tran_tree.item(rowid)["values"]
                 cur.execute("""UPDATE transactions SET date=?, type=?, id_size=?, od_size=?, th_size=?, name=?, quantity=?, price=?, is_restock=?
-                               WHERE rowid=?""",
+                                 WHERE rowid=?""",
                             (date, type_, raw_id, raw_od, raw_th, name, qty, price, is_restock, rowid))
             conn.commit()
             conn.close()
             self.refresh_transactions()
-            self.main_app.refresh_product_list()
+            # Call the callback after a successful save
+            if self.on_refresh_callback:
+                self.on_refresh_callback()
             form.destroy()
 
         btn_row = tk.Frame(form)
