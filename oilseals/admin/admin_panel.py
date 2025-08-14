@@ -34,10 +34,16 @@ class AdminPanel:
 
         self.create_products_tab()
         # Pass the controller AND the callback to TransactionTab
-        TransactionTab(self.tabs, main_app, self.controller, on_refresh_callback=self.on_closing)
+        TransactionTab(self.tabs, main_app, self.controller, on_refresh_callback=self.refresh_all_tabs)
         
         # Add a protocol to call the callback when the window is closed
         self.win.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def refresh_all_tabs(self):
+        """Refresh products tab + main app without closing AdminPanel."""
+        self.refresh_products()
+        if self.on_close_callback:
+            self.on_close_callback()
 
     def on_closing(self):
         """Callback function to handle window closing and trigger refresh in the main app."""
