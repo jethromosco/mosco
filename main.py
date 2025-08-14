@@ -52,3 +52,5 @@ if __name__ == "__main__":
 
 #everything under ng admin di nagrerrefresh sa mm table sa trans window ok naman don lang talaga sa mm
 # ty (taiwan) NQK and NACTEC 
+
+#nung nagenter save sa transaction tab nag exit naguupdate na pero nagcclose

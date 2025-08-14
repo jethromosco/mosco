@@ -60,7 +60,8 @@ class InventoryApp(tk.Frame):
     def create_widgets(self):
         back_btn = tk.Button(self, text="← Back", anchor="w", padx=10, pady=5)
         if self.controller:
-            back_btn.config(command=lambda: self.controller.show_frame(getattr(self, "return_to", "HomePage")))
+            # Go back to the page set in self.return_to
+            back_btn.config(command=lambda: self.controller.go_back(self.return_to))
         else:
             back_btn.config(command=self.master.destroy)
         back_btn.pack(anchor="nw", padx=10, pady=(10, 0))
@@ -284,8 +285,15 @@ class InventoryApp(tk.Frame):
         }
 
         if self.controller:
-            self.controller.show_transaction_window(details, self, return_to=self.controller.get_current_frame_name())
+            # Ensure we always return to THIS MM page, not HomePage
+            for name, frame in self.controller.frames.items():
+                if frame is self:
+                    mm_frame_name = name
+                    break
+            else:
+                mm_frame_name = self.controller.get_current_frame_name()  # fallback
 
+            self.controller.show_transaction_window(details, self, return_to=mm_frame_name)
         else:
             win = tk.Toplevel(self)
             TransactionWindow(win, details, self)

@@ -7,7 +7,6 @@ class HomePage(tk.Frame):
         self.controller = controller
         self.configure(bg="#f0f0f0")
 
-        # Categories with nested structure
         categories = {
             "OIL SEALS": {"MM": None, "INCH": None},
             "O-RINGS": {
@@ -47,15 +46,12 @@ class HomePage(tk.Frame):
             "ETC. (SPECIAL)": {}
         }
 
-        # Center wrapper
         center_frame = tk.Frame(self, bg="#f0f0f0")
         center_frame.place(relx=0.5, rely=0.5, anchor="center")
 
-        # Title
         title = tk.Label(center_frame, text="MOSCO", font=("Arial", 28, "bold"), bg="#f0f0f0")
         title.pack(pady=(0, 40))
 
-        # Button grid
         button_frame = tk.Frame(center_frame, bg="#f0f0f0")
         button_frame.pack()
 
@@ -68,34 +64,39 @@ class HomePage(tk.Frame):
             )
             btn.grid(row=i // 2, column=i % 2, padx=20, pady=10)
 
-        # Exit button
         exit_btn = ttk.Button(center_frame, text="Exit", command=self.controller.root.quit)
         exit_btn.pack(pady=(40, 10))
 
 
 class CategoryPage(tk.Frame):
-    def __init__(self, parent, controller, category_name, sub_data):
+    def __init__(self, parent, controller, category_name, sub_data, return_to="HomePage"):
         super().__init__(parent)
         self.controller = controller
         self.category_name = category_name
+        self.return_to = return_to
         self.configure(bg="#f0f0f0")
 
-        # Center wrapper
+        # 🔹 Back button at top-left (like in InventoryApp)
+        back_btn = tk.Button(self, text="← Back", anchor="w", padx=10, pady=5)
+        back_btn.config(command=lambda: controller.go_back(self.return_to))
+        back_btn.pack(anchor="nw", padx=10, pady=(10, 0))
+
         center_frame = tk.Frame(self, bg="#f0f0f0")
         center_frame.place(relx=0.5, rely=0.5, anchor="center")
 
         title = tk.Label(center_frame, text=category_name, font=("Arial", 28, "bold"), bg="#f0f0f0")
         title.pack(pady=(0, 40))
 
+        # Subcategory buttons
         for name, sub in sub_data.items():
-            if sub is None:  # Final level — load inventory directly
+            if sub is None:
                 btn = ttk.Button(
                     center_frame,
                     text=name,
                     width=30,
                     command=lambda n=f"{self.category_name} {name}": controller.show_inventory_for(n)
                 )
-            else:  # Another subcategory page
+            else:
                 btn = ttk.Button(
                     center_frame,
                     text=name,
@@ -103,6 +104,3 @@ class CategoryPage(tk.Frame):
                     command=lambda n=name, s=sub: controller.show_subcategory(n, s)
                 )
             btn.pack(pady=10)
-
-        back_btn = ttk.Button(center_frame, text="Back", width=30, command=controller.go_back)
-        back_btn.pack(pady=40)

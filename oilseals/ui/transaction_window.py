@@ -20,7 +20,7 @@ class TransactionWindow(tk.Frame):
     def __init__(self, parent, details, controller, return_to):
         super().__init__(parent)
         self.controller = controller
-        self.return_to = return_to  # ← store the page we came from
+        self.return_to = return_to  # store the page we came from (should be MM)
         self.main_app = None
 
         self.configure(bg="white")
@@ -35,11 +35,10 @@ class TransactionWindow(tk.Frame):
         self._build_ui()
 
     def _build_ui(self):
-        # Back button (aligned with InventoryApp)
+        # Back button — directly goes to return_to frame
         back_btn = tk.Button(self, text="← Back", anchor="w", padx=10, pady=5)
-        if self.controller:
+        if self.controller and self.return_to:
             back_btn.config(command=lambda: self.controller.show_frame(self.return_to))
-
         else:
             back_btn.config(command=self.master.destroy)
         back_btn.pack(anchor="nw", padx=10, pady=(10, 0))
@@ -48,7 +47,7 @@ class TransactionWindow(tk.Frame):
         header = tk.Frame(self, bg="white")
         header.pack(fill=tk.X, padx=10, pady=(0, 10))
 
-        # Title + subtitle container (centered)
+        # Title + subtitle container
         title_frame = tk.Frame(header, bg="white")
         title_frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
 
@@ -77,7 +76,7 @@ class TransactionWindow(tk.Frame):
         self.stock_label.pack(pady=(5, 0))
         self.stock_label.bind("<Button-1>", self.open_stock_settings)
 
-        # Next section
+        # Location, notes, SRP area
         sub = tk.Frame(self, bg="white")
         sub.pack(fill=tk.X, padx=10, pady=(0, 5))
 
@@ -103,6 +102,7 @@ class TransactionWindow(tk.Frame):
 
         self.srp_entry = tk.Entry(right_frame, textvariable=self.srp_var, width=10)
 
+        # Transaction list
         self.tree = ttk.Treeview(
             self,
             columns=("date", "qty_restock", "cost", "name", "qty", "price", "stock"),
@@ -127,7 +127,6 @@ class TransactionWindow(tk.Frame):
         self.tree.tag_configure("red", foreground="red")
         self.tree.tag_configure("blue", foreground="blue")
         self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
 
     def show_save_status(self, message="Saved!", duration=2000):
         self.save_status_label.config(text=message)
