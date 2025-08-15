@@ -61,3 +61,6 @@ if __name__ == "__main__":
 #isama brand sa special type file name uploads/
 
 #actual green black jo
+
+#SPECIAL (VC) lagyan ng ganyan pero dapat readable as special pa din siya
+# or pede gawin pag MOS automatic na special type siya

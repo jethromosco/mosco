@@ -6,12 +6,9 @@ from collections import defaultdict
 from dataclasses import dataclass
 from ..database import connect_db
 from fractions import Fraction
-from .trans_aed import TransactionFormHandler # Import the new class
+from .trans_aed import TransactionFormHandler
 
-# ─────────────────────────────────────────────────────────────
-# Utility
-# ─────────────────────────────────────────────────────────────
-
+# Utility functions
 def center_window(win, width, height):
     win.update_idletasks()
     x = (win.winfo_screenwidth() // 2) - (width // 2)
@@ -27,17 +24,7 @@ def parse_date(text):
 def parse_date_db(text):
     return datetime.strptime(text, "%Y-%m-%d")
 
-# Note: parse_size_component is not used in the form anymore, but is kept for utility purposes
 def parse_size_component(s: str) -> float:
-    """
-    Parses a string that may be:
-      - decimal: "12.5"
-      - fraction: "3/4"
-      - mixed number: "1 1/2"
-      - integer: "12"
-    Returns float.
-    Raises ValueError on invalid input.
-    """
     if s is None:
         raise ValueError("Size component is missing")
     s = str(s).strip()
@@ -58,11 +45,6 @@ def parse_size_component(s: str) -> float:
     return float(s)
 
 def format_size_value(v: float) -> str:
-    """
-    Nicely format sizes:
-      - If whole number (e.g., 12.0) -> "12"
-      - Otherwise trim trailing zeros up to 4 decimal places -> e.g., "12.5", "0.75"
-    """
     if v is None:
         return ""
     try:
@@ -103,18 +85,17 @@ class TransactionTab:
         notebook.add(self.frame, text="Transactions")
 
         self.sort_direction = {}
-        self.filtered_records = [] # Store records for sorting and editing
+        self.filtered_records = []
 
         self.setup_controls()
         self.setup_treeview()
         
-        # Instantiate the new handler class
         self.form_handler = TransactionFormHandler(
             parent_frame=self.frame,
             treeview=self.tran_tree,
             on_refresh_callback=self.refresh_transactions
         )
-        self.form_handler._get_record_by_id = self._get_record_by_id # Bind the helper method
+        self.form_handler._get_record_by_id = self._get_record_by_id
 
         self.setup_buttons()
         self.refresh_transactions()
@@ -131,7 +112,7 @@ class TransactionTab:
         tk.Label(control_frame, text="Restock:").pack(side=tk.LEFT, padx=(20, 0))
         self.restock_filter = tk.StringVar(value="All")
         ttk.Combobox(control_frame, textvariable=self.restock_filter,
-                     values=["All", "Restock", "Sale"], width=10, state="readonly").pack(side=tk.LEFT)
+                     values=["All", "Restock", "Sale", "Actual", "Fabrication"], width=10, state="readonly").pack(side=tk.LEFT)
         self.restock_filter.trace_add("write", lambda *args: self.refresh_transactions())
 
         tk.Label(control_frame, text="Date:").pack(side=tk.LEFT, padx=(20, 0))
@@ -161,6 +142,7 @@ class TransactionTab:
         )
         self.tran_tree.tag_configure("red", foreground="red")
         self.tran_tree.tag_configure("blue", foreground="blue")
+        self.tran_tree.tag_configure("green", foreground="green") # Added green tag
 
         column_config = {
             "item": {"anchor": "center", "width": 180},
@@ -183,7 +165,6 @@ class TransactionTab:
         btn_frame = tk.Frame(self.frame)
         btn_frame.pack()
         
-        # Use the methods from the new handler class
         tk.Button(btn_frame, text="Add", command=self.form_handler.add_transaction).pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text="Edit", command=self.form_handler.edit_transaction).pack(side=tk.LEFT, padx=5)
         tk.Button(btn_frame, text="Delete", command=self.form_handler.delete_transaction).pack(side=tk.LEFT, padx=5)
@@ -193,7 +174,6 @@ class TransactionTab:
         self.frame.bind_all("<Delete>", lambda e: self.form_handler.delete_transaction())
 
     def refresh_transactions(self):
-        self.tran_tree.delete(*self.tran_tree.get_children())
         conn = connect_db()
         cur = conn.cursor()
         cur.execute("""
@@ -225,19 +205,26 @@ class TransactionTab:
             search_terms = keyword.split()
             if keyword and not all(term in item_tokens or term in name_str for term in search_terms):
                 continue
-            if restock_filter == "Restock" and not record.is_restock:
+            
+            is_actual = (record.is_restock == 2)
+            is_restock = (record.is_restock == 1)
+            is_sale = (record.is_restock == 0)
+            
+            if restock_filter == "Restock" and not is_restock:
                 continue
-            if restock_filter == "Sale" and record.is_restock:
+            if restock_filter == "Sale" and not is_sale:
                 continue
+            if restock_filter == "Actual" and not is_actual:
+                continue
+            
             filtered.append(record)
-
-        self.filtered_records = filtered # Store the filtered records
+        
+        self.filtered_records = filtered
         self.render_transactions(self.filtered_records)
         if self.on_refresh_callback:
             self.on_refresh_callback()
 
     def _get_record_by_id(self, rowid):
-        # Helper to retrieve a full record object by its rowid
         for record in self.filtered_records:
             if record.rowid == rowid:
                 return record
@@ -245,33 +232,48 @@ class TransactionTab:
 
     def render_transactions(self, records):
         self.tran_tree.delete(*self.tran_tree.get_children())
-
-        # Group transactions by (type, id_size, od_size, th_size, brand)
-        grouped = defaultdict(list)
+        
+        # We need to process the records chronologically to calculate running stock correctly
+        records.sort(key=lambda r: (r.date, r.rowid))
+        
+        running_stock_map = defaultdict(int)
+        
+        # Calculate running stock with special handling for "Actual" transactions
+        all_rows = []
         for record in records:
             item_key = (record.type, record.id_size, record.od_size, record.th_size, record.brand)
-            grouped[item_key].append(record)
+            
+            if record.is_restock == 2:  # 'Actual' transaction
+                running_stock_map[item_key] = record.quantity # Reset stock to the quantity value
+            else: # Restock or Sale
+                running_stock_map[item_key] += record.quantity
+            
+            all_rows.append((record, running_stock_map[item_key]))
 
-        all_rows = []
-        for item_key, item_records in grouped.items():
-            # Sort by ascending date for correct running stock calculation
-            item_records.sort(key=lambda r: parse_date_db(r.date))
-            running_stock = 0
-            for record in item_records:
-                running_stock += record.quantity
-                all_rows.append((record, running_stock))
-
-        # Now sort all_rows by descending date for display
-        all_rows.sort(key=lambda x: parse_date_db(x[0].date), reverse=True)
+        # After calculating running stock for all_rows:
+        all_rows.sort(key=lambda x: (x[0].date, x[0].rowid), reverse=True) # Descending date
 
         for record, stock in all_rows:
             item_str = f"{record.type} {record.id_size}-{record.od_size}-{record.th_size} {record.brand}"
             formatted_date = parse_date_db(record.date).strftime("%m/%d/%y")
-            cost = format_currency(record.price) if record.is_restock else ""
-            price_str = format_currency(record.price) if not record.is_restock else ""
-            tag = "blue" if record.is_restock else "red"
-            qty_restock = record.quantity if record.is_restock else ""
-            qty_sale = abs(record.quantity) if not record.is_restock else ""
+            
+            cost = ""
+            price_str = ""
+            qty_restock = ""
+            qty_sale = ""
+            
+            tag = "gray"  # Default tag
+            if record.is_restock == 1: # Restock
+                tag = "blue"
+                cost = format_currency(record.price)
+                qty_restock = record.quantity
+            elif record.is_restock == 0: # Sale
+                tag = "red"
+                price_str = format_currency(record.price)
+                qty_sale = abs(record.quantity)
+            elif record.is_restock == 2: # Actual
+                tag = "green"
+            
             self.tran_tree.insert("", tk.END, iid=record.rowid, values=(
                 item_str, formatted_date, qty_restock, cost, record.name,
                 qty_sale, price_str, stock
@@ -290,7 +292,7 @@ class TransactionTab:
             elif col == "date":
                 return record.date
             elif col == "qty_restock" or col == "qty":
-                return abs(record.quantity)
+                return abs(record.quantity) if record.is_restock in [0, 1] else 0 # Only quantities for restock/sale
             elif col == "cost" or col == "price":
                 return record.price
             elif col == "name":

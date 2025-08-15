@@ -126,6 +126,7 @@ class TransactionWindow(tk.Frame):
 
         self.tree.tag_configure("red", foreground="red")
         self.tree.tag_configure("blue", foreground="blue")
+        self.tree.tag_configure("green", foreground="green")  # Added green tag for Actual
         self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
     def show_save_status(self, message="Saved!", duration=2000):
@@ -173,10 +174,13 @@ class TransactionWindow(tk.Frame):
 
     def load_transactions(self):
         with db_cursor() as cur:
-            cur.execute("""SELECT date, name, quantity, price, is_restock FROM transactions
-                        WHERE type=? AND id_size=? AND od_size=? AND th_size=?
-                        ORDER BY date ASC""",
-                        (self.details["type"], self.details["id"], self.details["od"], self.details["th"]))
+            cur.execute("""
+                SELECT t.date, t.name, t.quantity, t.price, t.is_restock, p.brand
+                FROM transactions t
+                JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th
+                WHERE t.type=? AND t.id_size=? AND t.od_size=? AND t.th_size=?
+                ORDER BY t.date ASC
+            """, (self.details["type"], self.details["id"], self.details["od"], self.details["th"]))
             rows = cur.fetchall()
 
         self.header_label.config(
@@ -188,36 +192,51 @@ class TransactionWindow(tk.Frame):
         subtitle = f"{part} | {country}" if part else country
         self.sub_header_label.config(text=subtitle)
 
-        stock_by_row = []
-        running_stock = 0
-        for row in rows:
-            qty = row[2]
-            running_stock += qty
-            stock_by_row.append((row, running_stock))
-
         self.tree.delete(*self.tree.get_children())
 
-        for row, stock in reversed(stock_by_row):
-            date, name, qty, price, is_restock = row
-            date_str = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%y")
-            qty_restock = qty if is_restock else ""
-            cost = f"₱{price:.2f}" if is_restock else ""
-            price_str = f"₱{price:.2f}" if not is_restock else ""
-            display_qty = abs(qty) if not is_restock else ""
-            tag = "blue" if is_restock else "red"
+        running_stock = 0
+        for row in rows:
+            date, name, qty, price, is_restock, brand = row
+            
+            # --- Key change: Handle 'Actual' transactions correctly ---
+            if is_restock == 2:  # 2 is for 'Actual'
+                running_stock = qty  # Reset stock to this new value
+            else: # Restock (1) or Sale (0)
+                running_stock += qty
 
-            self.tree.insert("", tk.END, values=(date_str, qty_restock, cost, name, display_qty, price_str, abs(stock)), tags=(tag,))
+            date_str = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%y")
+            
+            qty_restock = ""
+            cost = ""
+            price_str = ""
+            display_qty = ""
+            tag = ""
+
+            if is_restock == 1:  # Restock
+                qty_restock = qty
+                cost = f"₱{price:.2f}"
+                tag = "blue"
+            elif is_restock == 0:  # Sale
+                display_qty = abs(qty)
+                price_str = f"₱{price:.2f}"
+                tag = "red"
+            elif is_restock == 2: # Actual
+                tag = "green"
+            
+            self.tree.insert("", 0, values=(
+                date_str, qty_restock, cost, name, display_qty, price_str, running_stock
+            ), tags=(tag,))
 
         with db_cursor() as cur:
             cur.execute("""SELECT low_threshold, warn_threshold FROM products
-                        WHERE type=? AND id=? AND od=? AND th=? AND part_no=?""",
-                        (self.details["type"], self.details["id"], self.details["od"],
-                        self.details["th"], self.details["part_no"]))
+                         WHERE type=? AND id=? AND od=? AND th=? AND brand=?""",
+                         (self.details["type"], self.details["id"], self.details["od"],
+                          self.details["th"], self.details["brand"]))
             thresholds = cur.fetchone()
 
-        low = thresholds[0] if thresholds else 0
-        warn = thresholds[1] if thresholds else 5
-        stock = abs(running_stock)
+        low = thresholds[0] if thresholds and thresholds[0] is not None else 0
+        warn = thresholds[1] if thresholds and thresholds[1] is not None else 5
+        stock = running_stock
 
         color = "green"
         if stock <= low:
@@ -294,8 +313,8 @@ class TransactionWindow(tk.Frame):
                   self.details["th"], self.details["part_no"]))
             row = cur.fetchone()
 
-        low_var.set(row[0] if row else 0)
-        warn_var.set(row[1] if row else 5)
+        low_var.set(row[0] if row and row[0] is not None else 0)
+        warn_var.set(row[1] if row and row[1] is not None else 5)
 
         tk.Entry(settings, textvariable=low_var).pack()
         tk.Label(settings, text="Warning Threshold (Orange):").pack(pady=(10, 0))

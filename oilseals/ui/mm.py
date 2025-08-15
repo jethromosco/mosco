@@ -187,7 +187,7 @@ class InventoryApp(tk.Frame):
             cur = conn.cursor()
 
             query = """SELECT type, id, od, th, brand, part_no, country_of_origin, notes, price 
-                       FROM products WHERE 1=1"""
+                        FROM products WHERE 1=1"""
             params = []
             for key, var in self.search_vars.items():
                 val = self.get_var(key)
@@ -199,10 +199,24 @@ class InventoryApp(tk.Frame):
             cur.execute(query, params)
             products = cur.fetchall()
 
-            cur.execute("""SELECT type, id_size, od_size, th_size, SUM(quantity)
-                           FROM transactions GROUP BY type, id_size, od_size, th_size""")
-            stock_map = {(r[0], r[1], r[2], r[3]): r[4] for r in cur.fetchall()}
-
+            # --- UPDATED STOCK CALCULATION LOGIC ---
+            # Instead of a simple SUM, we now build a map of transactions per item
+            cur.execute("""SELECT type, id_size, od_size, th_size, quantity, is_restock 
+                           FROM transactions ORDER BY date ASC""")
+            all_transactions = cur.fetchall()
+            
+            stock_map = {}
+            for row in all_transactions:
+                type_, id_raw, od_raw, th_raw, quantity, is_restock = row
+                key = (type_, id_raw, od_raw, th_raw)
+                
+                # Check for an 'Actual' transaction
+                if is_restock == 2:
+                    stock_map[key] = quantity
+                else:
+                    stock_map[key] = stock_map.get(key, 0) + quantity
+            # ----------------------------------------
+            
         display_data = []
         for row in products:
             type_, id_raw, od_raw, th_raw, brand, part_no, origin, notes, price = row
@@ -220,11 +234,14 @@ class InventoryApp(tk.Frame):
         def parse_thickness_sort(th_raw):
             th_raw = str(th_raw).strip()
             if "/" in th_raw:
-                main, sub = th_raw.split("/", 1)
                 try:
-                    return (float(main), float(sub))
+                    main, sub = map(float, th_raw.split("/", 1))
+                    return (main, sub)
                 except Exception:
-                    return (float(main), 0)
+                    try:
+                        return (float(th_raw.split("/")[0]), 0)
+                    except ValueError:
+                        return (0, 0)
             else:
                 try:
                     return (float(th_raw), 0)
