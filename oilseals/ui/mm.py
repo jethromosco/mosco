@@ -130,7 +130,7 @@ class InventoryApp(tk.Frame):
 
     def open_admin_panel(self):
         password = simpledialog.askstring("Admin Access", "Enter password:", show="*")
-        if password == "569656":
+        if password == "1":
             current_frame_name = self.controller.get_current_frame_name()
             current_frame = self.controller.frames[current_frame_name]
             # Pass the refresh function as a callback

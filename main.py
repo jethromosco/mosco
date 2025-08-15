@@ -64,3 +64,5 @@ if __name__ == "__main__":
 
 #SPECIAL (VC) lagyan ng ganyan pero dapat readable as special pa din siya
 # or pede gawin pag MOS automatic na special type siya
+
+# JO mahirap pagsamahin kasi nageerror
