@@ -407,10 +407,7 @@ class TransactionTab:
                 raw_id = vars["ID"].get().strip()
                 raw_od = vars["OD"].get().strip()
                 raw_th = vars["TH"].get().strip()
-                # Validate only (do not convert)
-                parse_size_component(raw_id)
-                parse_size_component(raw_od)
-                parse_size_component(raw_th)
+                # The parse_size_component calls have been removed from here.
                 brand = vars["Brand"].get().strip().upper()
                 name = vars["Name"].get().strip().upper()
                 qty = abs(int(vars["Quantity"].get()))
@@ -433,14 +430,14 @@ class TransactionTab:
 
             if mode == "Add":
                 cur.execute("""INSERT INTO transactions (date, type, id_size, od_size, th_size, name, quantity, price, is_restock)
-                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                            (date, type_, raw_id, raw_od, raw_th, name, qty, price, is_restock))
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                 (date, type_, raw_id, raw_od, raw_th, name, qty, price, is_restock))
 
             else:
                 old_data = self.tran_tree.item(rowid)["values"]
                 cur.execute("""UPDATE transactions SET date=?, type=?, id_size=?, od_size=?, th_size=?, name=?, quantity=?, price=?, is_restock=?
-                                 WHERE rowid=?""",
-                            (date, type_, raw_id, raw_od, raw_th, name, qty, price, is_restock, rowid))
+                                     WHERE rowid=?""",
+                                 (date, type_, raw_id, raw_od, raw_th, name, qty, price, is_restock, rowid))
             conn.commit()
             conn.close()
             self.refresh_transactions()

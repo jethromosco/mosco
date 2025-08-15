@@ -54,3 +54,9 @@ if __name__ == "__main__":
 # ty (taiwan) NQK and NACTEC 
 
 #nung nagenter save sa transaction tab nag exit naguupdate na pero nagcclose
+
+#5/6.5 invalid literal for fraction -transaction tab
+
+#isama brand sa special type file name uploads
+
+#actual green black jo

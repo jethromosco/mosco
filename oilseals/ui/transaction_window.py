@@ -319,6 +319,10 @@ class TransactionWindow(tk.Frame):
             messagebox.showinfo("Not Allowed", "Photo upload is only allowed for SPECIAL type products.")
             return
 
+        if 'brand' not in self.details:
+            messagebox.showerror("Error", "Product details missing 'brand' information.")
+            return
+
         file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.jpeg *.png")])
         if not file_path:
             return  # User cancelled
@@ -329,7 +333,9 @@ class TransactionWindow(tk.Frame):
             return
 
         photos_dir = os.path.join(os.path.dirname(__file__), "..", "photos")
-        filename = f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}{ext}"
+        safe_th = self.details['th'].replace('/', 'x')
+        safe_brand = self.details['brand'].replace('/', 'x').replace(' ', '_') # Sanitize brand for filename
+        filename = f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{safe_th}-{safe_brand}{ext}"
         save_path = os.path.join(photos_dir, filename)
 
         img = Image.open(file_path).convert("RGB")
@@ -340,9 +346,11 @@ class TransactionWindow(tk.Frame):
                 break
             quality -= 5
 
+        # Remove old photo files (without brand in filename)
+        base_old = f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}"
         for old_ext in [".jpg", ".jpeg", ".png"]:
-            old_path = os.path.join(photos_dir, f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}{old_ext}")
-            if old_path != save_path and os.path.exists(old_path):
+            old_path = os.path.join(photos_dir, base_old + old_ext)
+            if os.path.exists(old_path):
                 os.remove(old_path)
 
         self.image_path = save_path
@@ -371,36 +379,64 @@ class TransactionWindow(tk.Frame):
         if not os.path.exists(self.image_path):
             return
 
+        # If item is not special, just open photo immediately
+        if self.details["type"].upper() != "SPECIAL":
+            self.show_fullscreen_photo()
+            return
+
+        # If a menu already exists, destroy it
+        if hasattr(self, "photo_menu") and self.photo_menu and self.photo_menu.winfo_exists():
+            self.photo_menu.destroy()
+            self.photo_menu = None
+            return
+
+        # Create menu popup
         popup = tk.Toplevel(self)
+        self.photo_menu = popup
         popup.overrideredirect(True)
-        popup.geometry(f"+{event.x_root}+{event.y_root}")
         popup.attributes("-topmost", True)
 
+        # Position popup in the center of the thumbnail
+        x = self.photo_label.winfo_rootx() + self.photo_label.winfo_width() // 2 - 50
+        y = self.photo_label.winfo_rooty() + self.photo_label.winfo_height() // 2 - 15
+        popup.geometry(f"+{x}+{y}")
+
+        def close_menu(event=None):
+            if popup and popup.winfo_exists():
+                popup.destroy()
+                self.photo_menu = None
+
         def view():
-            popup.destroy()
+            close_menu()
             self.show_fullscreen_photo()
 
         def delete():
-            popup.destroy()
+            close_menu()
             if messagebox.askyesno("Delete Photo", "Are you sure you want to delete this photo?"):
                 os.remove(self.image_path)
                 self.load_photo()
 
+        # Menu buttons
         tk.Button(popup, text="🔍 View", command=view, width=10).pack()
-
         if self.details["type"].upper() == "SPECIAL":
             tk.Button(popup, text="🗑 Delete", command=delete, width=10).pack()
 
+        popup.bind("<FocusOut>", lambda e: close_menu())
+        popup.focus_set()
+
     def get_photo_path_by_type(self):
         photos_dir = os.path.join(os.path.dirname(__file__), "..", "photos")
-        # For special type, use current product photo logic
+        # For special type, use current product photo logic with brand
         if self.details["type"].upper() == "SPECIAL":
-            # Return current product photo path
+            if 'brand' not in self.details:
+                return "" # Cannot find image if brand is missing in details
+            safe_th = self.details['th'].replace('/', 'x')
+            safe_brand = self.details['brand'].replace('/', 'x').replace(' ', '_')
             for ext in [".jpg", ".jpeg", ".png"]:
-                path = os.path.join(photos_dir, f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{self.details['th']}{ext}")
+                path = os.path.join(photos_dir, f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{safe_th}-{safe_brand}{ext}")
                 if os.path.exists(path):
                     return path
-            return ""  # No photo found for special
+            return ""  # No photo found for special with brand
         else:
             # For other types: shared photo by type with .jpg or .png fallback
             for ext in [".jpg", ".png"]:
@@ -410,6 +446,7 @@ class TransactionWindow(tk.Frame):
             # Placeholder fallback path (adjust to your placeholder image location)
             placeholder = os.path.join(photos_dir, "placeholder.png")
             return placeholder if os.path.exists(placeholder) else ""
+        
     def show_fullscreen_photo(self):
         if not os.path.exists(self.image_path):
             return  # No photo to show
