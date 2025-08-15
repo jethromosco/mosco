@@ -3,7 +3,7 @@ from tkinter import ttk, simpledialog, messagebox
 from ..database import connect_db
 from .transaction_window import TransactionWindow
 from fractions import Fraction
-from oilseals.admin.admin_panel import AdminPanel
+from oilseals.admin.products import AdminPanel
 
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
