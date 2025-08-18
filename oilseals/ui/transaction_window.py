@@ -334,8 +334,9 @@ class TransactionWindow(tk.Frame):
         tk.Button(settings, text="Save", command=save_thresholds).pack(pady=10)
 
     def upload_photo(self):
-        if self.details["type"].upper() != "SPECIAL":
-            messagebox.showinfo("Not Allowed", "Photo upload is only allowed for SPECIAL type products.")
+        # Changed from checking type == "SPECIAL" to checking brand == "MOS"
+        if self.details["brand"].upper() != "MOS":
+            messagebox.showinfo("Not Allowed", "Photo upload is only allowed for MOS brand products.")
             return
 
         if 'brand' not in self.details:
@@ -383,13 +384,15 @@ class TransactionWindow(tk.Frame):
             img.thumbnail((60, 60))
             self.image_thumbnail = ImageTk.PhotoImage(img)
             self.photo_label.config(image=self.image_thumbnail)
-            if self.details["type"].upper() == "SPECIAL":
+            # Changed from checking type == "SPECIAL" to checking brand == "MOS"
+            if self.details["brand"].upper() == "MOS":
                 self.upload_button.pack_forget()
             else:
-                self.upload_button.pack_forget()  # No upload button for other types
+                self.upload_button.pack_forget()  # No upload button for other brands
         else:
             self.photo_label.config(image="", bg="#ddd")
-            if self.details["type"].upper() == "SPECIAL":
+            # Changed from checking type == "SPECIAL" to checking brand == "MOS"
+            if self.details["brand"].upper() == "MOS":
                 self.upload_button.pack()
             else:
                 self.upload_button.pack_forget()
@@ -398,8 +401,9 @@ class TransactionWindow(tk.Frame):
         if not os.path.exists(self.image_path):
             return
 
-        # If item is not special, just open photo immediately
-        if self.details["type"].upper() != "SPECIAL":
+        # Changed from checking type == "SPECIAL" to checking brand == "MOS"
+        # If item is not MOS brand, just open photo immediately
+        if self.details["brand"].upper() != "MOS":
             self.show_fullscreen_photo()
             return
 
@@ -437,7 +441,8 @@ class TransactionWindow(tk.Frame):
 
         # Menu buttons
         tk.Button(popup, text="🔍 View", command=view, width=10).pack()
-        if self.details["type"].upper() == "SPECIAL":
+        # Changed from checking type == "SPECIAL" to checking brand == "MOS"
+        if self.details["brand"].upper() == "MOS":
             tk.Button(popup, text="🗑 Delete", command=delete, width=10).pack()
 
         popup.bind("<FocusOut>", lambda e: close_menu())
@@ -445,8 +450,9 @@ class TransactionWindow(tk.Frame):
 
     def get_photo_path_by_type(self):
         photos_dir = os.path.join(os.path.dirname(__file__), "..", "photos")
-        # For special type, use current product photo logic with brand
-        if self.details["type"].upper() == "SPECIAL":
+        # Changed from checking type == "SPECIAL" to checking brand == "MOS"
+        # For MOS brand, use current product photo logic with brand
+        if self.details["brand"].upper() == "MOS":
             if 'brand' not in self.details:
                 return "" # Cannot find image if brand is missing in details
             safe_th = self.details['th'].replace('/', 'x')
@@ -455,9 +461,9 @@ class TransactionWindow(tk.Frame):
                 path = os.path.join(photos_dir, f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{safe_th}-{safe_brand}{ext}")
                 if os.path.exists(path):
                     return path
-            return ""  # No photo found for special with brand
+            return ""  # No photo found for MOS with brand
         else:
-            # For other types: shared photo by type with .jpg or .png fallback
+            # For other brands: shared photo by type with .jpg or .png fallback
             for ext in [".jpg", ".png"]:
                 path = os.path.join(photos_dir, f"{self.details['type'].lower()}{ext}")
                 if os.path.exists(path):

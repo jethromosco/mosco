@@ -10,10 +10,15 @@ from .trans_aed import TransactionFormHandler
 
 # Utility functions
 def center_window(win, width, height):
-    win.update_idletasks()
+    # Calculate center position
     x = (win.winfo_screenwidth() // 2) - (width // 2)
     y = (win.winfo_screenheight() // 2) - (height // 2)
+    
+    # Set geometry with position BEFORE showing
     win.geometry(f"{width}x{height}+{x}+{y}")
+    
+    # Update to ensure proper positioning
+    win.update_idletasks()
 
 def format_currency(val):
     return f"\u20B1{val:.2f}"
@@ -86,6 +91,7 @@ class TransactionTab:
 
         self.sort_direction = {}
         self.filtered_records = []
+        self.date_filter_active = False  # Track if date filter should be active
 
         self.setup_controls()
         self.setup_treeview()
@@ -122,16 +128,38 @@ class TransactionTab:
             date_pattern="mm/dd/yy",
             width=12,
             showweeknumbers=False,
-            textvariable=self.date_var
+            textvariable=self.date_var,
+            state="readonly"  # Make the text field non-editable
         )
         self.date_filter.pack(side=tk.LEFT)
         self.date_var.set("")
-        self.date_var.trace_add("write", lambda *args: self.refresh_transactions())
+        
+        # Only bind to calendar selection since text field is readonly
+        self.date_filter.bind('<<DateEntrySelected>>', self.on_date_selected)
 
-        tk.Button(control_frame, text="All", command=self.clear_date_filter).pack(side=tk.LEFT, padx=(5, 0))
+        self.clear_btn = tk.Button(control_frame, text="All", command=self.clear_date_filter)
+        self.clear_btn.pack(side=tk.LEFT, padx=(5, 0))
+
+    def on_date_selected(self, event=None):
+        """Handle when user selects a date from the calendar"""
+        # Small delay to ensure the date is set properly
+        self.frame.after(50, self.apply_date_filter)
+        # Remove focus from date field after selection
+        self.frame.after(100, lambda: self.frame.focus_set())
+
+    def apply_date_filter(self):
+        """Apply the date filter and refresh"""
+        self.date_filter_active = bool(self.date_var.get().strip())
+        self.refresh_transactions()
 
     def clear_date_filter(self):
+        """Clear the date filter and remove focus from date field"""
         self.date_var.set("")
+        self.date_filter_active = False
+        # Remove focus from the DateEntry widget
+        self.frame.focus_set()
+        # Refresh after clearing
+        self.refresh_transactions()
 
     def setup_treeview(self):
         self.tran_tree = ttk.Treeview(
@@ -188,11 +216,41 @@ class TransactionTab:
         keyword = self.tran_search_var.get().lower()
         restock_filter = self.restock_filter.get()
 
+        # Only apply date filter if it's been activated
         date_str = self.date_var.get().strip()
-        try:
-            filter_date = parse_date(date_str).date() if date_str else None
-        except Exception:
-            filter_date = None
+        filter_date = None
+        if self.date_filter_active and date_str:
+            try:
+                filter_date = parse_date(date_str).date()
+            except Exception:
+                filter_date = None
+
+        # Group records to identify Fabrication transactions
+        fabrication_records = set()
+        
+        # First pass: identify Fabrication transactions by checking the transaction type in the database
+        conn2 = connect_db()
+        cur2 = conn2.cursor()
+        cur2.execute("SELECT DISTINCT date, type, id_size, od_size, th_size, name FROM transactions WHERE type IN (SELECT DISTINCT type FROM transactions WHERE type LIKE '%fabrication%' OR type = 'Fabrication')")
+        fab_rows = cur2.fetchall()
+        conn2.close()
+        
+        # Actually, let's use a simpler approach - check if there are matching restock/sale pairs on same date
+        date_item_groups = defaultdict(list)
+        for row in rows:
+            record = TransactionRecord(*row)
+            key = (record.date, record.type, record.id_size, record.od_size, record.th_size, record.name)
+            date_item_groups[key].append(record)
+        
+        # Identify fabrication records (same date, same item, one restock + one sale)
+        for key, records in date_item_groups.items():
+            if len(records) == 2:
+                has_restock = any(r.is_restock == 1 for r in records)
+                has_sale = any(r.is_restock == 0 for r in records)
+                if has_restock and has_sale:
+                    # These are fabrication records
+                    for record in records:
+                        fabrication_records.add(record.rowid)
 
         filtered = []
         for row in rows:
@@ -207,14 +265,17 @@ class TransactionTab:
                 continue
             
             is_actual = (record.is_restock == 2)
-            is_restock = (record.is_restock == 1)
-            is_sale = (record.is_restock == 0)
+            is_restock = (record.is_restock == 1 and record.rowid not in fabrication_records)
+            is_sale = (record.is_restock == 0 and record.rowid not in fabrication_records)
+            is_fabrication = (record.rowid in fabrication_records)
             
             if restock_filter == "Restock" and not is_restock:
                 continue
             if restock_filter == "Sale" and not is_sale:
                 continue
             if restock_filter == "Actual" and not is_actual:
+                continue
+            if restock_filter == "Fabrication" and not is_fabrication:
                 continue
             
             filtered.append(record)

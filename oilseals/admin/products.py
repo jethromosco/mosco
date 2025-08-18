@@ -102,7 +102,7 @@ class AdminPanel:
         cur.execute("""
             SELECT type, id, od, th, brand, part_no, country_of_origin, notes, price
             FROM products
-            ORDER BY type ASC, id ASC, od ASC, th ASC
+            ORDER BY id ASC, od ASC, th ASC
         """)
         rows = cur.fetchall()
         conn.close()

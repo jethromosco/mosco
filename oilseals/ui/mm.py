@@ -129,14 +129,21 @@ class InventoryApp(tk.Frame):
         admin_btn.pack(side=tk.RIGHT)
 
     def open_admin_panel(self):
-        password = simpledialog.askstring("Admin Access", "Enter password:", show="*")
-        if password == "1":
-            current_frame_name = self.controller.get_current_frame_name()
-            current_frame = self.controller.frames[current_frame_name]
-            # Pass the refresh function as a callback
-            AdminPanel(self.controller.root, current_frame, self.controller, on_close_callback=self.refresh_product_list)
-        else:
-            messagebox.showerror("Access Denied", "Incorrect password.")
+        while True:
+            password = simpledialog.askstring("Admin Access", "Enter password:", show="*")
+            
+            # If user clicks Cancel or closes the dialog, password will be None
+            if password is None:
+                break
+                
+            if password == "1":
+                current_frame_name = self.controller.get_current_frame_name()
+                current_frame = self.controller.frames[current_frame_name]
+                # Pass the refresh function as a callback
+                AdminPanel(self.controller.root, current_frame, self.controller, on_close_callback=self.refresh_product_list)
+                break
+            else:
+                messagebox.showerror("Access Denied", "Incorrect password. Please try again.")
 
     def update_inch_label(self, key):
         raw_value = self.get_var(key)

@@ -11,25 +11,14 @@ if __name__ == "__main__":
     root.mainloop()
 
 # 7/8 tsaka yung decimals /
-
-# actual check (green) transactiaction tab + FAB MOS 4 BTNS - sa black yung JO
-
-# 
+# actual check (green) transactiaction tab + FAB MOS 4 BTNS - sa black yung JO /
 # inventroy app country - gawin brand /
-# 
-#  _ taiwan T.Y magkakasama _ NOK = NACTEC
-# 
 # lipat admin sa loob ng oil seal/
 # lipat db sa loob/
 # diff db per cat./
-
 # oilsseal per type picture/
 # special upload button (no type)/
-
-# C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
-
 # now in searches 9/10 should be 0.354/0.394 not 0.035 /
-
 # TODO: Move admin panel inside each category folder (e.g., oilseals/admin)/
 # TODO: Move each category's database file inside its own folder (e.g., oilseals/database/oilseals.db)/
 # TODO: Create separate folders for each product category (oilseals, bearings, filters, etc.)/
@@ -43,26 +32,24 @@ if __name__ == "__main__":
 # TODO: Add clear filters button in the UI
 # TODO: Add user-friendly error messages and input validation
 # TODO: Optimize database queries and consider pagination for large inventories
-# TODO: Add README.md and requirements.txt for project documentation and setup
-# TODO: Add basic unit tests for utility functions and database operations
 
 #photo upload sa special di siguro gagana bc of /
-
 #back button returning to home page instead of previous category hard fix/
-
 #everything under ng admin di nagrerrefresh sa mm table sa trans window ok naman don lang talaga sa mm/
+#nung nagenter save sa transaction tab nag exit naguupdate na pero nagcclose/
+#5/6.5 invalid literal for fraction -transaction tab/
+#isama brand sa special type file name uploads/
+#SPECIAL (VC) lagyan ng ganyan pero dapat readable as special pa din siya --
+# or pede gawin pag MOS automatic na special type siya/
+
+# TODO: Add README.md and requirements.txt for project documentation and setup
+
+# C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
+
+
+
+# JO di mapagsama sa isang line ang "finabricate" at "nabenta" due to formulas present
+# ginawang magkahiwalay = fab (blue) and sold (red)
 
 # ty (taiwan) NQK and NACTEC 
-
-#nung nagenter save sa transaction tab nag exit naguupdate na pero nagcclose/
-
-#5/6.5 invalid literal for fraction -transaction tab/
-
-#isama brand sa special type file name uploads/
-
-#actual green black jo
-
-#SPECIAL (VC) lagyan ng ganyan pero dapat readable as special pa din siya
-# or pede gawin pag MOS automatic na special type siya
-
-# JO mahirap pagsamahin kasi nageerror
+# ipaconfirm kung mas ok hindi kasi may search filters na

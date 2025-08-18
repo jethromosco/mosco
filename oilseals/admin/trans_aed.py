@@ -70,7 +70,10 @@ class TransactionFormHandler:
     def _transaction_form(self, mode, record=None, rowid=None):
         form = tk.Toplevel(self.parent_frame)
         form.title(f"{mode} Transaction")
-        # Removed fixed geometry to enable fitting based on content
+        
+        # IMPORTANT FIX: Make window invisible initially to prevent flashing
+        form.withdraw()
+        
         form.resizable(False, False)
         form.bind("<Escape>", lambda e: form.destroy())
         form.transient(self.parent_frame.winfo_toplevel())
@@ -422,11 +425,14 @@ class TransactionFormHandler:
         save_btn.pack(anchor="center")
         form.bind("<Return>", save)
 
-        # Center and size window to content BEFORE focus & lift
+        # IMPORTANT FIX: Center window and show it properly to prevent flashing
         form.update_idletasks()
-        w = form.winfo_width()
-        h = form.winfo_height()
+        w = form.winfo_reqwidth()
+        h = form.winfo_reqheight()
         center_window(form, w, h)
-
+        
+        # Now make the window visible
+        form.deiconify()
+        
         form.focus_force()
         form.lift()
