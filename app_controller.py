@@ -1,7 +1,8 @@
 import tkinter as tk
 from oilseals.ui.transaction_window import TransactionWindow
 from oilseals.ui.mm import InventoryApp
-from home_page import HomePage, CategoryPage
+from home_page import HomePage, CategoryPage, ComingSoonPage
+
 
 CATEGORY_FOLDER_MAP = {
     "OIL SEALS": "oilseals",
@@ -10,18 +11,20 @@ CATEGORY_FOLDER_MAP = {
     "O-RING KITS": "oringkits",
     "QUAD RINGS (AIR SEALS)": "quadrings",
     "PACKING SEALS": "packingseals",
+    "MECHANICAL SHAFT SEALS": None,  # placeholder
     "LOCK RINGS (CIRCLIPS)": "lockrings",
     "V-RINGS": "vrings",
     "PISTON CUPS": "pistoncups",
-    "OIL CAPS": "oilcaps",
-    "RUBBER DIAPHRAGMS": "rubberdiaphragms",
-    "COUPLING INSERTS": "couplinginserts",
-    "IMPELLERS": "impellers",
-    "BALL BEARINGS": "ballbearings",
-    "BUSHINGS (FLAT RINGS)": "bushings",
-    "GREASE & SEALANTS": "grease_sealants",
-    "ETC. (SPECIAL)": "etc_special",
+    "OIL CAPS": None,
+    "RUBBER DIAPHRAGMS": None,
+    "COUPLING INSERTS": None,
+    "IMPELLERS": None,
+    "BALL BEARINGS": None,
+    "BUSHINGS (FLAT RINGS)": None,
+    "GREASE & SEALANTS": None,
+    "ETC. (SPECIAL)": None,
 }
+
 
 class AppController:
     def __init__(self, root):
@@ -50,9 +53,12 @@ class AppController:
         frame.grid(row=0, column=0, sticky="nsew")
 
     def show_subcategory(self, name, sub_data):
-        # Figure out where the Back button should go
         current_frame = self.get_current_frame_name()
         return_target = current_frame if current_frame else "HomePage"
+
+        if sub_data == "COMING_SOON":
+            self.show_coming_soon(name)
+            return
 
         if not sub_data:
             self.show_inventory_for(name)
@@ -81,7 +87,8 @@ class AppController:
                 self.frames[frame_name] = frame
                 frame.grid(row=0, column=0, sticky="nsew")
             except ModuleNotFoundError:
-                print(f"⚠ Inventory app for '{category_name}' not yet implemented.")
+                # instead of printing, show "Coming Soon"
+                self.show_coming_soon(category_name)
                 return
         self.show_frame(frame_name)
 
@@ -112,3 +119,11 @@ class AppController:
         self.frames["TransactionWindow"] = frame
         frame.grid(row=0, column=0, sticky="nsew")
         frame.tkraise()
+
+    def show_coming_soon(self, category_name):
+        frame_name = f"{category_name}ComingSoon"
+        if frame_name not in self.frames:
+            frame = ComingSoonPage(self.container, self, category_name, return_to="HomePage")
+            self.frames[frame_name] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
+        self.show_frame(frame_name)
