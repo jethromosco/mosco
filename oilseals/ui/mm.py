@@ -77,6 +77,8 @@ class InventoryApp(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(self, fg_color="#000000", height=120)
         header_frame.pack(fill="x", padx=20, pady=(20, 0))
         header_frame.pack_propagate(False)
+        header_frame.grid_columnconfigure(0, weight=1)
+        header_frame.grid_columnconfigure(1, weight=0)
 
         back_btn = ctk.CTkButton(
             header_frame,
@@ -90,15 +92,17 @@ class InventoryApp(ctk.CTkFrame):
             height=50,
             command=lambda: self.controller.go_back(self.return_to) if self.controller else self.master.destroy()
         )
-        back_btn.pack(side="left", anchor="w", pady=35, padx=40)
+        back_btn.grid(row=0, column=0, sticky="w", padx=(40, 10), pady=35)
 
-        # === Search Section ===
-        search_frame = ctk.CTkFrame(self, fg_color="transparent", height=140)
-        search_frame.pack(fill="x", padx=40, pady=(20, 10))
-        search_frame.pack_propagate(False)
+        # === Search Section (containerized) ===
+        search_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
+        search_section.pack(fill="x", padx=20, pady=(20, 10))
 
-        entries_container = ctk.CTkFrame(search_frame, fg_color="transparent")
-        entries_container.pack(expand=True, pady=20)
+        search_inner = ctk.CTkFrame(search_section, fg_color="transparent")
+        search_inner.pack(fill="x", padx=30, pady=20)
+
+        entries_container = ctk.CTkFrame(search_inner, fg_color="transparent")
+        entries_container.pack(fill="x")
 
         search_fields = [
             ("TYPE", "type"),
@@ -186,25 +190,24 @@ class InventoryApp(ctk.CTkFrame):
                 self.update_inch_label(key)
                 var.trace_add("write", lambda *args, k=key: self.update_inch_label(k))
 
-        # === Sort / Filter Section ===
-        search_filter_frame = ctk.CTkFrame(self, fg_color="transparent", height=70)
-        search_filter_frame.pack(fill="x", padx=40, pady=(10, 20))
-        search_filter_frame.pack_propagate(False)
+        # === Sort / Filter Section (containerized) ===
+        filter_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
+        filter_section.pack(fill="x", padx=20, pady=(10, 20))
 
-        search_filter_container = ctk.CTkFrame(search_filter_frame, fg_color="transparent")
-        search_filter_container.pack(expand=True, pady=15)
+        filter_inner = ctk.CTkFrame(filter_section, fg_color="transparent")
+        filter_inner.pack(fill="x", padx=30, pady=15)
 
-        sort_label = ctk.CTkLabel(search_filter_container, text="Sort by",
+        sort_label = ctk.CTkLabel(filter_inner, text="Sort by",
                                   font=("Poppins", 14, "bold"),
                                   text_color="#FFFFFF")
         sort_label.pack(side="left", padx=(0, 10))
 
         sort_combo = ctk.CTkComboBox(
-            search_filter_container,
+            filter_inner,
             variable=self.sort_by,
             values=["Size", "Quantity"],
             state="readonly",
-            width=120,
+            width=140,
             height=32,
             fg_color="#374151",
             button_color="#374151",
@@ -216,17 +219,17 @@ class InventoryApp(ctk.CTkFrame):
         sort_combo.pack(side="left", padx=10)
         self.sort_by.trace_add("write", lambda *args: self.refresh_product_list())
 
-        stock_label = ctk.CTkLabel(search_filter_container, text="Stock Filter",
+        stock_label = ctk.CTkLabel(filter_inner, text="Stock Filter",
                                    font=("Poppins", 14, "bold"),
                                    text_color="#FFFFFF")
-        stock_label.pack(side="left", padx=(40, 10))
+        stock_label.pack(side="left", padx=(30, 10))
 
         stock_combo = ctk.CTkComboBox(
-            search_filter_container,
+            filter_inner,
             variable=self.stock_filter,
             values=["All", "In Stock", "Low Stock", "Out of Stock"],
             state="readonly",
-            width=120,
+            width=180,
             height=32,
             fg_color="#374151",
             button_color="#374151",
@@ -238,12 +241,12 @@ class InventoryApp(ctk.CTkFrame):
         stock_combo.pack(side="left", padx=10)
         self.stock_filter.trace_add("write", lambda *args: self.refresh_product_list())
 
-        # === Table ===
-        table_container = ctk.CTkFrame(self, fg_color="transparent", corner_radius=40)
-        table_container.pack(fill="both", expand=True, padx=20, pady=0)
+        # === Table Section (containerized with inner padding for rounded corners) ===
+        table_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
+        table_section.pack(fill="both", expand=True, padx=20, pady=0)
 
-        table_inner = ctk.CTkFrame(table_container, fg_color="#2b2b2b", corner_radius=40)
-        table_inner.pack(fill="both", expand=True, padx=0, pady=0)
+        table_inner = ctk.CTkFrame(table_section, fg_color="transparent")
+        table_inner.pack(fill="both", expand=True, padx=20, pady=20)
 
         style = ttk.Style()
         style.theme_use("clam")
@@ -252,7 +255,7 @@ class InventoryApp(ctk.CTkFrame):
                         foreground="#FFFFFF",
                         fieldbackground="#2b2b2b",
                         font=("Poppins", 11),
-                        rowheight=40)
+                        rowheight=35)
         style.configure("Custom.Treeview.Heading",
                         background="#000000",
                         foreground="#D00000",
@@ -284,8 +287,8 @@ class InventoryApp(ctk.CTkFrame):
 
         tree_scrollbar = ttk.Scrollbar(table_inner, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=tree_scrollbar.set)
-        self.tree.pack(side="left", fill="both", expand=True, padx=(5, 0), pady=5)
-        tree_scrollbar.pack(side="right", fill="y", padx=(0, 5), pady=5)
+        self.tree.pack(side="left", fill="both", expand=True)
+        tree_scrollbar.pack(side="right", fill="y")
 
         self.tree.bind("<<TreeviewSelect>>", lambda e: self.tree.selection_remove(self.tree.selection()))
         self.tree.bind("<Double-1>", self.open_transaction_page)

@@ -264,9 +264,15 @@ class CategoryPage(ctk.CTkFrame):
         
         main_scroll._parent_canvas.bind("<MouseWheel>", _on_mousewheel)
         
-        # === Back button (top-left) - NOW RED ===
+        # === Header with fixed back button ===
+        header_frame = ctk.CTkFrame(main_scroll, fg_color="#000000", height=120)
+        header_frame.pack(fill="x", padx=20, pady=(20, 0))
+        header_frame.pack_propagate(False)
+        header_frame.grid_columnconfigure(0, weight=1)
+        header_frame.grid_columnconfigure(1, weight=0)
+
         back_btn = ctk.CTkButton(
-            main_scroll,
+            header_frame,
             text="← Back",
             font=("Poppins", 20, "bold"),
             fg_color="#D00000",  # Red background
@@ -277,7 +283,7 @@ class CategoryPage(ctk.CTkFrame):
             height=50,
             command=lambda: controller.go_back(self.return_to)
         )
-        back_btn.pack(anchor="nw", padx=40, pady=(40, 0))
+        back_btn.grid(row=0, column=0, sticky="w", padx=(40, 10), pady=35)
         
         # === Title with Hero font ===
         title_label = ctk.CTkLabel(main_scroll, text=self.category_name,
