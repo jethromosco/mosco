@@ -44,7 +44,6 @@ class TransactionWindow(ctk.CTkFrame):
 
         # Using grid for better control to avoid cut off
         header_frame.columnconfigure(0, weight=1)
-        header_frame.columnconfigure(1, weight=0)
 
         # Back button matching your app style
         back_btn = ctk.CTkButton(
@@ -61,94 +60,67 @@ class TransactionWindow(ctk.CTkFrame):
         )
         back_btn.grid(row=0, column=0, sticky="w", padx=(40,10), pady=35)
 
-        # Photo thumbnail on the right side, aligned with back button
-        photo_container = ctk.CTkFrame(header_frame, fg_color="transparent", width=100, height=100)
-        photo_container.grid(row=0, column=1, sticky="e", padx=(10,40), pady=35)
-        photo_container.grid_propagate(False)
-
-        # Photo frame
-        photo_frame = ctk.CTkFrame(photo_container, width=100, height=100, fg_color="#374151", corner_radius=20)
-        photo_frame.pack_propagate(False)
-        photo_frame.pack(fill="both", expand=True)
-
-        self.photo_label = ctk.CTkLabel(
-            photo_frame,
-            text="📷",
-            font=("Poppins", 30),
-            text_color="#CCCCCC",
-            cursor="hand2"
-        )
-        self.photo_label.pack(fill="both", expand=True)
-        self.photo_label.bind("<Button-1>", self.show_photo_menu)
-
-        self.upload_button = ctk.CTkButton(
-            photo_container,
-            text="Upload Photo",
-            font=("Poppins", 12),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
-            text_color="#FFFFFF",
-            corner_radius=20,
-            height=30,
-            command=self.upload_photo
-        )
+        # Remove header photo; photo will be moved into the first container
 
         # === Main Content Container (NO SCROLLBAR) ===
         main_container = ctk.CTkFrame(self, fg_color="#000000")
         main_container.pack(fill="both", expand=True, padx=20, pady=10)
 
-        # === Product Title Section (LARGER & CENTERED) ===
-        title_section = ctk.CTkFrame(main_container, fg_color="transparent")
-        title_section.pack(fill="x", pady=(0, 20))
-
-        self.header_label = ctk.CTkLabel(
-            title_section,
-            text="",
-            font=("Poppins", 36, "bold"),  # EVEN LARGER
-            text_color="#FFFFFF"
-        )
-        self.header_label.pack(anchor="center")  # CENTERED
-
-        self.sub_header_label = ctk.CTkLabel(
-            title_section,
-            text="",
-            font=("Poppins", 24),  # LARGER
-            text_color="#CCCCCC"
-        )
-        self.sub_header_label.pack(anchor="center", pady=(5, 0))  # CENTERED
+        # Title is moved into the first container (left side)
 
         # === Combined Info Section (Details Without Photo) ===
         combined_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
-        combined_section.pack(fill="x", pady=(0, 20))
+        combined_section.pack(fill="x", pady=(0, 10))
 
         combined_inner = ctk.CTkFrame(combined_section, fg_color="transparent")
-        combined_inner.pack(fill="x", padx=30, pady=30)
+        combined_inner.pack(fill="x", padx=20, pady=20)
 
-        # Top row: Stock + SRP (Most Important Info)
-        top_row = ctk.CTkFrame(combined_inner, fg_color="transparent")
-        top_row.pack(fill="x", pady=(0, 20))
+        # Top grid: Left = item info, Center = Stock/SRP, Right = Photo
+        top_grid = ctk.CTkFrame(combined_inner, fg_color="transparent")
+        top_grid.pack(fill="x", pady=(0, 10))
+        top_grid.grid_columnconfigure(0, weight=0)
+        top_grid.grid_columnconfigure(1, weight=1)
+        top_grid.grid_columnconfigure(2, weight=0)
 
-        # Center: Stock Count (BIG) + SRP (BIG & WHITE)
-        stock_srp_frame = ctk.CTkFrame(top_row, fg_color="transparent")
-        stock_srp_frame.pack(expand=True, fill="x", padx=30)
+        # Left: Product title (moved from separate title section)
+        title_left = ctk.CTkFrame(top_grid, fg_color="transparent")
+        title_left.grid(row=0, column=0, sticky="w")
 
-        # Stock label (BIG TEXT)
+        self.header_label = ctk.CTkLabel(
+            title_left,
+            text="",
+            font=("Poppins", 20, "bold"),
+            text_color="#FFFFFF"
+        )
+        self.header_label.pack(anchor="w")
+
+        self.sub_header_label = ctk.CTkLabel(
+            title_left,
+            text="",
+            font=("Poppins", 20),
+            text_color="#CCCCCC"
+        )
+        self.sub_header_label.pack(anchor="w", pady=(5, 0))
+
+        # Center: Stock Count + SRP (kept centered)
+        stock_srp_frame = ctk.CTkFrame(top_grid, fg_color="transparent")
+        stock_srp_frame.grid(row=0, column=1)
+
         self.stock_label = ctk.CTkLabel(
             stock_srp_frame,
             text="",
-            font=("Poppins", 28, "bold"),  # BIG
+            font=("Poppins", 28, "bold"),
             text_color="#FFFFFF",
             cursor="hand2"
         )
         self.stock_label.pack(anchor="center")
         self.stock_label.bind("<Button-1>", self.open_stock_settings)
 
-        # SRP (BIG & WHITE, directly under stock)
         self.srp_display = ctk.CTkLabel(
             stock_srp_frame,
             textvariable=self.srp_var,
-            font=("Poppins", 24, "bold"),  # BIG
-            text_color="#FFFFFF"  # WHITE font
+            font=("Poppins", 24, "bold"),
+            text_color="#FFFFFF"
         )
         self.srp_display.pack(anchor="center", pady=(10, 0))
 
@@ -164,39 +136,48 @@ class TransactionWindow(ctk.CTkFrame):
             justify="center"
         )
 
-        # Right: Edit controls
-        edit_frame = ctk.CTkFrame(top_row, fg_color="transparent")
-        edit_frame.pack(side="right")
+        # Right: Photo thumbnail moved here
+        photo_container2 = ctk.CTkFrame(top_grid, fg_color="transparent", width=100, height=100)
+        photo_container2.grid(row=0, column=2, sticky="e")
+        photo_container2.grid_propagate(False)
 
-        self.edit_btn = ctk.CTkButton(
-            edit_frame,
-            text="Edit",
-            font=("Poppins", 14, "bold"),
+        photo_frame2 = ctk.CTkFrame(photo_container2, width=100, height=100, fg_color="#374151", corner_radius=20)
+        photo_frame2.pack_propagate(False)
+        photo_frame2.pack(fill="both", expand=True)
+
+        self.photo_label = ctk.CTkLabel(
+            photo_frame2,
+            text="📷",
+            font=("Poppins", 30),
+            text_color="#CCCCCC",
+            cursor="hand2"
+        )
+        self.photo_label.pack(fill="both", expand=True)
+        self.photo_label.bind("<Button-1>", self.show_photo_menu)
+
+        # Upload button (initially unmanaged; controlled by load_photo)
+        self.upload_button = ctk.CTkButton(
+            photo_container2,
+            text="Upload Photo",
+            font=("Poppins", 12),
             fg_color="#4B5563",
             hover_color="#6B7280",
             text_color="#FFFFFF",
-            corner_radius=25,
-            width=100,
-            height=40,
-            command=self.toggle_edit_mode
+            corner_radius=20,
+            height=30,
+            command=self.upload_photo
         )
-        self.edit_btn.pack(pady=(0, 10))
 
-        self.save_status_label = ctk.CTkLabel(
-            edit_frame,
-            text="",
-            font=("Poppins", 12, "italic"),
-            text_color="#22C55E"
-        )
-        self.save_status_label.pack()
-
-        # Bottom row: Location (SMALL) + Notes (LONGER)
+        # Bottom row: Location + Notes + Edit in one line
         bottom_row = ctk.CTkFrame(combined_inner, fg_color="transparent")
         bottom_row.pack(fill="x")
+        bottom_row.grid_columnconfigure(0, weight=0)
+        bottom_row.grid_columnconfigure(1, weight=1)
+        bottom_row.grid_columnconfigure(2, weight=0)
 
-        # Location (VERY SMALL - 10 characters)
+        # Location
         loc_frame = ctk.CTkFrame(bottom_row, fg_color="transparent")
-        loc_frame.pack(side="left", padx=(0, 20))
+        loc_frame.grid(row=0, column=0, sticky="w", padx=(0, 12))
 
         ctk.CTkLabel(
             loc_frame,
@@ -213,14 +194,14 @@ class TransactionWindow(ctk.CTkFrame):
             text_color="#FFFFFF",
             corner_radius=20,
             height=35,
-            width=100,  # SMALL width (about 10 characters)
+            width=120,
             state="readonly"
         )
         self.location_entry.pack()
 
-        # Notes (LONGER to fill remaining space)
+        # Notes
         notes_frame = ctk.CTkFrame(bottom_row, fg_color="transparent")
-        notes_frame.pack(side="left", fill="x", expand=True)
+        notes_frame.grid(row=0, column=1, sticky="ew", padx=(0, 12))
 
         ctk.CTkLabel(
             notes_frame,
@@ -239,7 +220,33 @@ class TransactionWindow(ctk.CTkFrame):
             height=35,
             state="readonly"
         )
-        self.notes_entry.pack(fill="x")  # LONGER - fills remaining space
+        self.notes_entry.pack(fill="x")
+
+        # Edit button moved to the same line (right side)
+        edit_frame = ctk.CTkFrame(bottom_row, fg_color="transparent")
+        edit_frame.grid(row=0, column=2, sticky="e")
+
+        self.edit_btn = ctk.CTkButton(
+            edit_frame,
+            text="Edit",
+            font=("Poppins", 14, "bold"),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=40,
+            command=self.toggle_edit_mode
+        )
+        self.edit_btn.pack()
+
+        self.save_status_label = ctk.CTkLabel(
+            edit_frame,
+            text="",
+            font=("Poppins", 12, "italic"),
+            text_color="#22C55E"
+        )
+        self.save_status_label.pack(pady=(6, 0))
 
         # === Transaction History Section (WITH SCROLLBAR ONLY HERE) ===
         history_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
