@@ -344,20 +344,198 @@ class InventoryApp(ctk.CTkFrame):
         except ValueError:
             self.inch_labels[key].configure(text="⚠ Invalid input", text_color="#FF4444")
 
+    def create_password_window(self, callback=None):
+        """Create a custom password window that matches the app's design"""
+        # Create the password window
+        password_window = ctk.CTkToplevel(self.root)
+        password_window.title("Admin Access")
+        password_window.geometry("450x350")
+        password_window.resizable(False, False)
+        password_window.configure(fg_color="#000000")
+        
+        # Center the window on parent
+        password_window.transient(self.root)
+        password_window.grab_set()
+        
+        # Center positioning
+        password_window.update_idletasks()
+        parent_x = self.root.winfo_rootx()
+        parent_y = self.root.winfo_rooty()
+        parent_width = self.root.winfo_width()
+        parent_height = self.root.winfo_height()
+        
+        x = parent_x + (parent_width - 450) // 2
+        y = parent_y + (parent_height - 350) // 2
+        password_window.geometry(f"450x350+{x}+{y}")
+        
+        # Main container frame - matching your app's style
+        main_frame = ctk.CTkFrame(
+            password_window, 
+            fg_color="#000000",
+            corner_radius=0
+        )
+        main_frame.pack(fill="both", expand=True)
+        
+        # Content frame with rounded corners like your search section
+        content_frame = ctk.CTkFrame(
+            main_frame,
+            fg_color="#2b2b2b",
+            corner_radius=40,
+            border_width=1,
+            border_color="#4B5563"
+        )
+        content_frame.pack(fill="both", expand=True, padx=30, pady=30)
+        
+        # Title - matching your header style
+        title_label = ctk.CTkLabel(
+            content_frame,
+            text="Admin Access",
+            font=("Poppins", 28, "bold"),
+            text_color="#D00000"
+        )
+        title_label.pack(pady=(40, 20))
+        
+        # Subtitle
+        subtitle_label = ctk.CTkLabel(
+            content_frame,
+            text="Enter admin password to continue",
+            font=("Poppins", 16),
+            text_color="#FFFFFF"
+        )
+        subtitle_label.pack(pady=(0, 40))
+        
+        # Password entry container - matching your search field style
+        entry_container = ctk.CTkFrame(content_frame, fg_color="transparent")
+        entry_container.pack(pady=(0, 30))
+        
+        # Password label
+        password_label = ctk.CTkLabel(
+            entry_container,
+            text="Password",
+            font=("Poppins", 16, "bold"),
+            text_color="#FFFFFF"
+        )
+        password_label.pack(pady=(0, 10))
+        
+        # Password entry - matching your search entry style
+        password_entry = ctk.CTkEntry(
+            entry_container,
+            width=280,
+            height=40,
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            font=("Poppins", 14),
+            corner_radius=40,
+            border_width=2,
+            border_color="#4B5563",
+            placeholder_text="Enter password",
+            show="*"
+        )
+        password_entry.pack(pady=(0, 10))
+        
+        # Entry hover/focus effects - matching your search entries
+        def on_entry_enter(event):
+            if password_entry.focus_get() != password_entry:
+                password_entry.configure(border_color="#6B7280", fg_color="#4B5563")
+        
+        def on_entry_leave(event):
+            if password_entry.focus_get() != password_entry:
+                password_entry.configure(border_color="#4B5563", fg_color="#374151")
+        
+        def on_entry_focus_in(event):
+            password_entry.configure(border_color="#D00000", fg_color="#1F2937")
+        
+        def on_entry_focus_out(event):
+            password_entry.configure(border_color="#4B5563", fg_color="#374151")
+        
+        password_entry.bind("<Enter>", on_entry_enter)
+        password_entry.bind("<Leave>", on_entry_leave)
+        password_entry.bind("<FocusIn>", on_entry_focus_in)
+        password_entry.bind("<FocusOut>", on_entry_focus_out)
+        
+        # Error label
+        error_label = ctk.CTkLabel(
+            entry_container,
+            text="",
+            font=("Poppins", 12),
+            text_color="#FF4444"
+        )
+        error_label.pack()
+        
+        # Button container
+        button_container = ctk.CTkFrame(content_frame, fg_color="transparent")
+        button_container.pack(pady=(20, 30))
+        
+        # Cancel button - matching your back button style but gray
+        cancel_btn = ctk.CTkButton(
+            button_container,
+            text="Cancel",
+            font=("Poppins", 16, "bold"),
+            fg_color="#6B7280",
+            hover_color="#4B5563",
+            text_color="#FFFFFF",
+            corner_radius=40,
+            width=120,
+            height=45,
+            command=lambda: self.close_password_window(password_window, callback, False)
+        )
+        cancel_btn.pack(side="left", padx=(0, 20))
+        
+        # Submit button - matching your admin button style
+        submit_btn = ctk.CTkButton(
+            button_container,
+            text="Submit",
+            font=("Poppins", 16, "bold"),
+            fg_color="#D00000",
+            hover_color="#B71C1C",
+            text_color="#FFFFFF",
+            corner_radius=40,
+            width=120,
+            height=45,
+            command=lambda: self.check_password(password_entry, error_label, password_window, callback)
+        )
+        submit_btn.pack(side="right", padx=(20, 0))
+        
+        # Key bindings
+        password_window.bind('<Return>', lambda e: self.check_password(password_entry, error_label, password_window, callback))
+        password_window.bind('<Escape>', lambda e: self.close_password_window(password_window, callback, False))
+        
+        # Focus on password entry
+        password_entry.focus()
+        
+        return password_window
+    
+    def check_password(self, entry, error_label, window, callback):
+        """Check if the entered password is correct"""
+        password = entry.get().strip()
+        
+        if password == "1":  # Your current password
+            self.close_password_window(window, callback, True)
+        else:
+            # Show error message
+            error_label.configure(text="❌ Incorrect password. Please try again.")
+            entry.delete(0, tk.END)
+            entry.focus()
+            
+            # Clear error message after 3 seconds
+            window.after(3000, lambda: error_label.configure(text=""))
+    
+    def close_password_window(self, window, callback, success):
+        """Close the password window and execute callback"""
+        window.destroy()
+        if callback:
+            callback(success)
+
     def open_admin_panel(self, return_to=None):
-        while True:
-            password = simpledialog.askstring("Admin Access", "Enter password:", show="*")
-
-            if password is None:
-                break
-
-            if password == "1":
+        """Open admin panel with custom password window"""
+        def on_password_result(success):
+            if success:
                 current_frame_name = self.controller.get_current_frame_name()
                 current_frame = self.controller.frames[current_frame_name]
                 AdminPanel(self.controller.root, current_frame, self.controller, on_close_callback=self.refresh_product_list)
-                break
-            else:
-                messagebox.showerror("Access Denied", "Incorrect password. Please try again.")
+        
+        # Create and show custom password window
+        self.create_password_window(callback=on_password_result)
 
     def clear_filters(self):
         for var in self.search_vars.values():
