@@ -1,4 +1,4 @@
-import tkinter as tk
+import customtkinter as ctk
 from oilseals.ui.transaction_window import TransactionWindow
 from oilseals.ui.mm import InventoryApp
 from home_page import HomePage, CategoryPage, ComingSoonPage
@@ -30,27 +30,25 @@ class AppController:
     def __init__(self, root):
         self.root = root
         self.root.attributes('-fullscreen', True)
+        self.root.configure(bg="#000000")
 
-        self.container = tk.Frame(root)
-        self.container.grid(row=0, column=0, sticky="nsew")
-
-        self.root.grid_rowconfigure(0, weight=1)
-        self.root.grid_columnconfigure(0, weight=1)
-        self.container.grid_rowconfigure(0, weight=1)
-        self.container.grid_columnconfigure(0, weight=1)
+        # Create container frame using CustomTkinter
+        self.container = ctk.CTkFrame(root, fg_color="#000000")
+        self.container.pack(fill="both", expand=True)
 
         self.frames = {}
 
+        # Create and add home page
         home_page = HomePage(self.container, controller=self)
         self.frames["HomePage"] = home_page
-        home_page.grid(row=0, column=0, sticky="nsew")
+        home_page.place(x=0, y=0, relwidth=1, relheight=1)
 
         self.show_frame("HomePage")
 
     def add_category_page(self, name, sub_data, return_to="HomePage"):
         frame = CategoryPage(self.container, self, name, sub_data, return_to=return_to)
         self.frames[name] = frame
-        frame.grid(row=0, column=0, sticky="nsew")
+        frame.place(x=0, y=0, relwidth=1, relheight=1)
 
     def show_subcategory(self, name, sub_data):
         current_frame = self.get_current_frame_name()
@@ -85,7 +83,7 @@ class AppController:
                 frame.return_to = " ".join(parts[:2])  # back to category choice
 
                 self.frames[frame_name] = frame
-                frame.grid(row=0, column=0, sticky="nsew")
+                frame.place(x=0, y=0, relwidth=1, relheight=1)
             except ModuleNotFoundError:
                 # instead of printing, show "Coming Soon"
                 self.show_coming_soon(category_name)
@@ -93,16 +91,26 @@ class AppController:
         self.show_frame(frame_name)
 
     def show_frame(self, page_name):
-        frame = self.frames[page_name]
-        frame.tkraise()
+        # Hide all frames
+        for frame in self.frames.values():
+            frame.place_forget()
+        
+        # Show the requested frame
+        if page_name in self.frames:
+            frame = self.frames[page_name]
+            frame.place(x=0, y=0, relwidth=1, relheight=1)
+            frame.lift()
 
     def go_back(self, page_name):
         self.show_frame(page_name)
 
     def get_current_frame_name(self):
         for name, frame in self.frames.items():
-            if frame.winfo_ismapped():
-                return name
+            try:
+                if frame.winfo_viewable():
+                    return name
+            except:
+                continue
         return None
 
     def show_home(self):
@@ -117,13 +125,13 @@ class AppController:
         frame = TransactionWindow(self.container, details, controller=self, return_to=return_to)
         frame.set_details(details, main_app)
         self.frames["TransactionWindow"] = frame
-        frame.grid(row=0, column=0, sticky="nsew")
-        frame.tkraise()
+        frame.place(x=0, y=0, relwidth=1, relheight=1)
+        frame.lift()
 
     def show_coming_soon(self, category_name):
         frame_name = f"{category_name}ComingSoon"
         if frame_name not in self.frames:
             frame = ComingSoonPage(self.container, self, category_name, return_to="HomePage")
             self.frames[frame_name] = frame
-            frame.grid(row=0, column=0, sticky="nsew")
+            frame.place(x=0, y=0, relwidth=1, relheight=1)
         self.show_frame(frame_name)

@@ -2,11 +2,16 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-import tkinter as tk
+import customtkinter as ctk
 from app_controller import AppController
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    # Set CustomTkinter appearance mode and color theme
+    ctk.set_appearance_mode("dark")  # Modes: system (default), light, dark
+    ctk.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
+    
+    root = ctk.CTk()
+    root.title("MOSCO Inventory System")
     app = AppController(root)
     root.mainloop()
 
@@ -49,7 +54,12 @@ if __name__ == "__main__":
 
 
 # JO di mapagsama sa isang line ang "finabricate" at "nabenta" due to formulas present
-# ginawang magkahiwalay = fab (blue) and sold (red)
+# ginawang magkahiwalay = fab (blue) and sold (red) INVOICE NUM SA KALAS
 
 # ty (taiwan) NQK and NACTEC 
-# ipaconfirm kung mas ok hindi kasi may search filters na
+# ipaconfirm kung mas ok hindi kasi may search filters na / PAGSAMAHIN
+# NOK - NOK NACTEC
+# TY - lahat ng taiwan brands
+
+# quad tabi ng v-ring
+# bushing palit bearings
