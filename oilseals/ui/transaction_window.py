@@ -60,13 +60,9 @@ class TransactionWindow(ctk.CTkFrame):
         )
         back_btn.grid(row=0, column=0, sticky="w", padx=(40,10), pady=35)
 
-        # Remove header photo; photo will be moved into the first container
-
         # === Main Content Container (NO SCROLLBAR) ===
         main_container = ctk.CTkFrame(self, fg_color="#000000")
         main_container.pack(fill="both", expand=True, padx=20, pady=10)
-
-        # Title is moved into the first container (left side)
 
         # === Combined Info Section (Details Without Photo) ===
         combined_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
@@ -136,7 +132,7 @@ class TransactionWindow(ctk.CTkFrame):
             justify="center"
         )
 
-        # Right: Photo thumbnail moved here
+        # Right: Photo thumbnail and Upload button inside fixed 100x100 container
         photo_container2 = ctk.CTkFrame(top_grid, fg_color="transparent", width=100, height=100)
         photo_container2.grid(row=0, column=2, sticky="e")
         photo_container2.grid_propagate(False)
@@ -155,16 +151,17 @@ class TransactionWindow(ctk.CTkFrame):
         self.photo_label.pack(fill="both", expand=True)
         self.photo_label.bind("<Button-1>", self.show_photo_menu)
 
-        # Upload button (initially unmanaged; controlled by load_photo)
+        # Upload button inside the same 100x100 container, fixed width and height
         self.upload_button = ctk.CTkButton(
             photo_container2,
-            text="Upload Photo",
-            font=("Poppins", 12),
+            text="Upload",
+            font=("Poppins", 12, "bold"),
             fg_color="#4B5563",
             hover_color="#6B7280",
             text_color="#FFFFFF",
             corner_radius=20,
             height=30,
+            width=80,
             command=self.upload_photo
         )
 

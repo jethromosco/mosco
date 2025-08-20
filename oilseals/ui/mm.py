@@ -94,16 +94,22 @@ class InventoryApp(ctk.CTkFrame):
         )
         back_btn.grid(row=0, column=0, sticky="w", padx=(40, 10), pady=35)
 
-        # === Search Section (containerized) ===
+        # === Combined Search and Filter Section (single container) ===
         search_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
         search_section.pack(fill="x", padx=20, pady=(20, 10))
 
         search_inner = ctk.CTkFrame(search_section, fg_color="transparent")
-        search_inner.pack(fill="x", padx=30, pady=20)
+        search_inner.pack(fill="both", expand=True, padx=20, pady=20)
 
-        entries_container = ctk.CTkFrame(search_inner, fg_color="transparent")
-        entries_container.pack(fill="x")
+        # Main container for all fields in one row - fill entire width
+        main_container = ctk.CTkFrame(search_inner, fg_color="transparent")
+        main_container.pack(fill="x", expand=True)
 
+        # Configure grid columns to be equal width and fill the space
+        for i in range(8):  # 6 search fields + 2 dropdowns
+            main_container.grid_columnconfigure(i, weight=1, uniform="fields")
+
+        # Search fields configuration
         search_fields = [
             ("TYPE", "type"),
             ("ID", "id"),
@@ -132,34 +138,35 @@ class InventoryApp(ctk.CTkFrame):
             # Back to normal when focus is lost
             entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
 
+        # Create search fields
         for idx, (display_name, key) in enumerate(search_fields):
-            field_frame = ctk.CTkFrame(entries_container, fg_color="transparent", height=90)
-            field_frame.grid(row=0, column=idx, padx=20, sticky="nsew")
-            entries_container.grid_columnconfigure(idx, weight=1)
+            field_frame = ctk.CTkFrame(main_container, fg_color="transparent", height=90)
+            field_frame.grid(row=0, column=idx, padx=5, sticky="ew")
             field_frame.grid_propagate(False)
+            field_frame.grid_columnconfigure(0, weight=1)
 
             # Label
             label = ctk.CTkLabel(field_frame, text=display_name,
-                                 font=("Poppins", 16, "bold"),
+                                 font=("Poppins", 14, "bold"),
                                  text_color="#FFFFFF")
-            label.grid(row=0, column=0, pady=(0, 5), sticky="w")
+            label.grid(row=0, column=0, pady=(0, 5), sticky="ew")
 
             # Entry
             var = self.search_vars[key]
             entry = ctk.CTkEntry(
                 field_frame,
                 textvariable=var,
-                width=140,
+                width=120,
                 height=32,
                 fg_color="#374151",
                 text_color="#FFFFFF",
-                font=("Poppins", 12),
+                font=("Poppins", 13),
                 corner_radius=40,
                 border_width=1,
                 border_color="#4B5563",
                 placeholder_text=f"Enter {display_name}"
             )
-            entry.grid(row=1, column=0, pady=(0, 5), sticky="we")
+            entry.grid(row=1, column=0, pady=(0, 5), sticky="ew")
 
             entry.bind("<Enter>", lambda e, ent=entry: on_entry_enter(e, ent))
             entry.bind("<Leave>", lambda e, ent=entry: on_entry_leave(e, ent))
@@ -176,74 +183,105 @@ class InventoryApp(ctk.CTkFrame):
             # Bind change events for search refresh (all fields)
             var.trace_add("write", lambda *args: self.refresh_product_list())
 
-            # Inch conversion label
+            # Inch conversion label (only for id, od, th)
             if key in ["id", "od", "th"]:
                 inch_label = ctk.CTkLabel(
                     field_frame,
                     text="",   # start empty
-                    font=("Poppins", 11),
+                    font=("Poppins", 12, "bold"),
                     text_color="#FFFFFF"
                 )
-                inch_label.grid(row=2, column=0, pady=(2, 0), sticky="w")
+                inch_label.grid(row=2, column=0, pady=(2, 0), sticky="ew")
                 self.inch_labels[key] = inch_label
 
                 self.update_inch_label(key)
                 var.trace_add("write", lambda *args, k=key: self.update_inch_label(k))
 
-        # === Sort / Filter Section (containerized) ===
-        filter_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
-        filter_section.pack(fill="x", padx=20, pady=(10, 20))
+        # Sort By dropdown
+        sort_frame = ctk.CTkFrame(main_container, fg_color="transparent", height=90)
+        sort_frame.grid(row=0, column=6, padx=5, sticky="ew")
+        sort_frame.grid_propagate(False)
+        sort_frame.grid_columnconfigure(0, weight=1)
 
-        filter_inner = ctk.CTkFrame(filter_section, fg_color="transparent")
-        filter_inner.pack(fill="x", padx=30, pady=15)
-
-        sort_label = ctk.CTkLabel(filter_inner, text="Sort by",
-                                  font=("Poppins", 14, "bold"),
+        sort_label = ctk.CTkLabel(sort_frame, text="Sort By",
+                                  font=("Poppins", 16, "bold"),
                                   text_color="#FFFFFF")
-        sort_label.pack(side="left", padx=(0, 10))
+        sort_label.grid(row=0, column=0, pady=(0, 5), sticky="ew")
 
         sort_combo = ctk.CTkComboBox(
-            filter_inner,
+            sort_frame,
             variable=self.sort_by,
             values=["Size", "Quantity"],
             state="readonly",
-            width=140,
+            width=120,
             height=32,
             fg_color="#374151",
             button_color="#374151",
-            button_hover_color="#4B5563",
+            button_hover_color="#D00000",
+            dropdown_hover_color="#4B5563",
             text_color="#FFFFFF",
-            font=("Poppins", 12),
-            corner_radius=40
+            font=("Poppins", 13),
+            corner_radius=40,
+            border_width=1,
+            border_color="#4B5563"
         )
-        sort_combo.pack(side="left", padx=10)
+        sort_combo.grid(row=1, column=0, pady=(0, 5), sticky="ew")
+        
+        # Add hover effects for sort combo
+        def on_sort_combo_enter(event):
+            sort_combo.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+        
+        def on_sort_combo_leave(event):
+            sort_combo.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        
+        sort_combo.bind("<Enter>", on_sort_combo_enter)
+        sort_combo.bind("<Leave>", on_sort_combo_leave)
         self.sort_by.trace_add("write", lambda *args: self.refresh_product_list())
 
-        stock_label = ctk.CTkLabel(filter_inner, text="Stock Filter",
-                                   font=("Poppins", 14, "bold"),
+        # Stock Filter dropdown
+        stock_frame = ctk.CTkFrame(main_container, fg_color="transparent", height=90)
+        stock_frame.grid(row=0, column=7, padx=5, sticky="ew")
+        stock_frame.grid_propagate(False)
+        stock_frame.grid_columnconfigure(0, weight=1)
+
+        stock_label = ctk.CTkLabel(stock_frame, text="Stock Filter",
+                                   font=("Poppins", 16, "bold"),
                                    text_color="#FFFFFF")
-        stock_label.pack(side="left", padx=(30, 10))
+        stock_label.grid(row=0, column=0, pady=(0, 5), sticky="ew")
 
         stock_combo = ctk.CTkComboBox(
-            filter_inner,
+            stock_frame,
             variable=self.stock_filter,
             values=["All", "In Stock", "Low Stock", "Out of Stock"],
             state="readonly",
-            width=180,
+            width=120,
             height=32,
             fg_color="#374151",
             button_color="#374151",
-            button_hover_color="#4B5563",
+            button_hover_color="#D00000",
+            dropdown_hover_color="#4B5563",
             text_color="#FFFFFF",
-            font=("Poppins", 12),
-            corner_radius=40
+            font=("Poppins", 13),
+            corner_radius=40,
+            border_width=1,
+            border_color="#4B5563"
         )
-        stock_combo.pack(side="left", padx=10)
+        stock_combo.grid(row=1, column=0, pady=(0, 5), sticky="ew")
+        
+        # Add hover effects for stock combo
+        def on_stock_combo_enter(event):
+            stock_combo.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+        
+        def on_stock_combo_leave(event):
+            stock_combo.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        
+        stock_combo.bind("<Enter>", on_stock_combo_enter)
+        stock_combo.bind("<Leave>", on_stock_combo_leave)
         self.stock_filter.trace_add("write", lambda *args: self.refresh_product_list())
 
         # === Table Section (containerized with inner padding for rounded corners) ===
         table_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
-        table_section.pack(fill="both", expand=True, padx=20, pady=0)
+        table_section.pack(fill="both", expand=True, padx=20, pady=(0, 0))  # No gap between search and table
 
         table_inner = ctk.CTkFrame(table_section, fg_color="transparent")
         table_inner.pack(fill="both", expand=True, padx=20, pady=20)
@@ -254,12 +292,12 @@ class InventoryApp(ctk.CTkFrame):
                         background="#2b2b2b",
                         foreground="#FFFFFF",
                         fieldbackground="#2b2b2b",
-                        font=("Poppins", 11),
+                        font=("Poppins", 13),
                         rowheight=35)
         style.configure("Custom.Treeview.Heading",
                         background="#000000",
                         foreground="#D00000",
-                        font=("Poppins", 11, "bold"))
+                        font=("Poppins", 13, "bold"))
         style.map("Custom.Treeview", background=[("selected", "#2b2b2b")])
         style.map("Custom.Treeview.Heading", background=[("active", "#111111")])
 
@@ -299,7 +337,7 @@ class InventoryApp(ctk.CTkFrame):
         bottom_frame.pack_propagate(False)
 
         self.status_label = ctk.CTkLabel(bottom_frame, text="",
-                                         font=("Poppins", 14),
+                                         font=("Poppins", 16),
                                          text_color="#CCCCCC")
         self.status_label.pack(side="left", pady=15)
 
