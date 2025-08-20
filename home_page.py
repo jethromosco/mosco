@@ -68,9 +68,6 @@ icon_mapping = {
     "ETC. (SPECIAL)": f"{ICON_PATH}\\special.png"
 }
 
-LOGO_LEFT = f"{ICON_PATH}\\mosco logo.png"
-LOGO_RIGHT = f"{ICON_PATH}\\mosco text.png"
-
 
 class HomePage(ctk.CTkFrame):
     def __init__(self, parent, controller):
@@ -127,8 +124,8 @@ class HomePage(ctk.CTkFrame):
         logo_frame.bind("<Button-1>", self.remove_search_focus)
 
         try:
-            logo_img1 = ctk.CTkImage(Image.open(LOGO_LEFT), size=(240, 240))
-            logo_img2 = ctk.CTkImage(Image.open(LOGO_RIGHT), size=(847, 240))
+            logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(240, 240))
+            logo_img2 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco text.png"), size=(847, 240))
 
             lbl1 = ctk.CTkLabel(logo_frame, image=logo_img1, text="", bg_color="#000000")
             lbl2 = ctk.CTkLabel(logo_frame, image=logo_img2, text="", bg_color="#000000")

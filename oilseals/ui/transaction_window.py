@@ -1,10 +1,13 @@
+import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 from ..database import connect_db
-from PIL import Image, ImageTk
+from PIL import Image
+from customtkinter import CTkImage
 from contextlib import contextmanager
 import os
+
 
 @contextmanager
 def db_cursor():
@@ -16,14 +19,13 @@ def db_cursor():
     finally:
         conn.close()
 
-class TransactionWindow(tk.Frame):
-    def __init__(self, parent, details, controller, return_to):
-        super().__init__(parent)
-        self.controller = controller
-        self.return_to = return_to  # store the page we came from (should be MM)
-        self.main_app = None
 
-        self.configure(bg="white")
+class TransactionWindow(ctk.CTkFrame):
+    def __init__(self, parent, details, controller, return_to):
+        super().__init__(parent, fg_color="#000000")
+        self.controller = controller
+        self.return_to = return_to
+        self.main_app = None
 
         self.srp_var = tk.StringVar()
         self.location_var = tk.StringVar()
@@ -35,103 +37,284 @@ class TransactionWindow(tk.Frame):
         self._build_ui()
 
     def _build_ui(self):
-        # Back button — directly goes to return_to frame
-        back_btn = tk.Button(self, text="← Back", anchor="w", padx=10, pady=5)
-        if self.controller and self.return_to:
-            back_btn.config(command=lambda: self.controller.show_frame(self.return_to))
-        else:
-            back_btn.config(command=self.master.destroy)
-        back_btn.pack(anchor="nw", padx=10, pady=(10, 0))
+        # === Header with Back Button and Photo ===
+        header_frame = ctk.CTkFrame(self, fg_color="#000000", height=120)
+        header_frame.pack(fill="x", padx=20, pady=(20, 0))
+        header_frame.pack_propagate(False)
 
-        # Header layout: title block | photo + stock
-        header = tk.Frame(self, bg="white")
-        header.pack(fill=tk.X, padx=10, pady=(0, 10))
+        # Using grid for better control to avoid cut off
+        header_frame.columnconfigure(0, weight=1)
+        header_frame.columnconfigure(1, weight=0)
 
-        # Title + subtitle container
-        title_frame = tk.Frame(header, bg="white")
-        title_frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+        # Back button matching your app style
+        back_btn = ctk.CTkButton(
+            header_frame,
+            text="← Back",
+            font=("Poppins", 20, "bold"),
+            fg_color="#D00000",
+            hover_color="#B71C1C",
+            text_color="#FFFFFF",
+            corner_radius=40,
+            width=120,
+            height=50,
+            command=lambda: self.controller.show_frame(self.return_to) if self.controller and self.return_to else self.master.destroy()
+        )
+        back_btn.grid(row=0, column=0, sticky="w", padx=(40,10), pady=35)
 
-        self.header_label = tk.Label(title_frame, font=("Arial", 20, "bold"), bg="white", anchor="center")
-        self.header_label.pack()
+        # Photo thumbnail on the right side, aligned with back button
+        photo_container = ctk.CTkFrame(header_frame, fg_color="transparent", width=100, height=100)
+        photo_container.grid(row=0, column=1, sticky="e", padx=(10,40), pady=35)
+        photo_container.grid_propagate(False)
 
-        self.sub_header_label = tk.Label(title_frame, font=("Arial", 16), bg="white", anchor="center")
-        self.sub_header_label.pack()
-
-        # Right section: thumbnail + stock
-        right_section = tk.Frame(header, bg="white")
-        right_section.pack(side=tk.RIGHT)
-
-        photo_frame = tk.Frame(right_section, width=80, height=80, bg="#eee")
+        # Photo frame
+        photo_frame = ctk.CTkFrame(photo_container, width=100, height=100, fg_color="#374151", corner_radius=20)
         photo_frame.pack_propagate(False)
-        photo_frame.pack()
+        photo_frame.pack(fill="both", expand=True)
 
-        self.photo_label = tk.Label(photo_frame, bg="#ddd", relief="ridge", cursor="hand2")
-        self.photo_label.pack(fill=tk.BOTH, expand=True)
+        self.photo_label = ctk.CTkLabel(
+            photo_frame,
+            text="📷",
+            font=("Poppins", 30),
+            text_color="#CCCCCC",
+            cursor="hand2"
+        )
+        self.photo_label.pack(fill="both", expand=True)
         self.photo_label.bind("<Button-1>", self.show_photo_menu)
 
-        self.upload_button = tk.Button(photo_frame, text="Upload", command=self.upload_photo)
-        self.upload_button.pack()
-
-        self.stock_label = tk.Label(right_section, font=("Arial", 14, "bold underline"), cursor="hand2", bg="white")
-        self.stock_label.pack(pady=(5, 0))
-        self.stock_label.bind("<Button-1>", self.open_stock_settings)
-
-        # Location, notes, SRP area
-        sub = tk.Frame(self, bg="white")
-        sub.pack(fill=tk.X, padx=10, pady=(0, 5))
-
-        tk.Label(sub, text="LOC:", bg="white").pack(side=tk.LEFT, padx=(0, 2))
-        self.location_entry = tk.Entry(sub, textvariable=self.location_var, width=12, state="readonly", relief="flat")
-        self.location_entry.pack(side=tk.LEFT, padx=(0, 10))
-
-        tk.Label(sub, text="NOTES:", bg="white").pack(side=tk.LEFT, padx=(0, 2))
-        self.notes_entry = tk.Entry(sub, textvariable=self.notes_var, state="readonly", relief="flat")
-        self.notes_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
-
-        right_frame = tk.Frame(sub, bg="white")
-        right_frame.pack(side=tk.RIGHT)
-
-        self.edit_btn = tk.Button(right_frame, text="Edit", command=self.toggle_edit_mode)
-        self.edit_btn.pack(side=tk.LEFT, padx=(0, 5))
-        self.save_status_label = tk.Label(right_frame, text="", fg="green", bg="white", font=("Arial", 10, "italic"))
-        self.save_status_label.pack(side=tk.LEFT, padx=(10, 0))
-
-        tk.Label(right_frame, text="SRP:", font=("Arial", 14, "bold"), bg="white").pack(side=tk.LEFT, padx=(0, 2))
-        self.srp_display = tk.Label(right_frame, textvariable=self.srp_var, font=("Arial", 14, "bold"), bg="white")
-        self.srp_display.pack(side=tk.LEFT)
-
-        self.srp_entry = tk.Entry(right_frame, textvariable=self.srp_var, width=10)
-
-        # Transaction list
-        self.tree = ttk.Treeview(
-            self,
-            columns=("date", "qty_restock", "cost", "name", "qty", "price", "stock"),
-            show="headings",
-            height=20
+        self.upload_button = ctk.CTkButton(
+            photo_container,
+            text="Upload Photo",
+            font=("Poppins", 12),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=30,
+            command=self.upload_photo
         )
 
+        # === Main Content Container (NO SCROLLBAR) ===
+        main_container = ctk.CTkFrame(self, fg_color="#000000")
+        main_container.pack(fill="both", expand=True, padx=20, pady=10)
+
+        # === Product Title Section (LARGER & CENTERED) ===
+        title_section = ctk.CTkFrame(main_container, fg_color="transparent")
+        title_section.pack(fill="x", pady=(0, 20))
+
+        self.header_label = ctk.CTkLabel(
+            title_section,
+            text="",
+            font=("Poppins", 36, "bold"),  # EVEN LARGER
+            text_color="#FFFFFF"
+        )
+        self.header_label.pack(anchor="center")  # CENTERED
+
+        self.sub_header_label = ctk.CTkLabel(
+            title_section,
+            text="",
+            font=("Poppins", 24),  # LARGER
+            text_color="#CCCCCC"
+        )
+        self.sub_header_label.pack(anchor="center", pady=(5, 0))  # CENTERED
+
+        # === Combined Info Section (Details Without Photo) ===
+        combined_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
+        combined_section.pack(fill="x", pady=(0, 20))
+
+        combined_inner = ctk.CTkFrame(combined_section, fg_color="transparent")
+        combined_inner.pack(fill="x", padx=30, pady=30)
+
+        # Top row: Stock + SRP (Most Important Info)
+        top_row = ctk.CTkFrame(combined_inner, fg_color="transparent")
+        top_row.pack(fill="x", pady=(0, 20))
+
+        # Center: Stock Count (BIG) + SRP (BIG & WHITE)
+        stock_srp_frame = ctk.CTkFrame(top_row, fg_color="transparent")
+        stock_srp_frame.pack(expand=True, fill="x", padx=30)
+
+        # Stock label (BIG TEXT)
+        self.stock_label = ctk.CTkLabel(
+            stock_srp_frame,
+            text="",
+            font=("Poppins", 28, "bold"),  # BIG
+            text_color="#FFFFFF",
+            cursor="hand2"
+        )
+        self.stock_label.pack(anchor="center")
+        self.stock_label.bind("<Button-1>", self.open_stock_settings)
+
+        # SRP (BIG & WHITE, directly under stock)
+        self.srp_display = ctk.CTkLabel(
+            stock_srp_frame,
+            textvariable=self.srp_var,
+            font=("Poppins", 24, "bold"),  # BIG
+            text_color="#FFFFFF"  # WHITE font
+        )
+        self.srp_display.pack(anchor="center", pady=(10, 0))
+
+        self.srp_entry = ctk.CTkEntry(
+            stock_srp_frame,
+            textvariable=self.srp_var,
+            font=("Poppins", 16),
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=40,
+            width=150,
+            justify="center"
+        )
+
+        # Right: Edit controls
+        edit_frame = ctk.CTkFrame(top_row, fg_color="transparent")
+        edit_frame.pack(side="right")
+
+        self.edit_btn = ctk.CTkButton(
+            edit_frame,
+            text="Edit",
+            font=("Poppins", 14, "bold"),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=40,
+            command=self.toggle_edit_mode
+        )
+        self.edit_btn.pack(pady=(0, 10))
+
+        self.save_status_label = ctk.CTkLabel(
+            edit_frame,
+            text="",
+            font=("Poppins", 12, "italic"),
+            text_color="#22C55E"
+        )
+        self.save_status_label.pack()
+
+        # Bottom row: Location (SMALL) + Notes (LONGER)
+        bottom_row = ctk.CTkFrame(combined_inner, fg_color="transparent")
+        bottom_row.pack(fill="x")
+
+        # Location (VERY SMALL - 10 characters)
+        loc_frame = ctk.CTkFrame(bottom_row, fg_color="transparent")
+        loc_frame.pack(side="left", padx=(0, 20))
+
+        ctk.CTkLabel(
+            loc_frame,
+            text="LOCATION",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF"
+        ).pack(anchor="w", pady=(0, 5))
+
+        self.location_entry = ctk.CTkEntry(
+            loc_frame,
+            textvariable=self.location_var,
+            font=("Poppins", 12),
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35,
+            width=100,  # SMALL width (about 10 characters)
+            state="readonly"
+        )
+        self.location_entry.pack()
+
+        # Notes (LONGER to fill remaining space)
+        notes_frame = ctk.CTkFrame(bottom_row, fg_color="transparent")
+        notes_frame.pack(side="left", fill="x", expand=True)
+
+        ctk.CTkLabel(
+            notes_frame,
+            text="NOTES",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF"
+        ).pack(anchor="w", pady=(0, 5))
+
+        self.notes_entry = ctk.CTkEntry(
+            notes_frame,
+            textvariable=self.notes_var,
+            font=("Poppins", 12),
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35,
+            state="readonly"
+        )
+        self.notes_entry.pack(fill="x")  # LONGER - fills remaining space
+
+        # === Transaction History Section (WITH SCROLLBAR ONLY HERE) ===
+        history_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
+        history_section.pack(fill="both", expand=True)
+
+        # Section header
+        history_header = ctk.CTkFrame(history_section, fg_color="transparent")
+        history_header.pack(fill="x", padx=30, pady=(30, 10))
+
+        ctk.CTkLabel(
+            history_header,
+            text="TRANSACTION HISTORY",
+            font=("Poppins", 18, "bold"),
+            text_color="#FFFFFF"
+        ).pack(anchor="w")
+
+        # Table container (SCROLLBAR ONLY FOR TABLE)
+        table_container = ctk.CTkFrame(history_section, fg_color="transparent")
+        table_container.pack(fill="both", expand=True, padx=30, pady=(0, 30))
+
+        # Style the treeview to match your app
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Transaction.Treeview",
+                        background="#2b2b2b",
+                        foreground="#FFFFFF",
+                        fieldbackground="#2b2b2b",
+                        font=("Poppins", 11),
+                        rowheight=35)
+        style.configure("Transaction.Treeview.Heading",
+                        background="#000000",
+                        foreground="#D00000",
+                        font=("Poppins", 11, "bold"))
+        style.map("Transaction.Treeview", background=[("selected", "#374151")])
+        style.map("Transaction.Treeview.Heading", background=[("active", "#111111")])
+
+        # Create treeview
+        self.tree = ttk.Treeview(
+            table_container,
+            columns=("date", "qty_restock", "cost", "name", "qty", "price", "stock"),
+            show="headings",
+            style="Transaction.Treeview"
+        )
+
+        # Configure columns
         column_config = {
-            "date": {"anchor": "center", "width": 90},
-            "qty_restock": {"anchor": "center", "width": 60},
-            "cost": {"anchor": "center", "width": 80},
-            "name": {"anchor": "w", "width": 200},
-            "qty": {"anchor": "center", "width": 60},
-            "price": {"anchor": "center", "width": 80},
-            "stock": {"anchor": "center", "width": 80},
+            "date": {"text": "DATE", "anchor": "center", "width": 90},
+            "qty_restock": {"text": "QTY RESTOCK", "anchor": "center", "width": 100},
+            "cost": {"text": "COST", "anchor": "center", "width": 80},
+            "name": {"text": "NAME", "anchor": "w", "width": 200},
+            "qty": {"text": "QTY SOLD", "anchor": "center", "width": 80},
+            "price": {"text": "PRICE", "anchor": "center", "width": 80},
+            "stock": {"text": "STOCK", "anchor": "center", "width": 80},
         }
 
         for col in self.tree["columns"]:
-            self.tree.heading(col, text=col.upper().replace("_", " "))
-            self.tree.column(col, **column_config[col])
+            config = column_config[col]
+            self.tree.heading(col, text=config["text"])
+            self.tree.column(col, anchor=config["anchor"], width=config["width"])
 
-        self.tree.tag_configure("red", foreground="red")
-        self.tree.tag_configure("blue", foreground="blue")
-        self.tree.tag_configure("green", foreground="green")  # Added green tag for Actual
-        self.tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # Configure tags for different transaction types
+        self.tree.tag_configure("red", foreground="#EF4444")    # Sales
+        self.tree.tag_configure("blue", foreground="#3B82F6")   # Restocks
+        self.tree.tag_configure("green", foreground="#22C55E")  # Actual
+
+        # Scrollbar
+        tree_scrollbar = ttk.Scrollbar(table_container, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=tree_scrollbar.set)
+
+        self.tree.pack(side="left", fill="both", expand=True)
+        tree_scrollbar.pack(side="right", fill="y")
 
     def show_save_status(self, message="Saved!", duration=2000):
-        self.save_status_label.config(text=message)
-        self.after(duration, lambda: self.save_status_label.config(text=""))
+        self.save_status_label.configure(text=message)
+        self.after(duration, lambda: self.save_status_label.configure(text=""))
 
     def set_details(self, details, main_app):
         self.details = details
@@ -154,22 +337,24 @@ class TransactionWindow(tk.Frame):
 
     def toggle_edit_mode(self):
         if not self.edit_mode:
-            self.location_entry.config(state="normal", relief="sunken")
-            self.notes_entry.config(state="normal", relief="sunken")
+            # Enter edit mode
+            self.location_entry.configure(state="normal")
+            self.notes_entry.configure(state="normal")
             self.srp_display.pack_forget()
-            self.srp_entry.pack(side=tk.LEFT)
+            self.srp_entry.pack(anchor="center")
             self.srp_var.set(self.srp_var.get().replace("₱", "").strip())
-            self.edit_btn.config(text="Save")
+            self.edit_btn.configure(text="Save", fg_color="#22C55E", hover_color="#16A34A")
         else:
+            # Save and exit edit mode
             self.save_location()
             self.save_srp()
             self.save_notes()
-            self.location_entry.config(state="readonly", relief="flat")
-            self.notes_entry.config(state="readonly", relief="flat")
+            self.location_entry.configure(state="readonly")
+            self.notes_entry.configure(state="readonly")
             self.srp_entry.pack_forget()
-            self.srp_display.pack(side=tk.LEFT)
-            self.edit_btn.config(text="Edit")
-            self.show_save_status()  # ← Show the "Saved!" message
+            self.srp_display.pack(anchor="center", pady=(10, 0))
+            self.edit_btn.configure(text="Edit", fg_color="#4B5563", hover_color="#6B7280")
+            self.show_save_status()
         self.edit_mode = not self.edit_mode
 
     def load_transactions(self):
@@ -183,29 +368,31 @@ class TransactionWindow(tk.Frame):
             """, (self.details["type"], self.details["id"], self.details["od"], self.details["th"]))
             rows = cur.fetchall()
 
-        self.header_label.config(
+        # Update header labels with LARGER and more prominent display
+        self.header_label.configure(
             text=f"{self.details['type']} {self.details['id']}-{self.details['od']}-{self.details['th']} {self.details['brand']}"
         )
 
         part = self.details['part_no'].strip()
         country = self.details['country_of_origin'].strip()
         subtitle = f"{part} | {country}" if part else country
-        self.sub_header_label.config(text=subtitle)
+        self.sub_header_label.configure(text=subtitle)
 
+        # Clear existing items
         self.tree.delete(*self.tree.get_children())
 
         running_stock = 0
         for row in rows:
             date, name, qty, price, is_restock, brand = row
-            
-            # --- Key change: Handle 'Actual' transactions correctly ---
+
+            # Handle 'Actual' transactions correctly
             if is_restock == 2:  # 2 is for 'Actual'
                 running_stock = qty  # Reset stock to this new value
-            else: # Restock (1) or Sale (0)
+            else:  # Restock (1) or Sale (0)
                 running_stock += qty
 
             date_str = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%y")
-            
+
             qty_restock = ""
             cost = ""
             price_str = ""
@@ -220,13 +407,14 @@ class TransactionWindow(tk.Frame):
                 display_qty = abs(qty)
                 price_str = f"₱{price:.2f}"
                 tag = "red"
-            elif is_restock == 2: # Actual
+            elif is_restock == 2:  # Actual
                 tag = "green"
-            
+
             self.tree.insert("", 0, values=(
                 date_str, qty_restock, cost, name, display_qty, price_str, running_stock
             ), tags=(tag,))
 
+        # Update stock display
         with db_cursor() as cur:
             cur.execute("""SELECT low_threshold, warn_threshold FROM products
                          WHERE type=? AND id=? AND od=? AND th=? AND brand=?""",
@@ -238,13 +426,14 @@ class TransactionWindow(tk.Frame):
         warn = thresholds[1] if thresholds and thresholds[1] is not None else 5
         stock = running_stock
 
-        color = "green"
         if stock <= low:
-            color = "red"
+            color = "#EF4444"  # Red
         elif stock <= warn:
-            color = "orange"
+            color = "#F59E0B"  # Orange
+        else:
+            color = "#22C55E"  # Green
 
-        self.stock_label.config(text=f"STOCK: {stock}", fg=color)
+        self.stock_label.configure(text=f"STOCK: {stock}", text_color=color)
 
     def load_location(self):
         with db_cursor() as cur:
@@ -296,15 +485,37 @@ class TransactionWindow(tk.Frame):
             self.main_app.refresh_product_list()
 
     def open_stock_settings(self, event=None):
-        settings = tk.Toplevel(self)
+        # Create custom stock settings window matching your app style
+        settings = ctk.CTkToplevel(self)
         settings.title("Stock Color Settings")
-        settings.geometry("250x150")
+        settings.geometry("400x300")
         settings.resizable(False, False)
+        settings.configure(fg_color="#000000")
 
-        tk.Label(settings, text="Low Threshold (Red):").pack(pady=(10, 0))
+        # Center the window
+        settings.transient(self)
+        settings.grab_set()
+
+        # Main container
+        main_frame = ctk.CTkFrame(settings, fg_color="#2b2b2b", corner_radius=40)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # Title
+        ctk.CTkLabel(
+            main_frame,
+            text="Stock Threshold Settings",
+            font=("Poppins", 20, "bold"),
+            text_color="#FFFFFF"
+        ).pack(pady=(30, 20))
+
+        # Form container
+        form_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        form_frame.pack(fill="x", padx=30, pady=(0, 20))
+
         low_var = tk.IntVar()
         warn_var = tk.IntVar()
 
+        # Get current values
         with db_cursor() as cur:
             cur.execute("""
                 SELECT low_threshold, warn_threshold FROM products
@@ -316,9 +527,47 @@ class TransactionWindow(tk.Frame):
         low_var.set(row[0] if row and row[0] is not None else 0)
         warn_var.set(row[1] if row and row[1] is not None else 5)
 
-        tk.Entry(settings, textvariable=low_var).pack()
-        tk.Label(settings, text="Warning Threshold (Orange):").pack(pady=(10, 0))
-        tk.Entry(settings, textvariable=warn_var).pack()
+        # Low threshold
+        ctk.CTkLabel(
+            form_frame,
+            text="LOW THRESHOLD (Red)",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF"
+        ).pack(anchor="w", pady=(0, 5))
+
+        low_entry = ctk.CTkEntry(
+            form_frame,
+            textvariable=low_var,
+            font=("Poppins", 12),
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35
+        )
+        low_entry.pack(fill="x", pady=(0, 15))
+
+        # Warning threshold
+        ctk.CTkLabel(
+            form_frame,
+            text="WARNING THRESHOLD (Orange)",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF"
+        ).pack(anchor="w", pady=(0, 5))
+
+        warn_entry = ctk.CTkEntry(
+            form_frame,
+            textvariable=warn_var,
+            font=("Poppins", 12),
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35
+        )
+        warn_entry.pack(fill="x", pady=(0, 20))
+
+        # Buttons
+        button_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        button_frame.pack(fill="x")
 
         def save_thresholds():
             with db_cursor() as cur:
@@ -331,7 +580,31 @@ class TransactionWindow(tk.Frame):
             settings.destroy()
             self.load_transactions()
 
-        tk.Button(settings, text="Save", command=save_thresholds).pack(pady=10)
+        ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            font=("Poppins", 14, "bold"),
+            fg_color="#6B7280",
+            hover_color="#4B5563",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=40,
+            command=settings.destroy
+        ).pack(side="left", padx=(0, 10))
+
+        ctk.CTkButton(
+            button_frame,
+            text="Save",
+            font=("Poppins", 14, "bold"),
+            fg_color="#22C55E",
+            hover_color="#16A34A",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=40,
+            command=save_thresholds
+        ).pack(side="right")
 
     def upload_photo(self):
         # Changed from checking type == "SPECIAL" to checking brand == "MOS"
@@ -354,7 +627,7 @@ class TransactionWindow(tk.Frame):
 
         photos_dir = os.path.join(os.path.dirname(__file__), "..", "photos")
         safe_th = self.details['th'].replace('/', 'x')
-        safe_brand = self.details['brand'].replace('/', 'x').replace(' ', '_') # Sanitize brand for filename
+        safe_brand = self.details['brand'].replace('/', 'x').replace(' ', '_')  # Sanitize brand for filename
         filename = f"{self.details['type']}-{self.details['id']}-{self.details['od']}-{safe_th}-{safe_brand}{ext}"
         save_path = os.path.join(photos_dir, filename)
 
@@ -381,25 +654,34 @@ class TransactionWindow(tk.Frame):
 
         if os.path.exists(self.image_path):
             img = Image.open(self.image_path)
-            img.thumbnail((60, 60))
-            self.image_thumbnail = ImageTk.PhotoImage(img)
-            self.photo_label.config(image=self.image_thumbnail)
+            img.thumbnail((80, 80))
+
+            ctk_img = CTkImage(light_image=img, size=img.size)
+            self.image_thumbnail = ctk_img
+            self.photo_label.configure(image=ctk_img, text="")
+
             # Changed from checking type == "SPECIAL" to checking brand == "MOS"
             if self.details["brand"].upper() == "MOS":
                 self.upload_button.pack_forget()
             else:
                 self.upload_button.pack_forget()  # No upload button for other brands
         else:
-            self.photo_label.config(image="", bg="#ddd")
+            self.photo_label.configure(image=None, text="📷")
             # Changed from checking type == "SPECIAL" to checking brand == "MOS"
             if self.details["brand"].upper() == "MOS":
-                self.upload_button.pack()
+                self.upload_button.pack(pady=(5, 0))
             else:
                 self.upload_button.pack_forget()
 
     def show_photo_menu(self, event=None):
         if not os.path.exists(self.image_path):
-            return
+            # If no photo exists, just show fullscreen placeholder or return
+            if self.details["brand"].upper() == "MOS":
+                return  # No photo to show for MOS without image
+            else:
+                # For other brands, show fullscreen photo (shared or placeholder)
+                self.show_fullscreen_photo()
+                return
 
         # Changed from checking type == "SPECIAL" to checking brand == "MOS"
         # If item is not MOS brand, just open photo immediately
@@ -407,27 +689,20 @@ class TransactionWindow(tk.Frame):
             self.show_fullscreen_photo()
             return
 
-        # If a menu already exists, destroy it
-        if hasattr(self, "photo_menu") and self.photo_menu and self.photo_menu.winfo_exists():
-            self.photo_menu.destroy()
-            self.photo_menu = None
-            return
-
-        # Create menu popup
-        popup = tk.Toplevel(self)
-        self.photo_menu = popup
+        # Create custom menu popup matching your app style for MOS brand
+        popup = ctk.CTkToplevel(self)
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
+        popup.configure(fg_color="#2b2b2b")
 
-        # Position popup in the center of the thumbnail
-        x = self.photo_label.winfo_rootx() + self.photo_label.winfo_width() // 2 - 50
-        y = self.photo_label.winfo_rooty() + self.photo_label.winfo_height() // 2 - 15
-        popup.geometry(f"+{x}+{y}")
+        # Position popup near the photo
+        x = self.photo_label.winfo_rootx() + self.photo_label.winfo_width() // 2 - 60
+        y = self.photo_label.winfo_rooty() + self.photo_label.winfo_height() + 5
+        popup.geometry(f"120x80+{x}+{y}")
 
         def close_menu(event=None):
             if popup and popup.winfo_exists():
                 popup.destroy()
-                self.photo_menu = None
 
         def view():
             close_menu()
@@ -440,10 +715,31 @@ class TransactionWindow(tk.Frame):
                 self.load_photo()
 
         # Menu buttons
-        tk.Button(popup, text="🔍 View", command=view, width=10).pack()
+        ctk.CTkButton(
+            popup,
+            text="🔍 View",
+            font=("Poppins", 12),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=15,
+            height=30,
+            command=view
+        ).pack(padx=5, pady=(5, 2))
+
         # Changed from checking type == "SPECIAL" to checking brand == "MOS"
         if self.details["brand"].upper() == "MOS":
-            tk.Button(popup, text="🗑 Delete", command=delete, width=10).pack()
+            ctk.CTkButton(
+                popup,
+                text="🗑 Delete",
+                font=("Poppins", 12),
+                fg_color="#EF4444",
+                hover_color="#DC2626",
+                text_color="#FFFFFF",
+                corner_radius=15,
+                height=30,
+                command=delete
+            ).pack(padx=5, pady=(2, 5))
 
         popup.bind("<FocusOut>", lambda e: close_menu())
         popup.focus_set()
@@ -471,30 +767,99 @@ class TransactionWindow(tk.Frame):
             # Placeholder fallback path (adjust to your placeholder image location)
             placeholder = os.path.join(photos_dir, "placeholder.png")
             return placeholder if os.path.exists(placeholder) else ""
-        
+
     def show_fullscreen_photo(self):
         if not os.path.exists(self.image_path):
             return  # No photo to show
 
-        top = tk.Toplevel(self)
-        top.title("Photo Viewer")
-        top.transient(self)
-        top.grab_set()
-        top.resizable(False, False)
+        # Create custom fullscreen photo viewer matching your app style
+        photo_viewer = ctk.CTkToplevel(self)
+        photo_viewer.title("Photo Viewer")
+        photo_viewer.transient(self)
+        photo_viewer.grab_set()
+        photo_viewer.configure(fg_color="#000000")
 
+        # Get screen dimensions for proper sizing
+        screen_width = photo_viewer.winfo_screenwidth()
+        screen_height = photo_viewer.winfo_screenheight()
+
+        # Set window size to 80% of screen dimensions
+        window_width = int(screen_width * 0.8)
+        window_height = int(screen_height * 0.8)
+
+        # Center the window
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        photo_viewer.geometry(f"{window_width}x{window_height}+{x}+{y}")
+
+        # Main container
+        container = ctk.CTkFrame(photo_viewer, fg_color="#000000")
+        container.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # Load and scale image to fit window while maintaining aspect ratio
         img = Image.open(self.image_path)
-        img.thumbnail((800, 800))
-        photo = ImageTk.PhotoImage(img)
-        label = tk.Label(top, image=photo)
-        label.image = photo  # Keep reference so image displays
-        label.pack(padx=10, pady=10)
-        label.bind("<Button-1>", lambda e: top.destroy())  # Click photo to close
 
-        top.update_idletasks()
-        w = top.winfo_width()
-        h = top.winfo_height()
-        ws = top.winfo_screenwidth()
-        hs = top.winfo_screenheight()
-        x = (ws // 2) - (w // 2)
-        y = (hs // 2) - (h // 2)
-        top.geometry(f"{w}x{h}+{x}+{y}")
+        # Calculate available space for image (accounting for padding and labels)
+        available_width = window_width - 80  # Account for padding
+        available_height = window_height - 120  # Account for padding and labels
+
+        # Get original image dimensions
+        orig_width, orig_height = img.size
+
+        # Calculate scaling factor to fit image in available space
+        width_ratio = available_width / orig_width
+        height_ratio = available_height / orig_height
+        scale_factor = min(width_ratio, height_ratio)
+
+        # Calculate new dimensions
+        new_width = int(orig_width * scale_factor)
+        new_height = int(orig_height * scale_factor)
+
+        # Resize image
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        photo = CTkImage(light_image=img, size=img.size)
+
+        # Image label - centered
+        image_frame = ctk.CTkFrame(container, fg_color="#000000")
+        image_frame.pack(fill="both", expand=True)
+
+        label = ctk.CTkLabel(
+            image_frame,
+            image=photo,
+            text="",
+            cursor="hand2"
+        )
+        label.image = photo  # Keep reference so image displays
+        label.pack(expand=True)  # Center the image
+        label.bind("<Button-1>", lambda e: photo_viewer.destroy())  # Click photo to close
+
+        # Instructions container
+        instruction_frame = ctk.CTkFrame(container, fg_color="transparent")
+        instruction_frame.pack(fill="x", pady=(10, 0))
+
+        # Close instruction
+        ctk.CTkLabel(
+            instruction_frame,
+            text="Click image or press ESC to close",
+            font=("Poppins", 12),
+            text_color="#CCCCCC"
+        ).pack()
+
+        # Close button
+        close_btn = ctk.CTkButton(
+            instruction_frame,
+            text="Close",
+            font=("Poppins", 12, "bold"),
+            fg_color="#D00000",
+            hover_color="#B71C1C",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            width=100,
+            height=30,
+            command=photo_viewer.destroy
+        )
+        close_btn.pack(pady=(10, 0))
+
+        # Bind ESC key to close
+        photo_viewer.bind("<Escape>", lambda e: photo_viewer.destroy())
+        photo_viewer.focus_set()

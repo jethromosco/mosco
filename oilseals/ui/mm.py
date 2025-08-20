@@ -1,15 +1,9 @@
 import customtkinter as ctk
-from PIL import Image
 import tkinter as tk
-from tkinter import ttk, simpledialog, messagebox
+from tkinter import ttk
 from ..database import connect_db
 from .transaction_window import TransactionWindow
 from ..admin.products import AdminPanel
-
-# === File Paths ===
-ICON_PATH = r"C:\\Users\\MOS-PC2\\Desktop\\figma icons"
-LOGO_LEFT = f"{ICON_PATH}\\\\mosco logo.png"
-LOGO_RIGHT = f"{ICON_PATH}\\\\mosco text.png"
 
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
@@ -35,7 +29,6 @@ class InventoryApp(ctk.CTkFrame):
 
         self.sort_by = tk.StringVar(value="Size")
         self.stock_filter = tk.StringVar(value="All")
-        self.search_var = tk.StringVar()
 
         self.inch_labels = {}  # ID/OD/TH inch conversion labels
         self.entry_widgets = {}  # Store entry widgets for key binding
@@ -116,19 +109,23 @@ class InventoryApp(ctk.CTkFrame):
             ("Part No.", "part_no")
         ]
 
-        # Shared hover/focus handlers
+        # FIXED: Shared hover/focus handlers with RED outline on hover
         def on_entry_enter(event, entry):
             if entry.focus_get() != entry:
-                entry.configure(border_color="#6B7280", fg_color="#4B5563")
+                # RED outline on hover (not focused)
+                entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
 
         def on_entry_leave(event, entry):
             if entry.focus_get() != entry:
-                entry.configure(border_color="#4B5563", fg_color="#374151")
+                # Back to normal when not hovered and not focused
+                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
 
         def on_entry_focus_in(event, entry):
+            # RED outline when focused (clicked)
             entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
 
         def on_entry_focus_out(event, entry):
+            # Back to normal when focus is lost
             entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
 
         for idx, (display_name, key) in enumerate(search_fields):
@@ -433,10 +430,10 @@ class InventoryApp(ctk.CTkFrame):
         )
         password_entry.pack(pady=(0, 10))
         
-        # Entry hover/focus effects - matching your search entries
+        # FIXED: Entry hover/focus effects with RED outline on hover
         def on_entry_enter(event):
             if password_entry.focus_get() != password_entry:
-                password_entry.configure(border_color="#6B7280", fg_color="#4B5563")
+                password_entry.configure(border_color="#D00000", fg_color="#4B5563")
         
         def on_entry_leave(event):
             if password_entry.focus_get() != password_entry:
@@ -560,7 +557,6 @@ class InventoryApp(ctk.CTkFrame):
                 var.set("")
             self.sort_by.set("Size")
             self.stock_filter.set("All")
-            self.search_var.set("")
 
         self.tree.delete(*self.tree.get_children())
 
