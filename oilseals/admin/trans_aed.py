@@ -1,3 +1,4 @@
+import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
 from tkcalendar import DateEntry
@@ -51,8 +52,47 @@ class TransactionFormHandler:
         if not items:
             return messagebox.showwarning("Select", "Select transaction(s) to delete", parent=self.parent_frame.winfo_toplevel())
 
-        confirm = messagebox.askyesno("Delete", f"Delete selected {len(items)} transaction(s)?", parent=self.parent_frame.winfo_toplevel())
-        if confirm:
+        # Create custom confirmation dialog matching the app style
+        parent_window = self.parent_frame.winfo_toplevel()
+        confirm_window = ctk.CTkToplevel(parent_window)
+        confirm_window.title("Confirm Delete")
+        confirm_window.geometry("400x200")
+        confirm_window.resizable(False, False)
+        confirm_window.configure(fg_color="#000000")
+        
+        # Center the window
+        confirm_window.transient(parent_window)
+        confirm_window.grab_set()
+        
+        # Center positioning
+        confirm_window.update_idletasks()
+        parent_x = parent_window.winfo_rootx()
+        parent_y = parent_window.winfo_rooty()
+        parent_width = parent_window.winfo_width()
+        parent_height = parent_window.winfo_height()
+        
+        x = parent_x + (parent_width - 400) // 2
+        y = parent_y + (parent_height - 200) // 2
+        confirm_window.geometry(f"400x200+{x}+{y}")
+        
+        # Main container
+        main_frame = ctk.CTkFrame(confirm_window, fg_color="#2b2b2b", corner_radius=40)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Question text
+        question_label = ctk.CTkLabel(
+            main_frame,
+            text=f"Delete selected {len(items)} transaction(s)?",
+            font=("Poppins", 16, "bold"),
+            text_color="#FFFFFF"
+        )
+        question_label.pack(pady=(30, 40))
+        
+        # Button container
+        button_container = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_container.pack(pady=(0, 20))
+        
+        def confirm_delete():
             conn = connect_db()
             cur = conn.cursor()
             for item in items:
@@ -62,23 +102,84 @@ class TransactionFormHandler:
 
             if self.on_refresh_callback:
                 self.on_refresh_callback()
+            confirm_window.destroy()
+        
+        def cancel_delete():
+            confirm_window.destroy()
+        
+        # Cancel button
+        cancel_btn = ctk.CTkButton(
+            button_container,
+            text="Cancel",
+            font=("Poppins", 14, "bold"),
+            fg_color="#6B7280",
+            hover_color="#4B5563",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=40,
+            command=cancel_delete
+        )
+        cancel_btn.pack(side="left", padx=(0, 15))
+        
+        # Confirm button
+        confirm_btn = ctk.CTkButton(
+            button_container,
+            text="Delete",
+            font=("Poppins", 14, "bold"),
+            fg_color="#EF4444",
+            hover_color="#DC2626",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=40,
+            command=confirm_delete
+        )
+        confirm_btn.pack(side="right")
+        
+        # Key bindings
+        confirm_window.bind('<Escape>', lambda e: cancel_delete())
+        confirm_window.bind('<Return>', lambda e: confirm_delete())
+        
+        # Focus on confirm window
+        confirm_window.focus()
 
     def _get_record_by_id(self, rowid):
         # To be implemented/overridden as needed
         pass
 
     def _transaction_form(self, mode, record=None, rowid=None):
-        form = tk.Toplevel(self.parent_frame)
+        # Create CustomTkinter form window
+        form = ctk.CTkToplevel(self.parent_frame.winfo_toplevel())
         form.title(f"{mode} Transaction")
         
         # IMPORTANT FIX: Make window invisible initially to prevent flashing
         form.withdraw()
         
         form.resizable(False, False)
-        form.bind("<Escape>", lambda e: form.destroy())
+        form.configure(fg_color="#000000")
         form.transient(self.parent_frame.winfo_toplevel())
         form.grab_set()
+        form.bind("<Escape>", lambda e: form.destroy())
 
+        # Main container with the app's styling
+        container = ctk.CTkFrame(form, fg_color="#2b2b2b", corner_radius=40)
+        container.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # Inner container for form content
+        inner_container = ctk.CTkFrame(container, fg_color="transparent")
+        inner_container.pack(fill="both", expand=True, padx=30, pady=30)
+
+        # Form title
+        title_label = ctk.CTkLabel(
+            inner_container,
+            text=f"{mode} Transaction",
+            font=("Poppins", 20, "bold"),
+            text_color="#D00000"
+        )
+        title_label.pack(pady=(0, 20))
+
+        # Form variables
         vars = {key: tk.StringVar() for key in self.FIELDS}
         date_var = tk.StringVar()
         transaction_type_var = tk.StringVar(value="Sale")
@@ -130,70 +231,171 @@ class TransactionFormHandler:
 
         price_label_var = tk.StringVar(value="Price:")
 
+        # Transaction type buttons section
+        type_section = ctk.CTkFrame(inner_container, fg_color="#374151", corner_radius=25)
+        type_section.pack(fill="x", pady=(0, 20))
+        
+        type_inner = ctk.CTkFrame(type_section, fg_color="transparent")
+        type_inner.pack(fill="x", padx=20, pady=15)
+        
+        type_label = ctk.CTkLabel(
+            type_inner,
+            text="Transaction Type:",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF"
+        )
+        type_label.pack(pady=(0, 10))
+
+        # Button containers
+        top_btn_container = ctk.CTkFrame(type_inner, fg_color="transparent")
+        top_btn_container.pack(pady=(0, 10))
+        
+        bottom_btn_container = ctk.CTkFrame(type_inner, fg_color="transparent")
+        bottom_btn_container.pack()
+
         def select_transaction_type(value):
             transaction_type_var.set(value)
-            for btn in [restock_btn, sale_btn, actual_btn, fabrication_btn]:
-                btn.config(bg="SystemButtonFace")
+            
+            # Reset all button colors
+            restock_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
+            sale_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
+            actual_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
+            fabrication_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
 
             if value == "Restock":
-                restock_btn.config(bg="blue")
+                restock_btn.configure(fg_color="#3B82F6", hover_color="#2563EB")
                 price_label_var.set("Cost:")
             elif value == "Sale":
-                sale_btn.config(bg="red")
+                sale_btn.configure(fg_color="#EF4444", hover_color="#DC2626")
                 price_label_var.set("Price:")
             elif value == "Actual":
-                actual_btn.config(bg="green")
+                actual_btn.configure(fg_color="#22C55E", hover_color="#16A34A")
                 price_label_var.set("Price:")
             elif value == "Fabrication":
-                fabrication_btn.config(bg="gray")
+                fabrication_btn.configure(fg_color="#6B7280", hover_color="#4B5563")
                 price_label_var.set("Price:")
 
             def enable_disable(widgets, enable):
                 state = "normal" if enable else "disabled"
                 for w in widgets:
-                    w.config(state=state)
+                    w.configure(state=state)
 
             if value in ["Restock", "Sale"]:
                 enable_disable([quantity_entry], True)
                 enable_disable([price_entry], True)
                 enable_disable([stock_entry], False)
                 enable_disable([qty_restock_entry, qty_customer_entry], False)
-                stock_left_label.config(text="", fg="black")
+                stock_left_label.configure(text_color="#FFFFFF")
             elif value == "Actual":
                 enable_disable([quantity_entry], False)
                 enable_disable([price_entry], False)
                 enable_disable([stock_entry], True)
                 enable_disable([qty_restock_entry, qty_customer_entry], False)
-                stock_left_label.config(text="", fg="black")
+                stock_left_label.configure(text_color="#FFFFFF")
             elif value == "Fabrication":
                 enable_disable([quantity_entry], False)
                 enable_disable([price_entry], True)
                 enable_disable([stock_entry], False)
                 enable_disable([qty_restock_entry, qty_customer_entry], True)
                 if stock_left_var.get() == "Error: Negative!":
-                    stock_left_label.config(text="Check Qty Sold vs Qty Restock!", fg="red")
+                    stock_left_label.configure(text="Check Qty Sold vs Qty Restock!", text_color="#EF4444")
                 else:
-                    stock_left_label.config(text="", fg="black")
+                    stock_left_label.configure(text_color="#FFFFFF")
 
-        top_btn_frame = tk.Frame(form)
-        top_btn_frame.pack(pady=10)
-        restock_btn = tk.Button(top_btn_frame, text="Restock", width=10, command=lambda: select_transaction_type("Restock"))
-        restock_btn.pack(side=tk.LEFT, padx=5)
-        sale_btn = tk.Button(top_btn_frame, text="Sale", width=10, command=lambda: select_transaction_type("Sale"))
-        sale_btn.pack(side=tk.LEFT, padx=5)
+        # Create transaction type buttons
+        restock_btn = ctk.CTkButton(
+            top_btn_container,
+            text="Restock",
+            font=("Poppins", 14, "bold"),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=120,
+            height=40,
+            command=lambda: select_transaction_type("Restock")
+        )
+        restock_btn.pack(side="left", padx=(0, 10))
+        
+        sale_btn = ctk.CTkButton(
+            top_btn_container,
+            text="Sale",
+            font=("Poppins", 14, "bold"),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=120,
+            height=40,
+            command=lambda: select_transaction_type("Sale")
+        )
+        sale_btn.pack(side="left")
+        
+        actual_btn = ctk.CTkButton(
+            bottom_btn_container,
+            text="Actual",
+            font=("Poppins", 14, "bold"),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=120,
+            height=40,
+            command=lambda: select_transaction_type("Actual")
+        )
+        actual_btn.pack(side="left", padx=(0, 10))
+        
+        fabrication_btn = ctk.CTkButton(
+            bottom_btn_container,
+            text="Fabrication",
+            font=("Poppins", 14, "bold"),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=120,
+            height=40,
+            command=lambda: select_transaction_type("Fabrication")
+        )
+        fabrication_btn.pack(side="left")
 
-        bottom_btn_frame = tk.Frame(form)
-        bottom_btn_frame.pack()
-        actual_btn = tk.Button(bottom_btn_frame, text="Actual", width=10, command=lambda: select_transaction_type("Actual"))
-        actual_btn.pack(side=tk.LEFT, padx=5, pady=5)
-        fabrication_btn = tk.Button(bottom_btn_frame, text="Fabrication", width=10, command=lambda: select_transaction_type("Fabrication"))
-        fabrication_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        # Form fields section
+        fields_section = ctk.CTkFrame(inner_container, fg_color="transparent")
+        fields_section.pack(fill="x", pady=(0, 20))
 
-        date_row = tk.Frame(form)
-        date_row.pack(pady=(5, 5))
-        tk.Label(date_row, text="Date:").pack(side=tk.LEFT, padx=(0, 5))
-        DateEntry(date_row, textvariable=date_var, date_pattern="mm/dd/yy", width=12).pack(side=tk.LEFT)
+        # Date field
+        date_frame = ctk.CTkFrame(fields_section, fg_color="transparent")
+        date_frame.pack(fill="x", pady=8)
+        date_frame.grid_columnconfigure(1, weight=1)
+        
+        date_label = ctk.CTkLabel(
+            date_frame,
+            text="Date:",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF",
+            width=80,
+            anchor="w"
+        )
+        date_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+        
+        # Create a styled frame for the date picker
+        date_picker_frame = ctk.CTkFrame(date_frame, fg_color="#374151", corner_radius=20, height=35)
+        date_picker_frame.grid(row=0, column=1, sticky="ew")
+        date_picker_frame.pack_propagate(False)
+        
+        date_entry = DateEntry(
+            date_picker_frame,
+            textvariable=date_var,
+            date_pattern="mm/dd/yy",
+            width=12,
+            background='#374151',
+            foreground='#FFFFFF',
+            borderwidth=0,
+            relief='flat'
+        )
+        date_entry.pack(expand=True, padx=5, pady=2)
 
+        # Form input fields
         fields = [
             ("Type", "Type"), ("ID", "ID"), ("OD", "OD"), ("TH", "TH"),
             ("Brand", "Brand"), ("Name", "Name")
@@ -202,15 +404,58 @@ class TransactionFormHandler:
         entry_widgets = {}
 
         for label_text, var_key in fields:
-            row = tk.Frame(form)
-            row.pack(anchor="w", padx=10, pady=(10 if label_text == "Type" else 5, 0))
-            tk.Label(row, text=f"{label_text}:", width=8, anchor="w").pack(side=tk.LEFT)
-
-            entry = tk.Entry(row, textvariable=vars[var_key], width=20)
-            entry.pack(side=tk.LEFT)
+            # Field container
+            field_frame = ctk.CTkFrame(fields_section, fg_color="transparent")
+            field_frame.pack(fill="x", pady=8)
+            field_frame.grid_columnconfigure(1, weight=1)
+            
+            # Label
+            label = ctk.CTkLabel(
+                field_frame,
+                text=f"{label_text}:",
+                font=("Poppins", 14, "bold"),
+                text_color="#FFFFFF",
+                width=80,
+                anchor="w"
+            )
+            label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+            
+            # Entry field
+            entry = ctk.CTkEntry(
+                field_frame,
+                textvariable=vars[var_key],
+                font=("Poppins", 13),
+                fg_color="#374151",
+                text_color="#FFFFFF",
+                corner_radius=20,
+                height=35,
+                border_width=1,
+                border_color="#4B5563"
+            )
+            entry.grid(row=0, column=1, sticky="ew")
+            
+            # Add hover effects for entry fields
+            def on_entry_enter(event, ent=entry):
+                if ent.focus_get() != ent:
+                    ent.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+            
+            def on_entry_leave(event, ent=entry):
+                if ent.focus_get() != ent:
+                    ent.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            
+            def on_entry_focus_in(event, ent=entry):
+                ent.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+            
+            def on_entry_focus_out(event, ent=entry):
+                ent.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            
+            entry.bind("<Enter>", on_entry_enter)
+            entry.bind("<Leave>", on_entry_leave)
+            entry.bind("<FocusIn>", on_entry_focus_in)
+            entry.bind("<FocusOut>", on_entry_focus_out)
 
             if var_key in ["ID", "OD", "TH"]:
-                entry.config(validate='key', validatecommand=(form.register(validate_integer), '%P'))
+                entry.configure(validate='key', validatecommand=(form.register(validate_integer), '%P'))
 
             if var_key in ["Type", "Brand", "Name"]:
                 def on_focus_out(event, var=vars[var_key]):
@@ -219,58 +464,270 @@ class TransactionFormHandler:
 
             entry_widgets[var_key] = entry
 
-        qty_row = tk.Frame(form)
-        qty_row.pack(anchor="w", padx=10, pady=5)
-        tk.Label(qty_row, text="Quantity:", width=8, anchor="w").pack(side=tk.LEFT)
-        quantity_entry = tk.Entry(qty_row, textvariable=vars["Quantity"], width=20,
-                                  validate='key', validatecommand=(form.register(validate_integer), '%P'))
-        quantity_entry.pack(side=tk.LEFT)
+        # Quantity field
+        qty_frame = ctk.CTkFrame(fields_section, fg_color="transparent")
+        qty_frame.pack(fill="x", pady=8)
+        qty_frame.grid_columnconfigure(1, weight=1)
+        
+        qty_label = ctk.CTkLabel(
+            qty_frame,
+            text="Quantity:",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF",
+            width=80,
+            anchor="w"
+        )
+        qty_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+        
+        quantity_entry = ctk.CTkEntry(
+            qty_frame,
+            textvariable=vars["Quantity"],
+            font=("Poppins", 13),
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35,
+            border_width=1,
+            border_color="#4B5563",
+            validate='key',
+            validatecommand=(form.register(validate_integer), '%P')
+        )
+        quantity_entry.grid(row=0, column=1, sticky="ew")
         entry_widgets["Quantity"] = quantity_entry
 
-        price_row = tk.Frame(form)
-        price_row.pack(anchor="w", padx=10, pady=5)
-        tk.Label(price_row, textvariable=price_label_var, width=8, anchor="w").pack(side=tk.LEFT)
-        price_entry = tk.Entry(price_row, textvariable=vars["Price"], width=20,
-                               validate='key', validatecommand=(form.register(validate_float_price), '%P'))
-        price_entry.pack(side=tk.LEFT)
+        # Add hover effects for quantity entry
+        def on_qty_enter(event):
+            if quantity_entry.focus_get() != quantity_entry:
+                quantity_entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+        
+        def on_qty_leave(event):
+            if quantity_entry.focus_get() != quantity_entry:
+                quantity_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        
+        def on_qty_focus_in(event):
+            quantity_entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+        
+        def on_qty_focus_out(event):
+            quantity_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        
+        quantity_entry.bind("<Enter>", on_qty_enter)
+        quantity_entry.bind("<Leave>", on_qty_leave)
+        quantity_entry.bind("<FocusIn>", on_qty_focus_in)
+        quantity_entry.bind("<FocusOut>", on_qty_focus_out)
+
+        # Price field
+        price_frame = ctk.CTkFrame(fields_section, fg_color="transparent")
+        price_frame.pack(fill="x", pady=8)
+        price_frame.grid_columnconfigure(1, weight=1)
+        
+        price_label = ctk.CTkLabel(
+            price_frame,
+            textvariable=price_label_var,
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF",
+            width=80,
+            anchor="w"
+        )
+        price_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+        
+        price_entry = ctk.CTkEntry(
+            price_frame,
+            textvariable=vars["Price"],
+            font=("Poppins", 13),
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35,
+            border_width=1,
+            border_color="#4B5563",
+            validate='key',
+            validatecommand=(form.register(validate_float_price), '%P')
+        )
+        price_entry.grid(row=0, column=1, sticky="ew")
         entry_widgets["Price"] = price_entry
 
-        stock_row = tk.Frame(form)
-        stock_row.pack(anchor="w", padx=10, pady=5)
-        tk.Label(stock_row, text="Stock:", width=8, anchor="w").pack(side=tk.LEFT)
-        stock_entry = tk.Entry(stock_row, textvariable=vars["Stock"], width=20,
-                               validate='key', validatecommand=(form.register(validate_integer), '%P'))
-        stock_entry.pack(side=tk.LEFT)
+        # Add hover effects for price entry
+        def on_price_enter(event):
+            if price_entry.focus_get() != price_entry:
+                price_entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+        
+        def on_price_leave(event):
+            if price_entry.focus_get() != price_entry:
+                price_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        
+        def on_price_focus_in(event):
+            price_entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+        
+        def on_price_focus_out(event):
+            price_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        
+        price_entry.bind("<Enter>", on_price_enter)
+        price_entry.bind("<Leave>", on_price_leave)
+        price_entry.bind("<FocusIn>", on_price_focus_in)
+        price_entry.bind("<FocusOut>", on_price_focus_out)
+
+        # Stock field
+        stock_frame = ctk.CTkFrame(fields_section, fg_color="transparent")
+        stock_frame.pack(fill="x", pady=8)
+        stock_frame.grid_columnconfigure(1, weight=1)
+        
+        stock_label = ctk.CTkLabel(
+            stock_frame,
+            text="Stock:",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF",
+            width=80,
+            anchor="w"
+        )
+        stock_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+        
+        stock_entry = ctk.CTkEntry(
+            stock_frame,
+            textvariable=vars["Stock"],
+            font=("Poppins", 13),
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35,
+            border_width=1,
+            border_color="#4B5563",
+            validate='key',
+            validatecommand=(form.register(validate_integer), '%P')
+        )
+        stock_entry.grid(row=0, column=1, sticky="ew")
         entry_widgets["Stock"] = stock_entry
 
-        qty_restock_row = tk.Frame(form)
-        qty_restock_row.pack(anchor="w", padx=10, pady=5)
-        tk.Label(qty_restock_row, text="Qty Restock:", width=12, anchor="w").pack(side=tk.LEFT)
-        qty_restock_entry = tk.Entry(qty_restock_row, textvariable=qty_restock_var, width=15,
-                                    validate='key', validatecommand=(form.register(validate_integer), '%P'))
-        qty_restock_entry.pack(side=tk.LEFT)
+        # Add hover effects for stock entry
+        def on_stock_enter(event):
+            if stock_entry.focus_get() != stock_entry:
+                stock_entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+        
+        def on_stock_leave(event):
+            if stock_entry.focus_get() != stock_entry:
+                stock_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        
+        def on_stock_focus_in(event):
+            stock_entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+        
+        def on_stock_focus_out(event):
+            stock_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        
+        stock_entry.bind("<Enter>", on_stock_enter)
+        stock_entry.bind("<Leave>", on_stock_leave)
+        stock_entry.bind("<FocusIn>", on_stock_focus_in)
+        stock_entry.bind("<FocusOut>", on_stock_focus_out)
 
-        qty_customer_row = tk.Frame(form)
-        qty_customer_row.pack(anchor="w", padx=10, pady=5)
-        tk.Label(qty_customer_row, text="Qty Sold:", width=12, anchor="w").pack(side=tk.LEFT)
-        qty_customer_entry = tk.Entry(qty_customer_row, textvariable=qty_customer_var, width=15,
-                                     validate='key', validatecommand=(form.register(validate_integer), '%P'))
-        qty_customer_entry.pack(side=tk.LEFT)
+        # Fabrication-specific fields
+        fab_section = ctk.CTkFrame(inner_container, fg_color="#374151", corner_radius=25)
+        fab_section.pack(fill="x", pady=(0, 20))
+        
+        fab_inner = ctk.CTkFrame(fab_section, fg_color="transparent")
+        fab_inner.pack(fill="x", padx=20, pady=15)
+        
+        fab_label = ctk.CTkLabel(
+            fab_inner,
+            text="Fabrication Details:",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF"
+        )
+        fab_label.pack(pady=(0, 10))
 
-        stock_left_row = tk.Frame(form)
-        stock_left_row.pack(anchor="w", padx=10, pady=5)
-        tk.Label(stock_left_row, text="Stock Left:", width=12, anchor="w").pack(side=tk.LEFT)
-        stock_left_label = tk.Label(stock_left_row, textvariable=stock_left_var, width=10, relief=tk.SUNKEN, anchor="w")
-        stock_left_label.pack(side=tk.LEFT)
+        # Qty Restock field
+        qty_restock_frame = ctk.CTkFrame(fab_inner, fg_color="transparent")
+        qty_restock_frame.pack(fill="x", pady=5)
+        qty_restock_frame.grid_columnconfigure(1, weight=1)
+        
+        qty_restock_label = ctk.CTkLabel(
+            qty_restock_frame,
+            text="Qty Restock:",
+            font=("Poppins", 13, "bold"),
+            text_color="#FFFFFF",
+            width=100,
+            anchor="w"
+        )
+        qty_restock_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+        
+        qty_restock_entry = ctk.CTkEntry(
+            qty_restock_frame,
+            textvariable=qty_restock_var,
+            font=("Poppins", 13),
+            fg_color="#2b2b2b",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35,
+            border_width=1,
+            border_color="#4B5563",
+            validate='key',
+            validatecommand=(form.register(validate_integer), '%P')
+        )
+        qty_restock_entry.grid(row=0, column=1, sticky="ew")
+
+        # Qty Customer field
+        qty_customer_frame = ctk.CTkFrame(fab_inner, fg_color="transparent")
+        qty_customer_frame.pack(fill="x", pady=5)
+        qty_customer_frame.grid_columnconfigure(1, weight=1)
+        
+        qty_customer_label = ctk.CTkLabel(
+            qty_customer_frame,
+            text="Qty Sold:",
+            font=("Poppins", 13, "bold"),
+            text_color="#FFFFFF",
+            width=100,
+            anchor="w"
+        )
+        qty_customer_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+        
+        qty_customer_entry = ctk.CTkEntry(
+            qty_customer_frame,
+            textvariable=qty_customer_var,
+            font=("Poppins", 13),
+            fg_color="#2b2b2b",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35,
+            border_width=1,
+            border_color="#4B5563",
+            validate='key',
+            validatecommand=(form.register(validate_integer), '%P')
+        )
+        qty_customer_entry.grid(row=0, column=1, sticky="ew")
+
+        # Stock Left field
+        stock_left_frame = ctk.CTkFrame(fab_inner, fg_color="transparent")
+        stock_left_frame.pack(fill="x", pady=5)
+        stock_left_frame.grid_columnconfigure(1, weight=1)
+        
+        stock_left_label_text = ctk.CTkLabel(
+            stock_left_frame,
+            text="Stock Left:",
+            font=("Poppins", 13, "bold"),
+            text_color="#FFFFFF",
+            width=100,
+            anchor="w"
+        )
+        stock_left_label_text.grid(row=0, column=0, sticky="w", padx=(0, 15))
+        
+        stock_left_label = ctk.CTkLabel(
+            stock_left_frame,
+            textvariable=stock_left_var,
+            font=("Poppins", 13),
+            text_color="#FFFFFF",
+            fg_color="#2b2b2b",
+            corner_radius=20,
+            height=35,
+            anchor="w"
+        )
+        stock_left_label.grid(row=0, column=1, sticky="ew", padx=(0, 5))
 
         def on_stock_left_var_changed(*args):
             if stock_left_var.get() == "Error: Negative!":
-                stock_left_label.config(fg="red")
+                stock_left_label.configure(text_color="#EF4444")
             else:
-                stock_left_label.config(fg="black")
+                stock_left_label.configure(text_color="#FFFFFF")
 
         stock_left_var.trace_add("write", on_stock_left_var_changed)
 
+        # Initialize the form
         select_transaction_type(transaction_type_var.get())
 
         if mode == "Edit" and record:
@@ -419,10 +876,41 @@ class TransactionFormHandler:
                 self.on_refresh_callback()
             form.destroy()
 
-        btn_row = tk.Frame(form)
-        btn_row.pack(fill=tk.X, pady=(10, 5), padx=5)
-        save_btn = tk.Button(btn_row, text="Save", font=("TkDefaultFont", 10), width=12, command=save)
-        save_btn.pack(anchor="center")
+        # Button container
+        button_container = ctk.CTkFrame(inner_container, fg_color="transparent")
+        button_container.pack(pady=10)
+        
+        # Cancel button
+        cancel_btn = ctk.CTkButton(
+            button_container,
+            text="Cancel",
+            font=("Poppins", 16, "bold"),
+            fg_color="#6B7280",
+            hover_color="#4B5563",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=120,
+            height=45,
+            command=form.destroy
+        )
+        cancel_btn.pack(side="left", padx=(0, 15))
+        
+        # Save button
+        save_btn = ctk.CTkButton(
+            button_container,
+            text="Save",
+            font=("Poppins", 16, "bold"),
+            fg_color="#22C55E",
+            hover_color="#16A34A",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=120,
+            height=45,
+            command=save
+        )
+        save_btn.pack(side="right")
+        
+        # Key bindings
         form.bind("<Return>", save)
 
         # IMPORTANT FIX: Center window and show it properly to prevent flashing

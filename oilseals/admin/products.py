@@ -1,9 +1,11 @@
+import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk, messagebox
-from oilseals.admin.transactions import TransactionTab
+from oilseals.admin.transactions import TransactionTab  # uses your transactions.py
 from ..database import connect_db
 from fractions import Fraction
-from .prod_aed import ProductFormHandler # Import the new handler class
+from .prod_aed import ProductFormHandler  # Import the new handler class
+
 
 # Only the utility functions needed by this file remain here
 def center_window(win, width, height):
@@ -11,6 +13,7 @@ def center_window(win, width, height):
     x = (win.winfo_screenwidth() // 2) - (width // 2)
     y = (win.winfo_screenheight() // 2) - (height // 2)
     win.geometry(f"{width}x{height}+{x}+{y}")
+
 
 def parse_measurement(value):
     """Convert a string (fraction or decimal) to float for sorting, keep original for display."""
@@ -27,19 +30,127 @@ class AdminPanel:
         self.main_app = main_app
         self.controller = controller
         self.on_close_callback = on_close_callback
-        self.win = tk.Toplevel(parent)
+        
+        # Create CustomTkinter window
+        # Create hidden
+        self.win = ctk.CTkToplevel(parent)
+        self.win.withdraw()
+
+        # Remove window manager decorations (prevents flash resize)
+        self.win.overrideredirect(True)
+
+        # Set directly to full screen size
+        screen_w = self.win.winfo_screenwidth()
+        screen_h = self.win.winfo_screenheight()
+        self.win.geometry(f"{screen_w}x{screen_h}+0+0")
+
+        # Reapply titlebar AFTER it’s full screen (optional)
+        self.win.overrideredirect(False)
         self.win.title("Manage Database")
-        center_window(self.win, 950, 500)
 
-        self.tabs = ttk.Notebook(self.win)
-        self.tabs.pack(fill=tk.BOTH, expand=True)
-
-        self.create_products_tab()
-        # Pass the controller AND the callback to TransactionTab
-        TransactionTab(self.tabs, main_app, self.controller, on_refresh_callback=self.refresh_all_tabs)
+        # Now show without resize flash
+        self.win.deiconify()
+        
+        # Create main container with the app's styling
+        main_container = ctk.CTkFrame(self.win, fg_color="#000000")
+        main_container.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Create custom tab system to match the app style
+        self.create_tab_system(main_container)
         
         # Add a protocol to call the callback when the window is closed
         self.win.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def create_tab_system(self, parent):
+        """Create custom tab system matching the app's design"""
+        # Tab header frame
+        tab_header = ctk.CTkFrame(parent, fg_color="#2b2b2b", corner_radius=40, height=60)
+        tab_header.pack(fill="x", pady=(0, 10))
+        tab_header.pack_propagate(False)
+        
+        # Tab buttons container
+        tab_buttons_frame = ctk.CTkFrame(tab_header, fg_color="transparent")
+        tab_buttons_frame.pack(expand=True, pady=15)
+        
+        # Tab state management
+        self.current_tab = "products"
+        
+        # Products tab button
+        self.products_tab_btn = ctk.CTkButton(
+            tab_buttons_frame,
+            text="Products",
+            font=("Poppins", 16, "bold"),
+            fg_color="#D00000",
+            hover_color="#B71C1C",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=150,
+            height=40,
+            command=lambda: self.switch_tab("products")
+        )
+        self.products_tab_btn.pack(side="left", padx=(0, 10))
+        
+        # Transactions tab button
+        self.transactions_tab_btn = ctk.CTkButton(
+            tab_buttons_frame,
+            text="Transactions",
+            font=("Poppins", 16, "bold"),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=150,
+            height=40,
+            command=lambda: self.switch_tab("transactions")
+        )
+        self.transactions_tab_btn.pack(side="left")
+        
+        # Tab content frame
+        self.tab_content = ctk.CTkFrame(parent, fg_color="#2b2b2b", corner_radius=40)
+        self.tab_content.pack(fill="both", expand=True)
+        
+        # Create tab frames
+        self.products_frame = ctk.CTkFrame(self.tab_content, fg_color="transparent")
+        self.transactions_frame = ctk.CTkFrame(self.tab_content, fg_color="transparent")
+        
+        # Initialize tabs
+        self.create_products_tab()
+        self.create_transactions_tab()  # Now create the transactions tab
+        
+        # Show initial tab
+        self.switch_tab("products")
+    
+    def create_transactions_tab(self):
+        """Create the transactions tab using the TransactionTab class"""
+        # Just pass the transactions_frame directly (no dummy notebook)
+        self.transaction_tab = TransactionTab(
+            notebook=self.transactions_frame,
+            main_app=self.main_app,
+            controller=self.controller,
+            on_refresh_callback=self.refresh_all_tabs
+        )
+    
+    def switch_tab(self, tab_name):
+        """Switch between tabs with proper styling updates"""
+        # Hide all frames
+        self.products_frame.pack_forget()
+        self.transactions_frame.pack_forget()
+        
+        # Update button colors
+        if tab_name == "products":
+            self.products_tab_btn.configure(fg_color="#D00000", hover_color="#B71C1C")
+            self.transactions_tab_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
+            self.products_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        else:
+            self.products_tab_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
+            self.transactions_tab_btn.configure(fg_color="#D00000", hover_color="#B71C1C")
+            self.transactions_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            
+            # Refresh transactions when switching to that tab
+            if hasattr(self, 'transaction_tab'):
+                self.transaction_tab.refresh_transactions()
+        
+        self.current_tab = tab_name
 
     def refresh_all_tabs(self):
         """Refresh products tab + main app without closing AdminPanel."""
@@ -54,43 +165,157 @@ class AdminPanel:
         self.win.destroy()
 
     def create_products_tab(self):
-        frame = tk.Frame(self.tabs)
-        self.tabs.add(frame, text="Products")
-
+        """Create the products tab with the app's styling"""
         # Instantiate the new handler class, passing the necessary arguments
         self.prod_form_handler = ProductFormHandler(self.win, None, self.refresh_products)
 
-        # Search bar
-        search_frame = tk.Frame(frame)
-        search_frame.pack(fill=tk.X, padx=10, pady=5)
-        tk.Label(search_frame, text="Search ITEM:").pack(side=tk.LEFT)
+        # === Search Section ===
+        search_section = ctk.CTkFrame(self.products_frame, fg_color="#374151", corner_radius=25)
+        search_section.pack(fill="x", pady=(0, 15))
+        
+        search_inner = ctk.CTkFrame(search_section, fg_color="transparent")
+        search_inner.pack(fill="x", padx=20, pady=15)
+        
+        # Search container
+        search_container = ctk.CTkFrame(search_inner, fg_color="transparent")
+        search_container.pack(fill="x")
+        search_container.grid_columnconfigure(1, weight=1)
+        
+        # Search label
+        search_label = ctk.CTkLabel(
+            search_container,
+            text="Search ITEM:",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF"
+        )
+        search_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+        
+        # Search entry
         self.prod_search_var = tk.StringVar()
-        search_entry = tk.Entry(search_frame, textvariable=self.prod_search_var)
-        search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        search_entry = ctk.CTkEntry(
+            search_container,
+            textvariable=self.prod_search_var,
+            font=("Poppins", 13),
+            fg_color="#2b2b2b",
+            text_color="#FFFFFF",
+            corner_radius=20,
+            height=35,
+            border_width=1,
+            border_color="#4B5563",
+            placeholder_text="Enter search term..."
+        )
+        search_entry.grid(row=0, column=1, sticky="ew", padx=(0, 10))
+        
+        # Hover effects
+        def on_search_enter(event):
+            if search_entry.focus_get() != search_entry:
+                search_entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+        def on_search_leave(event):
+            if search_entry.focus_get() != search_entry:
+                search_entry.configure(border_color="#4B5563", border_width=1, fg_color="#2b2b2b")
+        def on_search_focus_in(event):
+            search_entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+        def on_search_focus_out(event):
+            search_entry.configure(border_color="#4B5563", border_width=1, fg_color="#2b2b2b")
+        
+        search_entry.bind("<Enter>", on_search_enter)
+        search_entry.bind("<Leave>", on_search_leave)
+        search_entry.bind("<FocusIn>", on_search_focus_in)
+        search_entry.bind("<FocusOut>", on_search_focus_out)
+        
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
-        # Treeview
+        # === Table Section ===
+        table_container = ctk.CTkFrame(self.products_frame, fg_color="transparent")
+        table_container.pack(fill="both", expand=True, pady=(0, 15))
+        
+        # Style the treeview
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Products.Treeview",
+                        background="#2b2b2b",
+                        foreground="#FFFFFF",
+                        fieldbackground="#2b2b2b",
+                        font=("Poppins", 12),
+                        rowheight=35)
+        style.configure("Products.Treeview.Heading",
+                        background="#000000",
+                        foreground="#D00000",
+                        font=("Poppins", 12, "bold"))
+        style.map("Products.Treeview", background=[("selected", "#374151")])
+        style.map("Products.Treeview.Heading", background=[("active", "#111111")])
+
+        # Create Treeview
         columns = ("item", "brand", "part_no", "origin", "notes", "price")
         self.headers = ["ITEM", "BRAND", "PART_NO", "ORIGIN", "NOTES", "PRICE"]
         self.sort_direction = {col: None for col in columns}
-        self.prod_tree = ttk.Treeview(frame, columns=columns, show="headings")
+        self.prod_tree = ttk.Treeview(table_container, columns=columns, show="headings", style="Products.Treeview")
 
         for col, header in zip(columns, self.headers):
             self.prod_tree.heading(col, text=header, command=lambda c=col: self.sort_column(c))
-            self.prod_tree.column(col, width=120, anchor="center")
+            self.prod_tree.column(col, width=150, anchor="center")
 
-        self.prod_tree.pack(fill=tk.BOTH, expand=True, pady=10)
+        # Scrollbar
+        tree_scrollbar = ttk.Scrollbar(table_container, orient="vertical", command=self.prod_tree.yview)
+        self.prod_tree.configure(yscrollcommand=tree_scrollbar.set)
         
-        # Now pass the actual treeview to the handler
+        self.prod_tree.pack(side="left", fill="both", expand=True)
+        tree_scrollbar.pack(side="right", fill="y")
+        
+        # Pass treeview to handler
         self.prod_form_handler.prod_tree = self.prod_tree
 
-        # Buttons
-        btn_frame = tk.Frame(frame)
-        btn_frame.pack()
-        # Call the methods from the new handler class
-        tk.Button(btn_frame, text="Add", width=10, command=self.prod_form_handler.add_product).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="Edit", width=10, command=self.prod_form_handler.edit_product).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text="Delete", width=10, command=self.prod_form_handler.delete_product).pack(side=tk.LEFT, padx=5)
+        # === Buttons Section ===
+        buttons_section = ctk.CTkFrame(self.products_frame, fg_color="transparent")
+        buttons_section.pack(fill="x")
+        
+        button_container = ctk.CTkFrame(buttons_section, fg_color="transparent")
+        button_container.pack(anchor="center")
+        
+        # Add button
+        add_btn = ctk.CTkButton(
+            button_container,
+            text="Add",
+            font=("Poppins", 16, "bold"),
+            fg_color="#22C55E",
+            hover_color="#16A34A",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=45,
+            command=self.prod_form_handler.add_product
+        )
+        add_btn.pack(side="left", padx=(0, 10))
+        
+        # Edit button
+        edit_btn = ctk.CTkButton(
+            button_container,
+            text="Edit",
+            font=("Poppins", 16, "bold"),
+            fg_color="#4B5563",
+            hover_color="#6B7280",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=45,
+            command=self.prod_form_handler.edit_product
+        )
+        edit_btn.pack(side="left", padx=(0, 10))
+        
+        # Delete button
+        delete_btn = ctk.CTkButton(
+            button_container,
+            text="Delete",
+            font=("Poppins", 16, "bold"),
+            fg_color="#EF4444",
+            hover_color="#DC2626",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=45,
+            command=self.prod_form_handler.delete_product
+        )
+        delete_btn.pack(side="left")
 
         self.refresh_products()
 

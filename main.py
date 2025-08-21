@@ -63,3 +63,10 @@ if __name__ == "__main__":
 
 # quad tabi ng v-ring
 # bushing palit bearings
+
+
+#panget ui sa trans tab also sa trans aed lumalagpas
+
+# di functional na maayos nasira after gui
+
+# paghiwalayin ui sa functions para mas madali magedit

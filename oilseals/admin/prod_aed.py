@@ -1,3 +1,4 @@
+import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
 from ..database import connect_db
@@ -96,8 +97,46 @@ class ProductFormHandler:
         except ValueError:
             type_, id_str, od_str, th_str = "", "", "", ""
 
-        confirm = messagebox.askyesno("Confirm Delete", f"Delete {type_} {size} {brand}?", parent=self.parent_window)
-        if confirm:
+        # Create custom confirmation dialog matching the app style
+        confirm_window = ctk.CTkToplevel(self.parent_window)
+        confirm_window.title("Confirm Delete")
+        confirm_window.geometry("400x200")
+        confirm_window.resizable(False, False)
+        confirm_window.configure(fg_color="#000000")
+        
+        # Center the window
+        confirm_window.transient(self.parent_window)
+        confirm_window.grab_set()
+        
+        # Center positioning
+        confirm_window.update_idletasks()
+        parent_x = self.parent_window.winfo_rootx()
+        parent_y = self.parent_window.winfo_rooty()
+        parent_width = self.parent_window.winfo_width()
+        parent_height = self.parent_window.winfo_height()
+        
+        x = parent_x + (parent_width - 400) // 2
+        y = parent_y + (parent_height - 200) // 2
+        confirm_window.geometry(f"400x200+{x}+{y}")
+        
+        # Main container
+        main_frame = ctk.CTkFrame(confirm_window, fg_color="#2b2b2b", corner_radius=40)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Question text
+        question_label = ctk.CTkLabel(
+            main_frame,
+            text=f"Delete {type_} {size} {brand}?",
+            font=("Poppins", 16, "bold"),
+            text_color="#FFFFFF"
+        )
+        question_label.pack(pady=(30, 40))
+        
+        # Button container
+        button_container = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_container.pack(pady=(0, 20))
+        
+        def confirm_delete():
             conn = connect_db()
             cur = conn.cursor()
             cur.execute(
@@ -108,24 +147,90 @@ class ProductFormHandler:
             conn.close()
             if self.on_refresh_callback:
                 self.on_refresh_callback()
+            confirm_window.destroy()
+        
+        def cancel_delete():
+            confirm_window.destroy()
+        
+        # Cancel button
+        cancel_btn = ctk.CTkButton(
+            button_container,
+            text="Cancel",
+            font=("Poppins", 14, "bold"),
+            fg_color="#6B7280",
+            hover_color="#4B5563",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=40,
+            command=cancel_delete
+        )
+        cancel_btn.pack(side="left", padx=(0, 15))
+        
+        # Confirm button
+        confirm_btn = ctk.CTkButton(
+            button_container,
+            text="Delete",
+            font=("Poppins", 14, "bold"),
+            fg_color="#EF4444",
+            hover_color="#DC2626",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=100,
+            height=40,
+            command=confirm_delete
+        )
+        confirm_btn.pack(side="right")
+        
+        # Key bindings
+        confirm_window.bind('<Escape>', lambda e: cancel_delete())
+        confirm_window.bind('<Return>', lambda e: confirm_delete())
+        
+        # Focus on confirm window
+        confirm_window.focus()
 
     def _product_form(self, title, values=None):
-        form = tk.Toplevel(self.parent_window)
+        # Create CustomTkinter form window
+        form = ctk.CTkToplevel(self.parent_window)
         form.title(title)
         form.resizable(False, False)
+        form.configure(fg_color="#000000")
         form.transient(self.parent_window)
         form.grab_set()
         form.bind("<Escape>", lambda e: form.destroy())
 
-        container = tk.Frame(form, padx=16, pady=14)
-        container.pack()
+        # Main container with the app's styling
+        container = ctk.CTkFrame(form, fg_color="#2b2b2b", corner_radius=40)
+        container.pack(fill="both", expand=True, padx=20, pady=20)
 
+        # Inner container for form content
+        inner_container = ctk.CTkFrame(container, fg_color="transparent")
+        inner_container.pack(fill="both", expand=True, padx=30, pady=30)
+
+        # Form title
+        title_label = ctk.CTkLabel(
+            inner_container,
+            text=title,
+            font=("Poppins", 20, "bold"),
+            text_color="#D00000"
+        )
+        title_label.pack(pady=(0, 20))
+
+        # Form variables
         vars = {field: tk.StringVar(value=(str(values[idx]) if values else "")) for idx, field in enumerate(self.FIELDS)}
 
+        # If editing, show the current item info
         if title.startswith("Edit") and values:
             item_str = f"{values[0]} {values[1]}-{values[2]}-{values[3]}"
-            tk.Label(container, text=item_str, font=("TkDefaultFont", 10, "bold")).pack(pady=(0, 6))
+            current_item_label = ctk.CTkLabel(
+                inner_container,
+                text=f"Editing: {item_str}",
+                font=("Poppins", 14, "bold"),
+                text_color="#CCCCCC"
+            )
+            current_item_label.pack(pady=(0, 20))
 
+        # Validation functions
         def force_uppercase(*args):
             vars["TYPE"].set(''.join(filter(str.isalpha, vars["TYPE"].get())).upper())
             vars["BRAND"].set(''.join(filter(str.isalpha, vars["BRAND"].get())).upper())
@@ -140,13 +245,63 @@ class ProductFormHandler:
             price_val = ''.join(c for c in vars["PRICE"].get() if c in '0123456789.')
             vars["PRICE"].set(price_val)
 
-        for field in self.FIELDS:
-            row = tk.Frame(container)
-            row.pack(fill="x", pady=2)
-            tk.Label(row, text=f"{field.replace('_', ' ')}:", width=12, anchor="w").pack(side="left")
-            tk.Entry(row, textvariable=vars[field]).pack(side="left", fill="x", expand=True)
+        # Form fields
+        form_fields_frame = ctk.CTkFrame(inner_container, fg_color="transparent")
+        form_fields_frame.pack(fill="x", pady=(0, 25))
 
-        # Attach validation trace
+        # Create styled form fields
+        for idx, field in enumerate(self.FIELDS):
+            # Field container
+            field_frame = ctk.CTkFrame(form_fields_frame, fg_color="transparent")
+            field_frame.pack(fill="x", pady=8)
+            field_frame.grid_columnconfigure(1, weight=1)
+            
+            # Label
+            label = ctk.CTkLabel(
+                field_frame,
+                text=f"{field.replace('_', ' ')}:",
+                font=("Poppins", 14, "bold"),
+                text_color="#FFFFFF",
+                width=80,
+                anchor="w"
+            )
+            label.grid(row=0, column=0, sticky="w", padx=(0, 15))
+            
+            # Entry field
+            entry = ctk.CTkEntry(
+                field_frame,
+                textvariable=vars[field],
+                font=("Poppins", 13),
+                fg_color="#374151",
+                text_color="#FFFFFF",
+                corner_radius=20,
+                height=35,
+                border_width=1,
+                border_color="#4B5563"
+            )
+            entry.grid(row=0, column=1, sticky="ew")
+            
+            # Add hover effects for entry fields
+            def on_entry_enter(event, ent=entry):
+                if ent.focus_get() != ent:
+                    ent.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+            
+            def on_entry_leave(event, ent=entry):
+                if ent.focus_get() != ent:
+                    ent.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            
+            def on_entry_focus_in(event, ent=entry):
+                ent.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+            
+            def on_entry_focus_out(event, ent=entry):
+                ent.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            
+            entry.bind("<Enter>", on_entry_enter)
+            entry.bind("<Leave>", on_entry_leave)
+            entry.bind("<FocusIn>", on_entry_focus_in)
+            entry.bind("<FocusOut>", on_entry_focus_out)
+
+        # Attach validation traces
         vars["TYPE"].trace_add("write", force_uppercase)
         vars["BRAND"].trace_add("write", force_uppercase)
         vars["ORIGIN"].trace_add("write", force_uppercase)
@@ -159,14 +314,19 @@ class ProductFormHandler:
 
                 # Validate required fields: TYPE, ID, OD, TH, BRAND
                 if not all(data[i] for i in range(5)):
-                    return messagebox.showerror("Missing", "Fill all required fields", parent=form)
+                    messagebox.showerror("Missing Fields", "Please fill all required fields (TYPE, ID, OD, TH, BRAND)", parent=form)
+                    return
 
                 # Validate measurements
                 for field in ["ID", "OD", "TH"]:
                     parse_measurement(data[self.FIELDS.index(field)])
 
                 # Validate price
-                data[self.FIELDS.index("PRICE")] = float(data[self.FIELDS.index("PRICE")])
+                try:
+                    data[self.FIELDS.index("PRICE")] = float(data[self.FIELDS.index("PRICE")])
+                except ValueError:
+                    messagebox.showerror("Invalid Price", "Please enter a valid price", parent=form)
+                    return
 
                 conn = connect_db()
                 cur = conn.cursor()
@@ -194,13 +354,49 @@ class ProductFormHandler:
             except Exception as e:
                 messagebox.showerror("Error", f"An error occurred:\n{e}", parent=form)
 
-        btn_row = tk.Frame(container, pady=10)
-        btn_row.pack(fill="x")
-        tk.Button(btn_row, text="Save", width=12, command=save).pack()
+        # Button container
+        button_container = ctk.CTkFrame(inner_container, fg_color="transparent")
+        button_container.pack(pady=10)
+        
+        # Cancel button
+        cancel_btn = ctk.CTkButton(
+            button_container,
+            text="Cancel",
+            font=("Poppins", 16, "bold"),
+            fg_color="#6B7280",
+            hover_color="#4B5563",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=120,
+            height=45,
+            command=form.destroy
+        )
+        cancel_btn.pack(side="left", padx=(0, 15))
+        
+        # Save button
+        save_btn = ctk.CTkButton(
+            button_container,
+            text="Save",
+            font=("Poppins", 16, "bold"),
+            fg_color="#22C55E",
+            hover_color="#16A34A",
+            text_color="#FFFFFF",
+            corner_radius=25,
+            width=120,
+            height=45,
+            command=save
+        )
+        save_btn.pack(side="right")
+        
+        # Key bindings
         form.bind("<Return>", save)
 
+        # Auto-size and center the form
         form.update_idletasks()
-        w, h = form.winfo_width(), form.winfo_height()
-        center_window(form, w, h)
+        form_width = max(500, container.winfo_reqwidth() + 40)
+        form_height = max(400, container.winfo_reqheight() + 40)
+        center_window(form, form_width, form_height)
+        
+        # Focus and bring to front
         form.focus_force()
         form.lift()
