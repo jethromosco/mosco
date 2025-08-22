@@ -7,7 +7,6 @@ from PIL import Image
 from customtkinter import CTkImage
 from contextlib import contextmanager
 import os
-from oilseals.gui.gui_transaction_window import TransactionWindow  # re-export GUI
 
 
 @contextmanager
@@ -16,8 +15,8 @@ def db_cursor():
     cur = conn.cursor()
     try:
         yield cur
-        conn.commit()
     finally:
+        conn.commit()
         conn.close()
 
 

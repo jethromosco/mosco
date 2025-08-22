@@ -2,9 +2,8 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk
 from ..database import connect_db
-# TransactionWindow moved to gui; imported within oilseals.gui.gui_mm
-# AdminPanel moved to gui; imported within oilseals.gui.gui_mm
-from oilseals.gui.gui_mm import InventoryApp  # re-export GUI
+from .gui_transaction_window import TransactionWindow
+from .gui_products import AdminPanel
 
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
