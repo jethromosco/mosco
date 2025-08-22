@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from oilseals.gui.gui_transaction_window import TransactionWindow
+from oilseals.ui.transaction_window import TransactionWindow
 from oilseals.gui.gui_mm import InventoryApp
 from home_page import HomePage, CategoryPage, ComingSoonPage
 
