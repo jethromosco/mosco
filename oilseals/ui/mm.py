@@ -1,1 +1,164 @@
-from oilseals.gui.gui_mm import InventoryApp
+from typing import Dict, List, Tuple, Any
+from ..database import connect_db
+
+LOW_STOCK_THRESHOLD = 5
+OUT_OF_STOCK = 0
+
+
+def parse_number(val: Any) -> float:
+    try:
+        return float(val)
+    except Exception:
+        return 0.0
+
+
+def format_display_value(value: Any) -> str:
+    value_str = str(value).strip()
+    if "/" in value_str:
+        return value_str
+    try:
+        num = float(value_str)
+        return str(int(num)) if num.is_integer() else str(num)
+    except ValueError:
+        return value_str
+
+
+def convert_mm_to_inches_display(raw_value: str) -> Tuple[str, bool]:
+    text = ""
+    is_error = False
+    raw = (raw_value or "").replace("mm", "").strip()
+    if not raw:
+        return text, is_error
+
+    def mm_to_inches(mm: float) -> float:
+        return mm * 0.0393701
+
+    try:
+        parts = raw.split("/")
+        inches_list: List[str] = []
+        for part in parts:
+            if not part.strip():
+                continue
+            mm_val = float(part.strip())
+            inches = mm_to_inches(mm_val)
+            inches_list.append(f"{inches:.3f}")
+        text = "/".join(inches_list) + '"'
+    except ValueError:
+        text = "⚠ Invalid input"
+        is_error = True
+    return text, is_error
+
+
+def _build_query_and_params(search_filters: Dict[str, str]) -> Tuple[str, List[Any]]:
+    query = (
+        """SELECT type, id, od, th, brand, part_no, country_of_origin, notes, price FROM products WHERE 1=1"""
+    )
+    params: List[Any] = []
+    for key, val in search_filters.items():
+        val = (val or "").strip()
+        if not val:
+            continue
+        col = key if key not in ("brand", "part_no") else key
+        query += f" AND UPPER({col}) LIKE UPPER(?)"
+        params.append(f"{val}%")
+    return query, params
+
+
+def _fetch_products(search_filters: Dict[str, str]) -> List[Tuple[Any, ...]]:
+    query, params = _build_query_and_params(search_filters)
+    with connect_db() as conn:
+        cur = conn.cursor()
+        cur.execute(query, params)
+        rows = cur.fetchall()
+    return rows
+
+
+def _fetch_all_transactions() -> List[Tuple[Any, ...]]:
+    with connect_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT type, id_size, od_size, th_size, quantity, is_restock FROM transactions ORDER BY date ASC"""
+        )
+        rows = cur.fetchall()
+    return rows
+
+
+def _compute_stock_map(all_transactions: List[Tuple[Any, ...]]) -> Dict[Tuple[str, str, str, str], int]:
+    stock_map: Dict[Tuple[str, str, str, str], int] = {}
+    for row in all_transactions:
+        type_, id_raw, od_raw, th_raw, quantity, is_restock = row
+        key = (type_, id_raw, od_raw, th_raw)
+        if is_restock == 2:
+            stock_map[key] = int(quantity)
+        else:
+            stock_map[key] = stock_map.get(key, 0) + int(quantity)
+    return stock_map
+
+
+def _parse_thickness_sort(th_raw: Any) -> Tuple[float, float]:
+    val = str(th_raw).strip()
+    if "/" in val:
+        try:
+            main, sub = map(float, val.split("/", 1))
+            return (main, sub)
+        except Exception:
+            try:
+                return (float(val.split("/")[0]), 0.0)
+            except ValueError:
+                return (0.0, 0.0)
+    else:
+        try:
+            return (float(val), 0.0)
+        except Exception:
+            return (0.0, 0.0)
+
+
+def stock_filter_matches(qty: int, stock_filter: str) -> bool:
+    if stock_filter == "Low Stock":
+        return 0 < qty <= LOW_STOCK_THRESHOLD
+    if stock_filter == "Out of Stock":
+        return qty == OUT_OF_STOCK
+    if stock_filter == "In Stock":
+        return qty > OUT_OF_STOCK
+    return True
+
+
+def build_products_display_data(
+    search_filters: Dict[str, str],
+    sort_by: str,
+    stock_filter: str
+) -> List[Tuple[Any, ...]]:
+    """Return list of tuples: (type, size_str, brand, part_no, origin, notes, qty, price_str, id_raw, od_raw, th_raw)
+    where the last three are for sorting only and should not be displayed.
+    """
+    products = _fetch_products(search_filters)
+    all_transactions = _fetch_all_transactions()
+    stock_map = _compute_stock_map(all_transactions)
+
+    display_data: List[Tuple[Any, ...]] = []
+    for row in products:
+        type_, id_raw, od_raw, th_raw, brand, part_no, origin, notes, price = row
+        qty = stock_map.get((type_, id_raw, od_raw, th_raw), 0)
+        if not stock_filter_matches(qty, stock_filter):
+            continue
+        size_str = f"{format_display_value(id_raw)}×{format_display_value(od_raw)}×{format_display_value(th_raw)}"
+        display_data.append((
+            type_,
+            size_str,
+            brand,
+            part_no,
+            origin,
+            notes,
+            qty,
+            f"₱{float(price):.2f}",
+            id_raw,
+            od_raw,
+            th_raw
+        ))
+
+    if sort_by == "Size":
+        display_data.sort(key=lambda x: (parse_number(x[8]), parse_number(x[9]), _parse_thickness_sort(x[10])))
+    elif sort_by == "Quantity":
+        display_data.sort(key=lambda x: x[6], reverse=True)
+
+    return display_data

@@ -1,6 +1,6 @@
 import customtkinter as ctk
-from oilseals.ui.transaction_window import TransactionWindow
-from oilseals.ui.mm import InventoryApp
+from oilseals.gui.gui_transaction_window import TransactionWindow
+from oilseals.gui.gui_mm import InventoryApp
 from home_page import HomePage, CategoryPage, ComingSoonPage
 
 
@@ -75,7 +75,7 @@ class AppController:
                 base_folder = parts[0].lower() + parts[1].lower()
                 sub_module = parts[-1].lower()
 
-                module_path = f"{base_folder}.ui.{sub_module}"
+                module_path = f"{base_folder}.gui.gui_{sub_module}"
                 module = __import__(module_path, fromlist=["InventoryApp"])
                 InventoryClass = getattr(module, "InventoryApp")
 
