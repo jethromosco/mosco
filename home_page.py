@@ -1,9 +1,10 @@
 import customtkinter as ctk
 from PIL import Image
 import tkinter as tk
+import os
 
 # === File Paths ===
-ICON_PATH = r"C:\Users\MOS-PC2\Desktop\figma icons"
+ICON_PATH = os.path.join(os.path.dirname(__file__), "icons")
 
 # Category structure
 categories = {
@@ -20,7 +21,6 @@ categories = {
         "POLYCORD": {}
     },
     "O-RING KITS": {},
-    "QUAD RINGS (AIR SEALS)": {"MM": None, "INCH": None},
     "PACKING SEALS": {
         "MONOSEALS": {"MM": None, "INCH": None},
         "WIPER SEALS": {"MM": None, "INCH": None},
@@ -35,13 +35,14 @@ categories = {
         "E-RINGS": {}
     },
     "V-RINGS": {"VS": {}, "VA": {}, "VL": {}},
+    "QUAD RINGS (AIR SEALS)": {"MM": None, "INCH": None},
     "PISTON CUPS": {"PISTON CUPS": {}, "DOUBLE ACTION": {}},
     "OIL CAPS": "COMING_SOON",
     "RUBBER DIAPHRAGMS": "COMING_SOON",
     "COUPLING INSERTS": "COMING_SOON",
     "IMPELLERS": "COMING_SOON",
-    "BALL BEARINGS": "COMING_SOON",
     "BUSHINGS (FLAT RINGS)": "COMING_SOON",
+    "BALL BEARINGS": "COMING_SOON",
     "GREASE & SEALANTS": "COMING_SOON",
     "ETC. (SPECIAL)": "COMING_SOON"
 }
@@ -52,18 +53,18 @@ icon_mapping = {
     "O-RINGS": f"{ICON_PATH}\\orings.png",
     "O-CORDS": f"{ICON_PATH}\\o-ring cords.png",
     "O-RING KITS": f"{ICON_PATH}\\o-ring kits.png",
-    "QUAD RINGS (AIR SEALS)": f"{ICON_PATH}\\quad rings.png",
     "PACKING SEALS": f"{ICON_PATH}\\packing seals.png",
     "MECHANICAL SHAFT SEALS": f"{ICON_PATH}\\mechanical shaft seals.png",
     "LOCK RINGS (CIRCLIPS)": f"{ICON_PATH}\\lock rings.png",
     "V-RINGS": f"{ICON_PATH}\\v-rings.png",
+    "QUAD RINGS (AIR SEALS)": f"{ICON_PATH}\\quad rings.png",
     "PISTON CUPS": f"{ICON_PATH}\\piston cups.png",
     "OIL CAPS": f"{ICON_PATH}\\oil caps.png",
     "RUBBER DIAPHRAGMS": f"{ICON_PATH}\\rubber diaphragms.png",
     "COUPLING INSERTS": f"{ICON_PATH}\\coupling inserts.png",
     "IMPELLERS": f"{ICON_PATH}\\impellers.png",
-    "BALL BEARINGS": f"{ICON_PATH}\\ball bearings.png",
     "BUSHINGS (FLAT RINGS)": f"{ICON_PATH}\\bushings.png",
+    "BALL BEARINGS": f"{ICON_PATH}\\ball bearings.png",
     "GREASE & SEALANTS": f"{ICON_PATH}\\grease and sealants.png",
     "ETC. (SPECIAL)": f"{ICON_PATH}\\special.png"
 }

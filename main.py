@@ -53,16 +53,17 @@ if __name__ == "__main__":
 
 
 
-# JO di mapagsama sa isang line ang "finabricate" at "nabenta" due to formulas present
-# ginawang magkahiwalay = fab (blue) and sold (red) INVOICE NUM SA KALAS
+# JO di mapagsama sa isang line ang "finabricate" at "nabenta" due to formulas present /
+# ginawang magkahiwalay = fab (blue) and sold (red) INVOICE NUM SA KALAS /
+# ok na yung recent ilagay na lang sa read me 
 
 # ty (taiwan) NQK and NACTEC 
 # ipaconfirm kung mas ok hindi kasi may search filters na / PAGSAMAHIN
 # NOK - NOK NACTEC
 # TY - lahat ng taiwan brands
 
-# quad tabi ng v-ring
-# bushing palit bearings
+# quad tabi ng v-ring /
+# bushing palit bearings / 
 
 
 #panget ui sa trans tab also sa trans aed lumalagpas
