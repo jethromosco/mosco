@@ -97,9 +97,9 @@ class TransactionLogic:
 			cur.execute(
 				"""
 				SELECT t.rowid, t.date, t.type, t.id_size, t.od_size, t.th_size,
-				       COALESCE(p.brand, ''), t.name, t.quantity, t.price, t.is_restock
+				       COALESCE(t.brand, COALESCE(p.brand, '')) AS brand, t.name, t.quantity, t.price, t.is_restock
 				FROM transactions t
-				LEFT JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th AND t.part_no = p.part_no
+				LEFT JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th
 				WHERE t.rowid = ?
 				""",
 				(rowid,)
@@ -179,23 +179,23 @@ class TransactionLogic:
 			if mode == "Add":
 				cur.execute(
 					"""
-					INSERT INTO transactions (date, type, id_size, od_size, th_size, part_no, name, quantity, price, is_restock)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					INSERT INTO transactions (date, type, id_size, od_size, th_size, brand, part_no, name, quantity, price, is_restock)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 					""",
 					(
 						data['date'], data['item_type'], data['id_size'], data['od_size'],
-						data['th_size'], data['part_no'], data['name'], data['quantity'], data['price'], data['is_restock']
+						data['th_size'], data['brand'], data['part_no'], data['name'], data['quantity'], data['price'], data['is_restock']
 					),
 				)
 			else:  # Edit
 				cur.execute(
 					"""
-					UPDATE transactions SET date=?, type=?, id_size=?, od_size=?, th_size=?, part_no=?, name=?, quantity=?, price=?, is_restock=?
+					UPDATE transactions SET date=?, type=?, id_size=?, od_size=?, th_size=?, brand=?, part_no=?, name=?, quantity=?, price=?, is_restock=?
 					WHERE rowid=?
 					""",
 					(
 						data['date'], data['item_type'], data['id_size'], data['od_size'],
-						data['th_size'], data['part_no'], data['name'], data['quantity'], data['price'], data['is_restock'], rowid
+						data['th_size'], data['brand'], data['part_no'], data['name'], data['quantity'], data['price'], data['is_restock'], rowid
 					),
 				)
 			
@@ -215,24 +215,24 @@ class TransactionLogic:
 			# Insert restock record
 			cur.execute(
 				"""
-				INSERT INTO transactions (date, type, id_size, od_size, th_size, part_no, name, quantity, price, is_restock)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				INSERT INTO transactions (date, type, id_size, od_size, th_size, brand, part_no, name, quantity, price, is_restock)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				""",
 				(
 					data['date'], data['item_type'], data['id_size'], data['od_size'],
-					data['th_size'], data['part_no'], data['name'], data['qty_restock'], 0, 1
+					data['th_size'], data['brand'], data['part_no'], data['name'], data['qty_restock'], 0, 1
 				),
 			)
 			
 			# Insert sale record
 			cur.execute(
 				"""
-				INSERT INTO transactions (date, type, id_size, od_size, th_size, part_no, name, quantity, price, is_restock)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				INSERT INTO transactions (date, type, id_size, od_size, th_size, brand, part_no, name, quantity, price, is_restock)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				""",
 				(
 					data['date'], data['item_type'], data['id_size'], data['od_size'],
-					data['th_size'], data['part_no'], data['name'], -data['qty_customer'], data['price'], 0
+					data['th_size'], data['brand'], data['part_no'], data['name'], -data['qty_customer'], data['price'], 0
 				),
 			)
 			

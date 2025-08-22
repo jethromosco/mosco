@@ -82,9 +82,8 @@ class TransactionsLogic:
         cur = conn.cursor()
         cur.execute("""
             SELECT t.rowid, t.date, t.type, t.id_size, t.od_size, t.th_size, t.name, t.quantity, t.price, t.is_restock,
-                p.brand
+                t.brand
             FROM transactions t
-            LEFT JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th AND t.part_no = p.part_no
         """)
         rows = cur.fetchall()
         conn.close()

@@ -4,12 +4,19 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import customtkinter as ctk
 from app_controller import AppController
+from oilseals.migrations import run_migrations
 
 if __name__ == "__main__":
     # Set CustomTkinter appearance mode and color theme
     ctk.set_appearance_mode("dark")  # Modes: system (default), light, dark
     ctk.set_default_color_theme("blue")  # Themes: blue (default), dark-blue, green
     
+    # Run DB migrations upfront to ensure schema is up to date
+    try:
+        run_migrations()
+    except Exception:
+        pass
+
     root = ctk.CTk()
     root.title("MOSCO Inventory System")
     app = AppController(root)
