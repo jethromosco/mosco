@@ -58,9 +58,22 @@ def _build_query_and_params(search_filters: Dict[str, str]) -> Tuple[str, List[A
         val = (val or "").strip()
         if not val:
             continue
-        col = key if key not in ("brand", "part_no") else key
-        query += f" AND UPPER({col}) LIKE UPPER(?)"
-        params.append(f"{val}%")
+
+        if key in ("id", "od", "th"):
+            # Handle numeric search with decimals and slash
+            if val.isdigit():  
+                # if user searched "5", allow 5, 5.x, and 5/...
+                query += f" AND ( {key} = ? OR {key} LIKE ? OR {key} LIKE ? )"
+                params.extend([val, f"{val}.%", f"{val}/%"])
+            else:
+                # fallback: search as prefix
+                query += f" AND {key} LIKE ?"
+                params.append(f"{val}%")
+        else:
+            # normal text fields
+            query += f" AND UPPER({key}) LIKE UPPER(?)"
+            params.append(f"{val}%")
+
     return query, params
 
 
@@ -162,3 +175,57 @@ def build_products_display_data(
         display_data.sort(key=lambda x: x[6], reverse=True)
 
     return display_data
+
+
+def validate_admin_password(password: str) -> bool:
+    """Validate admin password"""
+    return password.strip() == "1"
+
+
+def parse_size_string(size_str: str) -> Tuple[str, str, str]:
+    """Parse size string in format 'id×od×th' or 'id-od-th' and return (id, od, th)"""
+    try:
+        size_clean = size_str.replace("×", "-").replace("x", "-")
+        parts = size_clean.split("-")
+        if len(parts) >= 3:
+            return parts[0].strip(), parts[1].strip(), parts[2].strip()
+        else:
+            return "", "", ""
+    except Exception:
+        return "", "", ""
+
+
+def create_product_details(item_values: List[Any]) -> Dict[str, Any]:
+    """Create product details dictionary from tree item values"""
+    if len(item_values) < 8:
+        return {}
+    
+    id_, od, th = parse_size_string(item_values[1])
+    
+    return {
+        "type": item_values[0],
+        "id": id_,
+        "od": od,
+        "th": th,
+        "brand": item_values[2],
+        "part_no": item_values[3],
+        "country_of_origin": item_values[4],
+        "notes": item_values[5],
+        "quantity": item_values[6],
+        "price": float(str(item_values[7]).replace("₱", ""))
+    }
+
+
+def get_stock_tag(qty: int) -> str:
+    """Get stock status tag based on quantity"""
+    if qty == OUT_OF_STOCK:
+        return "out"
+    elif qty <= LOW_STOCK_THRESHOLD:
+        return "low"
+    else:
+        return "normal"
+
+
+def should_uppercase_field(field_name: str) -> bool:
+    """Check if a field should be automatically uppercased"""
+    return field_name in ["type", "brand", "part_no"]
