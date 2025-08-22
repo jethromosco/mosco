@@ -10,7 +10,7 @@ from ..ui.mm import (
 	format_display_value,
 	stock_filter_matches,
 )
-from ..ui.transaction_window import TransactionWindow
+from .gui_transaction_window import TransactionWindow
 from .gui_products import AdminPanel
 
 
