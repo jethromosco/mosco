@@ -1,19 +1,9 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk, messagebox
-from ..database import connect_db
 from .gui_transactions import TransactionTab
 from .gui_prod_aed import ProductFormHandler
-from fractions import Fraction
-
-
-def parse_measurement(value):
-    try:
-        if "/" in value:
-            return float(Fraction(value))
-        return float(value)
-    except ValueError:
-        raise ValueError(f"Invalid measurement: {value}")
+from ..admin.products import ProductsLogic
 
 
 class AdminPanel:
@@ -21,6 +11,9 @@ class AdminPanel:
         self.main_app = main_app
         self.controller = controller
         self.on_close_callback = on_close_callback
+        
+        # Initialize logic handler
+        self.products_logic = ProductsLogic()
         
         # Create CustomTkinter window
         # Create hidden
@@ -35,7 +28,7 @@ class AdminPanel:
         screen_h = self.win.winfo_screenheight()
         self.win.geometry(f"{screen_w}x{screen_h}+0+0")
 
-        # Reapply titlebar AFTER it’s full screen (optional)
+        # Reapply titlebar AFTER it's full screen (optional)
         self.win.overrideredirect(False)
         self.win.title("Manage Database")
 
@@ -156,7 +149,12 @@ class AdminPanel:
 
     def create_products_tab(self):
         """Create the products tab with the app's styling"""
-        self.prod_form_handler = ProductFormHandler(self.win, None, self.refresh_products)
+        # Initialize form handler
+        self.prod_form_handler = ProductFormHandler(
+            self.win, 
+            None, 
+            self.refresh_products
+        )
 
         # === Search Section ===
         search_section = ctk.CTkFrame(self.products_frame, fg_color="#374151", corner_radius=25)
@@ -306,66 +304,62 @@ class AdminPanel:
         )
         delete_btn.pack(side="left")
 
+        # Store current products data for sorting
+        self.current_products_data = []
+        
         self.refresh_products()
 
     def refresh_products(self):
+        """Refresh the products display using logic layer."""
+        # Clear the tree
         self.prod_tree.delete(*self.prod_tree.get_children())
-
-        conn = connect_db()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT type, id, od, th, brand, part_no, country_of_origin, notes, price
-            FROM products
-            ORDER BY id ASC, od ASC, th ASC
-        """)
-        rows = cur.fetchall()
-        conn.close()
-
-        keyword = self.prod_search_var.get().lower()
-        for row in rows:
-            type_, id_, od, th, brand, part_no, origin, notes, price = row
-
-            def fmt(val):
-                return str(val) if isinstance(val, str) else (str(int(val)) if float(val).is_integer() else str(val))
-
-            id_str = fmt(id_)
-            od_str = fmt(od)
-            th_str = fmt(th)
-
-            item_str = f"{type_.upper()} {id_str}-{od_str}-{th_str}"
-            combined = f"{type_} {id_str} {od_str} {th_str}".lower()
-
-            if keyword in combined:
-                self.prod_tree.insert("", tk.END,
-                    values=(item_str, brand, part_no, origin, notes, f"₱{price:.2f}")
-                )
+        
+        # Get search keyword
+        keyword = self.prod_search_var.get()
+        
+        # Use logic layer to get filtered products
+        self.current_products_data = self.products_logic.search_products(keyword)
+        
+        # Display products in tree
+        for product in self.current_products_data:
+            self.prod_tree.insert("", tk.END, values=(
+                product['item'],
+                product['brand'],
+                product['part_no'],
+                product['origin'],
+                product['notes'],
+                product['price']
+            ))
 
     def sort_column(self, col):
+        """Sort table by column using logic layer."""
         if col in ("part_no", "notes"):
             return
 
+        # Toggle sort direction
         ascending = self.sort_direction[col] != "asc"
         self.sort_direction[col] = "asc" if ascending else "desc"
 
-        data = [(self.prod_tree.set(child, col), child) for child in self.prod_tree.get_children()]
+        # Use logic layer to sort data
+        sorted_data = self.products_logic.sort_products_data(
+            self.current_products_data, 
+            col, 
+            ascending
+        )
+        
+        # Clear and repopulate tree with sorted data
+        self.prod_tree.delete(*self.prod_tree.get_children())
+        for product in sorted_data:
+            self.prod_tree.insert("", tk.END, values=(
+                product['item'],
+                product['brand'],
+                product['part_no'],
+                product['origin'],
+                product['notes'],
+                product['price']
+            ))
 
-        if col == "item":
-            def size_key(val):
-                try:
-                    size_str = val[0].split(" ")[1]
-                    parts = size_str.split("-")
-                    return tuple(parse_measurement(p) for p in parts)
-                except:
-                    return (0, 0, 0)
-            data.sort(key=lambda x: size_key(x), reverse=not ascending)
-        elif col == "price":
-            data.sort(key=lambda x: float(x[0].replace("₱", "").replace(",", "")), reverse=not ascending)
-        else:
-            data.sort(key=lambda x: x[0].lower(), reverse=not ascending)
-
-        for index, (_, child) in enumerate(data):
-            self.prod_tree.move(child, '', index)
-
+        # Update headers with sort indicators
         for c, h in zip(self.prod_tree["columns"], self.headers):
             arrow = " ↑" if c == col and ascending else " ↓" if c == col else ""
             self.prod_tree.heading(c, text=h + arrow)

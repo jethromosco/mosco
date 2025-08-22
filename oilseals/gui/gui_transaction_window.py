@@ -5,6 +5,7 @@ from PIL import Image
 from customtkinter import CTkImage
 from typing import Any, Dict
 import os
+from datetime import datetime
 
 from ..ui.transaction_window import (
     load_transactions_records,
@@ -364,15 +365,22 @@ class TransactionWindow(ctk.CTkFrame):
 
     def _load_transactions(self):
         rows = load_transactions_records(self.details)
-        
+
         self.header_label.configure(text=create_header_text(self.details))
         self.sub_header_label.configure(text=create_subtitle_text(self.details))
 
         self.tree.delete(*self.tree.get_children())
-        for values in summarize_running_stock(rows):
+
+        # Summarize transactions
+        summarized_rows = summarize_running_stock(rows)
+
+        # Sort by date descending; format is MM/DD/YY
+        summarized_rows.sort(key=lambda x: datetime.strptime(x[0], "%m/%d/%y"), reverse=True)
+
+        for values in summarized_rows:
             date_str, qty_restock, cost, name, display_qty, price_str, running_stock = values
             tag = get_transaction_tag(qty_restock, price_str)
-            self.tree.insert("", 0, values=(date_str, qty_restock, cost, name, display_qty, price_str, running_stock), tags=(tag,))
+            self.tree.insert("", "end", values=(date_str, qty_restock, cost, name, display_qty, price_str, running_stock), tags=(tag,))
 
         self._update_stock_display(rows)
 

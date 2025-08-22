@@ -3,46 +3,22 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 from datetime import datetime
-from collections import defaultdict
-from dataclasses import dataclass
-from ..database import connect_db
 from .gui_trans_aed import TransactionFormHandler
-
-
-def format_currency(val):
-    return f"\u20B1{val:.2f}"
-
-
-def parse_date(text):
-    return datetime.strptime(text, "%m/%d/%y")
-
-
-def parse_date_db(text):
-    return datetime.strptime(text, "%Y-%m-%d")
-
-
-@dataclass
-class TransactionRecord:
-    rowid: int
-    date: str
-    type: str
-    id_size: str
-    od_size: str
-    th_size: str
-    name: str
-    quantity: int
-    price: float
-    is_restock: int
-    brand: str
+from ..admin.transactions import TransactionsLogic, parse_date
 
 
 class TransactionTab:
+    """GUI class for managing transaction display and user interactions."""
+    
     FIELDS = ["Type", "ID", "OD", "TH", "Brand", "Name", "Quantity", "Price"]
 
     def __init__(self, notebook, main_app, controller, on_refresh_callback=None):
         self.main_app = main_app
         self.controller = controller
         self.on_refresh_callback = on_refresh_callback
+        
+        # Initialize logic handler
+        self.logic = TransactionsLogic()
 
         # Support both ttk.Notebook and CTkFrame container
         if hasattr(notebook, "add"):
@@ -53,15 +29,17 @@ class TransactionTab:
 
         self.sort_direction = {}
         self.filtered_records = []
+        self.fabrication_records = set()
         self.date_filter_active = False
 
         self.setup_controls()
         self.setup_treeview()
 
+        # Initialize form handler with logic reference
         self.form_handler = TransactionFormHandler(
             parent_frame=self.frame,
             treeview=self.tran_tree,
-            on_refresh_callback=self.refresh_transactions
+            on_refresh_callback=self.refresh_transactions,
         )
         self.form_handler._get_record_by_id = self._get_record_by_id
 
@@ -70,6 +48,7 @@ class TransactionTab:
 
     # ─────────────── controls (search, filters, date) ───────────────
     def setup_controls(self):
+        """Create search and filter controls."""
         controls_section = ctk.CTkFrame(self.frame, fg_color="#374151", corner_radius=25)
         controls_section.pack(fill="x", padx=20, pady=(20, 15))
 
@@ -142,14 +121,17 @@ class TransactionTab:
         self.clear_btn.pack(side="left")
 
     def on_date_selected(self, event=None):
+        """Handle date selection."""
         self.frame.after(50, self.apply_date_filter)
         self.frame.after(100, lambda: self.frame.focus_set())
 
     def apply_date_filter(self):
+        """Apply the selected date filter."""
         self.date_filter_active = bool(self.date_var.get().strip())
         self.refresh_transactions()
 
     def clear_date_filter(self):
+        """Clear the date filter."""
         self.date_var.set("")
         self.date_filter_active = False
         self.frame.focus_set()
@@ -157,6 +139,7 @@ class TransactionTab:
 
     # ─────────────── treeview ───────────────
     def setup_treeview(self):
+        """Create and configure the transactions treeview."""
         table_container = ctk.CTkFrame(self.frame, fg_color="transparent")
         table_container.pack(fill="both", expand=True, padx=20, pady=(0, 15))
 
@@ -203,6 +186,7 @@ class TransactionTab:
 
     # ─────────────── buttons (Add / Edit / Delete) ───────────────
     def setup_buttons(self):
+        """Create action buttons."""
         buttons_section = ctk.CTkFrame(self.frame, fg_color="transparent")
         buttons_section.pack(fill="x", padx=20, pady=(0, 20))
 
@@ -233,6 +217,7 @@ class TransactionTab:
         )
         delete_btn.pack(side="left")
 
+        # Keyboard shortcuts
         root = self.frame.winfo_toplevel()
         root.bind("<Control-a>", lambda e: self.form_handler.add_transaction())
         root.bind("<Control-e>", lambda e: self.form_handler.edit_transaction())
@@ -240,151 +225,76 @@ class TransactionTab:
 
     # ─────────────── transaction logic / refresh / rendering ───────────────
     def refresh_transactions(self):
-        conn = connect_db()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT t.rowid, t.date, t.type, t.id_size, t.od_size, t.th_size, t.name, t.quantity, t.price, t.is_restock,
-                p.brand
-            FROM transactions t
-            LEFT JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th
-        """)
-        rows = cur.fetchall()
-        conn.close()
-
-        keyword = self.tran_search_var.get().lower()
-        restock_filter = self.restock_filter.get()
-
-        # Only apply date filter if it's been activated
-        date_str = self.date_var.get().strip()
-        filter_date = None
-        if self.date_filter_active and date_str:
-            try:
-                filter_date = parse_date(date_str).date()
-            except Exception:
-                filter_date = None
-
-        # Group records to identify Fabrication transactions
-        fabrication_records = set()
-
-        # Simpler approach - check if there are matching restock/sale pairs on same date
-        date_item_groups = defaultdict(list)
-        for row in rows:
-            record = TransactionRecord(*row)
-            key = (record.date, record.type, record.id_size, record.od_size, record.th_size, record.name)
-            date_item_groups[key].append(record)
-
-        # Identify fabrication records (same date, same item, one restock + one sale)
-        for key, records in date_item_groups.items():
-            if len(records) == 2:
-                has_restock = any(r.is_restock == 1 for r in records)
-                has_sale = any(r.is_restock == 0 for r in records)
-                if has_restock and has_sale:
-                    for record in records:
-                        fabrication_records.add(record.rowid)
-
-        filtered = []
-        for row in rows:
-            record = TransactionRecord(*row)
-            date_obj = parse_date_db(record.date)
-            if filter_date and date_obj.date() != filter_date:
-                continue
-            item_tokens = f"{record.type} {record.id_size} {record.od_size} {record.th_size} {record.brand}".lower()
-            name_str = record.name.lower()
-            search_terms = keyword.split()
-            if keyword and not all(term in item_tokens or term in name_str for term in search_terms):
-                continue
-            
-            is_actual = (record.is_restock == 2)
-            is_restock = (record.is_restock == 1 and record.rowid not in fabrication_records)
-            is_sale = (record.is_restock == 0 and record.rowid not in fabrication_records)
-            is_fabrication = (record.rowid in fabrication_records)
-            
-            if restock_filter == "Restock" and not is_restock:
-                continue
-            if restock_filter == "Sale" and not is_sale:
-                continue
-            if restock_filter == "Actual" and not is_actual:
-                continue
-            if restock_filter == "Fabrication" and not is_fabrication:
-                continue
-            
-            filtered.append(record)
+        """Refresh the transaction display using logic layer."""
+        # Get all transactions from logic
+        all_records = self.logic.get_all_transactions()
         
-        self.filtered_records = filtered
+        # Identify fabrication records
+        self.fabrication_records = self.logic.identify_fabrication_records(all_records)
+        
+        # Apply filters
+        keyword = self.tran_search_var.get()
+        restock_filter = self.restock_filter.get()
+        
+        # Date filter
+        date_filter = None
+        if self.date_filter_active and self.date_var.get().strip():
+            try:
+                date_filter = parse_date(self.date_var.get().strip()).date()
+            except Exception:
+                date_filter = None
+        
+        # Filter transactions using logic
+        self.filtered_records = self.logic.filter_transactions(
+            all_records, keyword, restock_filter, date_filter, self.fabrication_records
+        )
+        
+        # Render the filtered transactions
         self.render_transactions(self.filtered_records)
+        
+        # Trigger refresh callback if provided
         if self.on_refresh_callback:
             self.on_refresh_callback()
 
     def _get_record_by_id(self, rowid):
-        for record in self.filtered_records:
-            if record.rowid == rowid:
-                return record
-        return None
+        """Get a transaction record by its rowid."""
+        return self.logic.get_transaction_by_id(self.filtered_records, rowid)
 
     def render_transactions(self, records):
+        """Render transactions in the treeview."""
+        # Clear existing items
         self.tran_tree.delete(*self.tran_tree.get_children())
         
-        # Process the records chronologically to calculate running stock correctly
-        records.sort(key=lambda r: (r.date, r.rowid))
+        if not records:
+            return
         
-        running_stock_map = defaultdict(int)
-        all_rows = []
-        for record in records:
-            item_key = (record.type, record.id_size, record.od_size, record.th_size, record.brand)
-            if record.is_restock == 2:
-                running_stock_map[item_key] = record.quantity
-            else:
-                running_stock_map[item_key] += record.quantity
-            all_rows.append((record, running_stock_map[item_key]))
-
-        all_rows.sort(key=lambda x: (x[0].date, x[0].rowid), reverse=True)
-
-        for record, stock in all_rows:
-            item_str = f"{record.type} {record.id_size}-{record.od_size}-{record.th_size} {record.brand}"
-            formatted_date = parse_date_db(record.date).strftime("%m/%d/%y")
+        # Calculate running stock using logic
+        records_with_stock = self.logic.calculate_running_stock(records)
+        
+        # Sort by date (newest first) for display
+        records_with_stock.sort(key=lambda x: (x[0].date, x[0].rowid), reverse=True)
+        
+        # Add items to treeview
+        for record, stock in records_with_stock:
+            display_data = self.logic.format_transaction_for_display(record, stock)
             
-            cost = ""
-            price_str = ""
-            qty_restock = ""
-            qty_sale = ""
-            
-            tag = "gray"
-            if record.is_restock == 1:
-                tag = "blue"
-                cost = format_currency(record.price)
-                qty_restock = record.quantity
-            elif record.is_restock == 0:
-                tag = "red"
-                price_str = format_currency(record.price)
-                qty_sale = abs(record.quantity)
-            elif record.is_restock == 2:
-                tag = "green"
-            
-            self.tran_tree.insert("", tk.END, iid=record.rowid, values=(
-                item_str, formatted_date, qty_restock, cost, record.name,
-                qty_sale, price_str, stock
-            ), tags=(tag,))
+            self.tran_tree.insert("", tk.END, 
+                iid=display_data['rowid'],
+                values=display_data['values'],
+                tags=(display_data['tag'],)
+            )
 
     def sort_by_column(self, col):
+        """Sort transactions by the specified column."""
         if not self.filtered_records:
             return
 
+        # Toggle sort direction
         self.sort_direction[col] = not self.sort_direction.get(col, False)
-        reverse = self.sort_direction[col]
-
-        def sort_key(record):
-            if col == "item":
-                return f"{record.type} {record.id_size}-{record.od_size}-{record.th_size} {record.brand}"
-            elif col == "date":
-                return record.date
-            elif col == "qty_restock" or col == "qty":
-                return abs(record.quantity) if record.is_restock in [0, 1] else 0
-            elif col == "cost" or col == "price":
-                return record.price
-            elif col == "name":
-                return record.name.lower()
-            else:
-                return 0
-
-        self.filtered_records.sort(key=sort_key, reverse=reverse)
+        ascending = not self.sort_direction[col]
+        
+        # Sort using logic layer
+        self.filtered_records = self.logic.sort_transactions(self.filtered_records, col, ascending)
+        
+        # Re-render the sorted transactions
         self.render_transactions(self.filtered_records)
