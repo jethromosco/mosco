@@ -56,6 +56,33 @@ def _normalize_number_for_db(value_str):
 	return float(val)
 
 
+def _resolve_part_no(item_type, id_size, od_size, th_size, brand):
+	"""Find part number for the given product selection. Returns empty string if not found."""
+	try:
+		item_type = (item_type or "").strip().upper()
+		brand = (brand or "").strip().upper()
+		id_val = _normalize_number_for_db(id_size)
+		od_val = _normalize_number_for_db(od_size)
+		th_val = _normalize_number_for_db(th_size)
+		if None in (id_val, od_val, th_val):
+			return ""
+		conn = connect_db()
+		cur = conn.cursor()
+		cur.execute(
+			"""
+			SELECT part_no FROM products
+			WHERE type = ? AND id = ? AND od = ? AND th = ? AND brand = ?
+			LIMIT 1
+			""",
+			(item_type, id_val, od_val, th_val, brand),
+		)
+		row = cur.fetchone()
+		conn.close()
+		return row[0] if row and row[0] is not None else ""
+	except Exception:
+		return ""
+
+
 class TransactionLogic:
 	"""Handles all transaction-related business logic"""
 	
@@ -72,7 +99,7 @@ class TransactionLogic:
 				SELECT t.rowid, t.date, t.type, t.id_size, t.od_size, t.th_size,
 				       COALESCE(p.brand, ''), t.name, t.quantity, t.price, t.is_restock
 				FROM transactions t
-				LEFT JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th
+				LEFT JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th AND t.part_no = p.part_no
 				WHERE t.rowid = ?
 				""",
 				(rowid,)
@@ -152,23 +179,23 @@ class TransactionLogic:
 			if mode == "Add":
 				cur.execute(
 					"""
-					INSERT INTO transactions (date, type, id_size, od_size, th_size, name, quantity, price, is_restock)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+					INSERT INTO transactions (date, type, id_size, od_size, th_size, part_no, name, quantity, price, is_restock)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 					""",
 					(
 						data['date'], data['item_type'], data['id_size'], data['od_size'],
-						data['th_size'], data['name'], data['quantity'], data['price'], data['is_restock']
+						data['th_size'], data['part_no'], data['name'], data['quantity'], data['price'], data['is_restock']
 					),
 				)
 			else:  # Edit
 				cur.execute(
 					"""
-					UPDATE transactions SET date=?, type=?, id_size=?, od_size=?, th_size=?, name=?, quantity=?, price=?, is_restock=?
+					UPDATE transactions SET date=?, type=?, id_size=?, od_size=?, th_size=?, part_no=?, name=?, quantity=?, price=?, is_restock=?
 					WHERE rowid=?
 					""",
 					(
 						data['date'], data['item_type'], data['id_size'], data['od_size'],
-						data['th_size'], data['name'], data['quantity'], data['price'], data['is_restock'], rowid
+						data['th_size'], data['part_no'], data['name'], data['quantity'], data['price'], data['is_restock'], rowid
 					),
 				)
 			
@@ -188,24 +215,24 @@ class TransactionLogic:
 			# Insert restock record
 			cur.execute(
 				"""
-				INSERT INTO transactions (date, type, id_size, od_size, th_size, name, quantity, price, is_restock)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				INSERT INTO transactions (date, type, id_size, od_size, th_size, part_no, name, quantity, price, is_restock)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				""",
 				(
 					data['date'], data['item_type'], data['id_size'], data['od_size'],
-					data['th_size'], data['name'], data['qty_restock'], 0, 1
+					data['th_size'], data['part_no'], data['name'], data['qty_restock'], 0, 1
 				),
 			)
 			
 			# Insert sale record
 			cur.execute(
 				"""
-				INSERT INTO transactions (date, type, id_size, od_size, th_size, name, quantity, price, is_restock)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				INSERT INTO transactions (date, type, id_size, od_size, th_size, part_no, name, quantity, price, is_restock)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 				""",
 				(
 					data['date'], data['item_type'], data['id_size'], data['od_size'],
-					data['th_size'], data['name'], -data['qty_customer'], data['price'], 0
+					data['th_size'], data['part_no'], data['name'], -data['qty_customer'], data['price'], 0
 				),
 			)
 			
@@ -281,6 +308,7 @@ class TransactionLogic:
 				'od_size': od_size,
 				'th_size': th_size,
 				'brand': brand,
+				'part_no': _resolve_part_no(item_type, id_size, od_size, th_size, brand),
 				'name': name
 			}
 			
