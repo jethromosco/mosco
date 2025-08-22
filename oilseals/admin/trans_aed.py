@@ -46,6 +46,16 @@ def _parse_size_component(value):
 		return None
 
 
+def _normalize_number_for_db(value_str):
+	"""Convert an input size string to a number suitable for DB comparison (int if near int)."""
+	val = _parse_size_component(value_str)
+	if val is None:
+		return None
+	if abs(val - round(val)) < 1e-9:
+		return int(round(val))
+	return float(val)
+
+
 class TransactionLogic:
 	"""Handles all transaction-related business logic"""
 	
@@ -53,12 +63,20 @@ class TransactionLogic:
 	
 	@staticmethod
 	def get_record_by_id(rowid):
-		"""Retrieve a transaction record by its row ID"""
+		"""Retrieve a transaction record by its row ID, attaching brand via products."""
 		try:
 			conn = connect_db()
 			cur = conn.cursor()
-			cur.execute("""SELECT rowid, date, type, id_size, od_size, th_size, brand, name, 
-							quantity, price, is_restock FROM transactions WHERE rowid=?""", (rowid,))
+			cur.execute(
+				"""
+				SELECT t.rowid, t.date, t.type, t.id_size, t.od_size, t.th_size,
+				       COALESCE(p.brand, ''), t.name, t.quantity, t.price, t.is_restock
+				FROM transactions t
+				LEFT JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th
+				WHERE t.rowid = ?
+				""",
+				(rowid,)
+			)
 			record = cur.fetchone()
 			conn.close()
 			
@@ -72,7 +90,7 @@ class TransactionLogic:
 						self.id_size = data[3]
 						self.od_size = data[4]
 						self.th_size = data[5]
-						self.brand = data[6]
+						self.brand = data[6] or ""
 						self.name = data[7]
 						self.quantity = data[8]
 						self.price = data[9]
@@ -99,33 +117,28 @@ class TransactionLogic:
 	
 	@staticmethod
 	def validate_product_exists(item_type, id_size, od_size, th_size, brand):
-		"""Check if a product exists in the products table, matching brand and numeric sizes."""
+		"""Check if a product exists in the products table, matching brand and sizes."""
 		try:
+			item_type = (item_type or "").strip().upper()
+			brand = (brand or "").strip().upper()
+			id_val = _normalize_number_for_db(id_size)
+			od_val = _normalize_number_for_db(od_size)
+			th_val = _normalize_number_for_db(th_size)
+			if None in (id_val, od_val, th_val):
+				return False
 			conn = connect_db()
 			cur = conn.cursor()
-			# Fetch candidates by type and brand, then compare numerically
-			cur.execute("SELECT id, od, th FROM products WHERE type=? AND brand=?", (item_type, brand))
-			rows = cur.fetchall()
+			cur.execute(
+				"""
+				SELECT 1 FROM products
+				WHERE type = ? AND id = ? AND od = ? AND th = ? AND brand = ?
+				LIMIT 1
+				""",
+				(item_type, id_val, od_val, th_val, brand),
+			)
+			res = cur.fetchone()
 			conn.close()
-			
-			if not rows:
-				return False
-			
-			in_id = _parse_size_component(id_size)
-			in_od = _parse_size_component(od_size)
-			in_th = _parse_size_component(th_size)
-			if in_id is None or in_od is None or in_th is None:
-				return False
-			
-			for pid, pod, pth in rows:
-				pid_v = _parse_size_component(pid)
-				pod_v = _parse_size_component(pod)
-				pth_v = _parse_size_component(pth)
-				if pid_v is None or pod_v is None or pth_v is None:
-					continue
-				if abs(pid_v - in_id) < 1e-6 and abs(pod_v - in_od) < 1e-6 and abs(pth_v - in_th) < 1e-6:
-					return True
-			return False
+			return res is not None
 		except Exception:
 			return False
 	
@@ -137,15 +150,27 @@ class TransactionLogic:
 			cur = conn.cursor()
 			
 			if mode == "Add":
-				cur.execute("""INSERT INTO transactions (date, type, id_size, od_size, th_size, brand, name, quantity, price, is_restock)
-							 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-							(data['date'], data['trans_type'], data['id_size'], data['od_size'], 
-							 data['th_size'], data['brand'], data['name'], data['quantity'], data['price'], data['is_restock']))
+				cur.execute(
+					"""
+					INSERT INTO transactions (date, type, id_size, od_size, th_size, name, quantity, price, is_restock)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+					""",
+					(
+						data['date'], data['item_type'], data['id_size'], data['od_size'],
+						data['th_size'], data['name'], data['quantity'], data['price'], data['is_restock']
+					),
+				)
 			else:  # Edit
-				cur.execute("""UPDATE transactions SET date=?, type=?, id_size=?, od_size=?, th_size=?, brand=?, name=?, quantity=?, price=?, is_restock=?
-							 WHERE rowid=?""",
-							(data['date'], data['trans_type'], data['id_size'], data['od_size'], 
-							 data['th_size'], data['brand'], data['name'], data['quantity'], data['price'], data['is_restock'], rowid))
+				cur.execute(
+					"""
+					UPDATE transactions SET date=?, type=?, id_size=?, od_size=?, th_size=?, name=?, quantity=?, price=?, is_restock=?
+					WHERE rowid=?
+					""",
+					(
+						data['date'], data['item_type'], data['id_size'], data['od_size'],
+						data['th_size'], data['name'], data['quantity'], data['price'], data['is_restock'], rowid
+					),
+				)
 			
 			conn.commit()
 			conn.close()
@@ -161,16 +186,28 @@ class TransactionLogic:
 			cur = conn.cursor()
 			
 			# Insert restock record
-			cur.execute("""INSERT INTO transactions (date, type, id_size, od_size, th_size, brand, name, quantity, price, is_restock)
-						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-						(data['date'], data['trans_type'], data['id_size'], data['od_size'], 
-						 data['th_size'], data['brand'], data['name'], data['qty_restock'], 0, 1))
+			cur.execute(
+				"""
+				INSERT INTO transactions (date, type, id_size, od_size, th_size, name, quantity, price, is_restock)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				""",
+				(
+					data['date'], data['item_type'], data['id_size'], data['od_size'],
+					data['th_size'], data['name'], data['qty_restock'], 0, 1
+				),
+			)
 			
 			# Insert sale record
-			cur.execute("""INSERT INTO transactions (date, type, id_size, od_size, th_size, brand, name, quantity, price, is_restock)
-						 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-						(data['date'], data['trans_type'], data['id_size'], data['od_size'], 
-						 data['th_size'], data['brand'], data['name'], -data['qty_customer'], data['price'], 0))
+			cur.execute(
+				"""
+				INSERT INTO transactions (date, type, id_size, od_size, th_size, name, quantity, price, is_restock)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				""",
+				(
+					data['date'], data['item_type'], data['id_size'], data['od_size'],
+					data['th_size'], data['name'], -data['qty_customer'], data['price'], 0
+				),
+			)
 			
 			conn.commit()
 			conn.close()
@@ -239,6 +276,7 @@ class TransactionLogic:
 			data = {
 				'date': date,
 				'trans_type': trans_type,
+				'item_type': item_type,
 				'id_size': id_size,
 				'od_size': od_size,
 				'th_size': th_size,
