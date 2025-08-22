@@ -591,7 +591,8 @@ class TransactionFormHandler:
                 form_data['item_type'].strip().upper(),
                 form_data['id_size'].strip(),
                 form_data['od_size'].strip(),
-                form_data['th_size'].strip()
+                form_data['th_size'].strip(),
+                form_data['brand'].strip().upper()
             ):
                 messagebox.showerror("Product Not Found", "This product does not exist. Please add it first.", parent=form)
                 return

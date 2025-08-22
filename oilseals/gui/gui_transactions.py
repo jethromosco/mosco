@@ -163,6 +163,7 @@ class TransactionTab:
         self.tran_tree.tag_configure("red", foreground="#EF4444")
         self.tran_tree.tag_configure("blue", foreground="#3B82F6")
         self.tran_tree.tag_configure("green", foreground="#22C55E")
+        self.tran_tree.tag_configure("gray", foreground="#9CA3AF")
 
         column_config = {
             "item": {"anchor": "center", "width": 180},
