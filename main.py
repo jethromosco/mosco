@@ -44,32 +44,30 @@ if __name__ == "__main__":
 #nung nagenter save sa transaction tab nag exit naguupdate na pero nagcclose/
 #5/6.5 invalid literal for fraction -transaction tab/
 #isama brand sa special type file name uploads/
-#SPECIAL (VC) lagyan ng ganyan pero dapat readable as special pa din siya --
+#SPECIAL (VC) lagyan ng ganyan pero dapat readable as special pa din siya /
 # or pede gawin pag MOS automatic na special type siya/
-
-# TODO: Add README.md and requirements.txt for project documentation and setup
-
-# C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
-
-
 
 # JO di mapagsama sa isang line ang "finabricate" at "nabenta" due to formulas present /
 # ginawang magkahiwalay = fab (blue) and sold (red) INVOICE NUM SA KALAS /
-# ok na yung recent ilagay na lang sa read me 
-
-# ty (taiwan) NQK and NACTEC 
-# ipaconfirm kung mas ok hindi kasi may search filters na / PAGSAMAHIN
-# NOK - NOK NACTEC
-# TY - lahat ng taiwan brands
-
 # quad tabi ng v-ring /
 # bushing palit bearings / 
 
+# ok na yung recent ilagay na lang sa read me 
 
-#panget ui sa trans tab also sa trans aed lumalagpas
-
-# di functional na maayos nasira after gui
-
-# paghiwalayin ui sa functions para mas madali magedit
+# di functional na maayos nasira after gui /
+# paghiwalayin ui sa functions para mas madali magedit /
 
 
+# NOK - NOK NACTEC
+# TY - lahat ng taiwan brands
+# C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
+
+# TRANS AED BIG PROBLEM !!!
+# gawin din consistent yung cards styles pati table size and margins UI
+# dapat seamless parang sa admin
+# LAKIHAN TEXT SA UI
+
+# back button sa subcategories di maayos kasi bumabalik sa home page
+# LIGHT MODE SA LAHAT kahit sa home na lang yung button for switching modes
+
+# TODO: Add README.md and requirements.txt for project documentation and setup
