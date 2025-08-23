@@ -116,11 +116,16 @@ class TransactionTab:
         self.date_var.set("")
         self.date_filter.bind('<<DateEntrySelected>>', self.on_date_selected)
 
-        # Bind hover/focus to date container after creation
-        date_frame.bind("<Enter>", on_widget_enter)
-        date_frame.bind("<Leave>", on_widget_leave)
-        date_frame.bind("<FocusIn>", on_widget_focus_in)
-        date_frame.bind("<FocusOut>", on_widget_focus_out)
+        # Bind hover/focus to date container after creation (visual only)
+        def on_frame_hover(frame, is_enter):
+            # mimic entry-like hover by changing fg_color subtly
+            if is_enter:
+                frame.configure(fg_color="#4B5563")
+            else:
+                frame.configure(fg_color="#374151")
+
+        date_frame.bind("<Enter>", lambda e: on_frame_hover(date_frame, True))
+        date_frame.bind("<Leave>", lambda e: on_frame_hover(date_frame, False))
 
         # All Dates
         self.clear_btn = ctk.CTkButton(
@@ -148,11 +153,14 @@ class TransactionTab:
         restock_combo.pack(side="left", padx=(0, 0))
         self.restock_filter.trace_add("write", lambda *args: self.refresh_transactions())
 
-        # Hover/focus binds for combo
-        restock_combo.bind("<Enter>", on_widget_enter)
-        restock_combo.bind("<Leave>", on_widget_leave)
-        restock_combo.bind("<FocusIn>", on_widget_focus_in)
-        restock_combo.bind("<FocusOut>", on_widget_focus_out)
+        # Hover/focus binds for combo (visual only)
+        def on_combo_hover(is_enter):
+            try:
+                restock_combo.configure(fg_color="#4B5563" if is_enter else "#374151")
+            except Exception:
+                pass
+        restock_combo.bind("<Enter>", lambda e: on_combo_hover(True))
+        restock_combo.bind("<Leave>", lambda e: on_combo_hover(False))
 
     def on_date_selected(self, event=None):
         """Handle date selection."""
