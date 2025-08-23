@@ -170,9 +170,18 @@ class AdminPanel:
         # Search container
         search_input_container = ctk.CTkFrame(search_inner, fg_color="transparent")
         search_input_container.pack(fill="x")
-        search_input_container.grid_columnconfigure(0, weight=1)
+        search_input_container.grid_columnconfigure(1, weight=1)
         
-        # Search entry (full width)
+        # Label
+        search_label = ctk.CTkLabel(
+            search_input_container,
+            text="Search:",
+            font=("Poppins", 14, "bold"),
+            text_color="#FFFFFF"
+        )
+        search_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
+        
+        # Search entry
         self.prod_search_var = tk.StringVar()
         search_entry = ctk.CTkEntry(
             search_input_container,
@@ -184,33 +193,28 @@ class AdminPanel:
             height=35,
             border_width=1,
             border_color="#4B5563",
-            placeholder_text="Search..."
+            placeholder_text="Enter search term..."
         )
-        search_entry.grid(row=0, column=0, sticky="ew")
+        search_entry.grid(row=0, column=1, sticky="ew")
         
-        # Hover + Focus effects (standardized)
-        def on_widget_enter(event):
-            widget = event.widget
-            if widget.focus_get() != widget:
-                widget.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+        # Hover + Focus effects (mirroring gui_mm.py)
+        def on_entry_hover(entry, is_enter):
+            if entry.focus_get() != entry:
+                if is_enter:
+                    entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                else:
+                    entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
 
-        def on_widget_leave(event):
-            widget = event.widget
-            if widget.focus_get() != widget:
-                widget.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+        def on_entry_focus(entry, has_focus):
+            if has_focus:
+                entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+            else:
+                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
 
-        def on_widget_focus_in(event):
-            widget = event.widget
-            widget.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
-
-        def on_widget_focus_out(event):
-            widget = event.widget
-            widget.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
-
-        search_entry.bind("<Enter>", on_widget_enter)
-        search_entry.bind("<Leave>", on_widget_leave)
-        search_entry.bind("<FocusIn>", on_widget_focus_in)
-        search_entry.bind("<FocusOut>", on_widget_focus_out)
+        search_entry.bind("<Enter>", lambda e: on_entry_hover(search_entry, True))
+        search_entry.bind("<Leave>", lambda e: on_entry_hover(search_entry, False))
+        search_entry.bind("<FocusIn>", lambda e: on_entry_focus(search_entry, True))
+        search_entry.bind("<FocusOut>", lambda e: on_entry_focus(search_entry, False))
         
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
@@ -266,8 +270,8 @@ class AdminPanel:
             button_frame,
             text="Add",
             font=("Poppins", 16, "bold"),
-            fg_color="#000000",
-            hover_color="#111111",
+            fg_color="#22C55E",
+            hover_color="#16A34A",
             text_color="#FFFFFF",
             corner_radius=25,
             width=100,
@@ -281,8 +285,8 @@ class AdminPanel:
             button_frame,
             text="Edit",
             font=("Poppins", 16, "bold"),
-            fg_color="#000000",
-            hover_color="#111111",
+            fg_color="#4B5563",
+            hover_color="#6B7280",
             text_color="#FFFFFF",
             corner_radius=25,
             width=100,
@@ -296,8 +300,8 @@ class AdminPanel:
             button_frame,
             text="Delete",
             font=("Poppins", 16, "bold"),
-            fg_color="#000000",
-            hover_color="#111111",
+            fg_color="#EF4444",
+            hover_color="#DC2626",
             text_color="#FFFFFF",
             corner_radius=25,
             width=100,

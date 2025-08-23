@@ -60,57 +60,46 @@ class TransactionTab:
         row = ctk.CTkFrame(controls_inner, fg_color="transparent")
         row.pack(fill="x")
 
+        # Search label
+        search_label = ctk.CTkLabel(row, text="Search:", font=("Poppins", 14, "bold"), text_color="#FFFFFF")
+        search_label.pack(side="left", padx=(0, 10))
+
         # Search
         self.tran_search_var = tk.StringVar()
         search_entry = ctk.CTkEntry(
             row, textvariable=self.tran_search_var,
             font=("Poppins", 13), fg_color="#374151", text_color="#FFFFFF",
             corner_radius=20, height=35, border_width=1, border_color="#4B5563",
-            placeholder_text="Search...", width=260
+            placeholder_text="Enter search term...", width=260
         )
         search_entry.pack(side="left")
         self.tran_search_var.trace_add("write", lambda *args: self.refresh_transactions())
 
-        # Hover + Focus effects (standardized)
-        def on_widget_enter(event):
-            widget = event.widget
-            if hasattr(widget, 'configure') and widget.focus_get() != widget:
-                try:
-                    widget.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
-                except Exception:
-                    pass
+        # Hover + Focus effects (mirroring gui_mm.py)
+        def on_entry_hover(entry, is_enter):
+            if entry.focus_get() != entry:
+                if is_enter:
+                    entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                else:
+                    entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
 
-        def on_widget_leave(event):
-            widget = event.widget
-            if hasattr(widget, 'configure') and widget.focus_get() != widget:
-                try:
-                    widget.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
-                except Exception:
-                    pass
+        def on_entry_focus(entry, has_focus):
+            if has_focus:
+                entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+            else:
+                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
 
-        def on_widget_focus_in(event):
-            widget = event.widget
-            if hasattr(widget, 'configure'):
-                try:
-                    widget.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
-                except Exception:
-                    pass
-
-        def on_widget_focus_out(event):
-            widget = event.widget
-            if hasattr(widget, 'configure'):
-                try:
-                    widget.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
-                except Exception:
-                    pass
-
-        search_entry.bind("<Enter>", on_widget_enter)
-        search_entry.bind("<Leave>", on_widget_leave)
-        search_entry.bind("<FocusIn>", on_widget_focus_in)
-        search_entry.bind("<FocusOut>", on_widget_focus_out)
+        search_entry.bind("<Enter>", lambda e: on_entry_hover(search_entry, True))
+        search_entry.bind("<Leave>", lambda e: on_entry_hover(search_entry, False))
+        search_entry.bind("<FocusIn>", lambda e: on_entry_focus(search_entry, True))
+        search_entry.bind("<FocusOut>", lambda e: on_entry_focus(search_entry, False))
 
         # Spacer
         ctk.CTkLabel(row, text=" ", fg_color="transparent").pack(side="left", padx=10)
+
+        # Date label
+        date_label = ctk.CTkLabel(row, text="Date:", font=("Poppins", 14, "bold"), text_color="#FFFFFF")
+        date_label.pack(side="left", padx=(10, 10))
 
         # Date
         self.date_var = tk.StringVar()
@@ -141,6 +130,10 @@ class TransactionTab:
         )
         self.clear_btn.pack(side="left", padx=10)
 
+        # Filter label
+        filter_label = ctk.CTkLabel(row, text="Filter:", font=("Poppins", 14, "bold"), text_color="#FFFFFF")
+        filter_label.pack(side="left", padx=(10, 10))
+
         # Filter
         self.restock_filter = tk.StringVar(value="All")
         restock_combo = ctk.CTkComboBox(
@@ -152,7 +145,7 @@ class TransactionTab:
             button_color="#4B5563", button_hover_color="#6B7280",
             border_color="#4B5563", corner_radius=20, width=160, height=35, state="readonly"
         )
-        restock_combo.pack(side="left", padx=(10, 0))
+        restock_combo.pack(side="left", padx=(0, 0))
         self.restock_filter.trace_add("write", lambda *args: self.refresh_transactions())
 
         # Hover/focus binds for combo
@@ -240,7 +233,7 @@ class TransactionTab:
 
         add_btn = ctk.CTkButton(
             button_container, text="Add", font=("Poppins", 16, "bold"),
-            fg_color="#000000", hover_color="#111111", text_color="#FFFFFF",
+            fg_color="#22C55E", hover_color="#16A34A", text_color="#FFFFFF",
             corner_radius=25, width=100, height=45,
             command=self.form_handler.add_transaction
         )
@@ -248,7 +241,7 @@ class TransactionTab:
 
         edit_btn = ctk.CTkButton(
             button_container, text="Edit", font=("Poppins", 16, "bold"),
-            fg_color="#000000", hover_color="#111111", text_color="#FFFFFF",
+            fg_color="#4B5563", hover_color="#6B7280", text_color="#FFFFFF",
             corner_radius=25, width=100, height=45,
             command=self.form_handler.edit_transaction
         )
@@ -256,7 +249,7 @@ class TransactionTab:
 
         delete_btn = ctk.CTkButton(
             button_container, text="Delete", font=("Poppins", 16, "bold"),
-            fg_color="#000000", hover_color="#111111", text_color="#FFFFFF",
+            fg_color="#EF4444", hover_color="#DC2626", text_color="#FFFFFF",
             corner_radius=25, width=100, height=45,
             command=self.form_handler.delete_transaction
         )
