@@ -71,3 +71,5 @@ if __name__ == "__main__":
 # di functional na maayos nasira after gui
 
 # paghiwalayin ui sa functions para mas madali magedit
+
+

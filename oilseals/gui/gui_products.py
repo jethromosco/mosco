@@ -31,13 +31,14 @@ class AdminPanel:
         # Reapply titlebar AFTER it's full screen (optional)
         self.win.overrideredirect(False)
         self.win.title("Manage Database")
+        self.win.configure(fg_color="#000000")  # Set window background to black
 
         # Now show without resize flash
         self.win.deiconify()
         
-        # Create main container with the app's styling
+        # Create main container with NO PADDING to eliminate gray borders
         main_container = ctk.CTkFrame(self.win, fg_color="#000000")
-        main_container.pack(fill="both", expand=True, padx=20, pady=20)
+        main_container.pack(fill="both", expand=True)  # REMOVED padx=20, pady=20
         
         # Create custom tab system to match the app style
         self.create_tab_system(main_container)
@@ -47,12 +48,12 @@ class AdminPanel:
 
     def create_tab_system(self, parent):
         """Create custom tab system matching the app's design"""
-        # Tab header frame
-        tab_header = ctk.CTkFrame(parent, fg_color="#2b2b2b", corner_radius=40, height=60)
-        tab_header.pack(fill="x", pady=(0, 10))
+        # Tab header frame - NO BACKGROUND, just for positioning
+        tab_header = ctk.CTkFrame(parent, fg_color="transparent", height=60)
+        tab_header.pack(fill="x", pady=(20, 10), padx=20)
         tab_header.pack_propagate(False)
         
-        # Tab buttons container
+        # Tab buttons container - transparent background
         tab_buttons_frame = ctk.CTkFrame(tab_header, fg_color="transparent")
         tab_buttons_frame.pack(expand=True, pady=15)
         
@@ -89,9 +90,9 @@ class AdminPanel:
         )
         self.transactions_tab_btn.pack(side="left")
         
-        # Tab content frame
+        # Tab content frame - ADD padding here instead
         self.tab_content = ctk.CTkFrame(parent, fg_color="#2b2b2b", corner_radius=40)
-        self.tab_content.pack(fill="both", expand=True)
+        self.tab_content.pack(fill="both", expand=True, padx=20, pady=(0, 20))  # MOVED padding here
         
         # Create tab frames
         self.products_frame = ctk.CTkFrame(self.tab_content, fg_color="transparent")
@@ -123,11 +124,13 @@ class AdminPanel:
         if tab_name == "products":
             self.products_tab_btn.configure(fg_color="#D00000", hover_color="#B71C1C")
             self.transactions_tab_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
-            self.products_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            # CONSISTENT padding for products frame
+            self.products_frame.pack(fill="both", expand=True)  # REMOVED padx, pady here
         else:
             self.products_tab_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
             self.transactions_tab_btn.configure(fg_color="#D00000", hover_color="#B71C1C")
-            self.transactions_frame.pack(fill="both", expand=True, padx=20, pady=20)
+            # CONSISTENT padding for transactions frame
+            self.transactions_frame.pack(fill="both", expand=True)  # REMOVED padx, pady here
             
             # Refresh transactions when switching to that tab
             if hasattr(self, 'transaction_tab'):
@@ -156,21 +159,21 @@ class AdminPanel:
             self.refresh_products
         )
 
-        # === Search Section ===
-        search_section = ctk.CTkFrame(self.products_frame, fg_color="#374151", corner_radius=25)
-        search_section.pack(fill="x", pady=(0, 15))
+        # === Search Section === - First grey container with corner radius
+        search_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=25)
+        search_container.pack(fill="x", pady=(20, 15), padx=20)
         
-        search_inner = ctk.CTkFrame(search_section, fg_color="transparent")
+        search_inner = ctk.CTkFrame(search_container, fg_color="transparent")
         search_inner.pack(fill="x", padx=20, pady=15)
         
         # Search container
-        search_container = ctk.CTkFrame(search_inner, fg_color="transparent")
-        search_container.pack(fill="x")
-        search_container.grid_columnconfigure(1, weight=1)
+        search_input_container = ctk.CTkFrame(search_inner, fg_color="transparent")
+        search_input_container.pack(fill="x")
+        search_input_container.grid_columnconfigure(1, weight=1)
         
         # Search label
         search_label = ctk.CTkLabel(
-            search_container,
+            search_input_container,
             text="Search ITEM:",
             font=("Poppins", 14, "bold"),
             text_color="#FFFFFF"
@@ -180,10 +183,10 @@ class AdminPanel:
         # Search entry
         self.prod_search_var = tk.StringVar()
         search_entry = ctk.CTkEntry(
-            search_container,
+            search_input_container,
             textvariable=self.prod_search_var,
             font=("Poppins", 13),
-            fg_color="#2b2b2b",
+            fg_color="#374151",
             text_color="#FFFFFF",
             corner_radius=20,
             height=35,
@@ -199,11 +202,11 @@ class AdminPanel:
                 search_entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
         def on_search_leave(event):
             if search_entry.focus_get() != search_entry:
-                search_entry.configure(border_color="#4B5563", border_width=1, fg_color="#2b2b2b")
+                search_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
         def on_search_focus_in(event):
             search_entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
         def on_search_focus_out(event):
-            search_entry.configure(border_color="#4B5563", border_width=1, fg_color="#2b2b2b")
+            search_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
         
         search_entry.bind("<Enter>", on_search_enter)
         search_entry.bind("<Leave>", on_search_leave)
@@ -212,9 +215,9 @@ class AdminPanel:
         
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
-        # === Table Section ===
-        table_container = ctk.CTkFrame(self.products_frame, fg_color="transparent")
-        table_container.pack(fill="both", expand=True, pady=(0, 15))
+        # === Table Section === - Second grey container with corner radius (separate from buttons)
+        table_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=25)
+        table_container.pack(fill="both", expand=True, pady=(0, 15), padx=20)
         
         # Style the treeview
         style = ttk.Style()
@@ -246,22 +249,19 @@ class AdminPanel:
         tree_scrollbar = ttk.Scrollbar(table_container, orient="vertical", command=self.prod_tree.yview)
         self.prod_tree.configure(yscrollcommand=tree_scrollbar.set)
         
-        self.prod_tree.pack(side="left", fill="both", expand=True)
-        tree_scrollbar.pack(side="right", fill="y")
+        self.prod_tree.pack(side="left", fill="both", expand=True, padx=(20, 0), pady=20)
+        tree_scrollbar.pack(side="right", fill="y", pady=20, padx=(0, 20))
         
         # Pass treeview to handler
         self.prod_form_handler.prod_tree = self.prod_tree
 
-        # === Buttons Section ===
-        buttons_section = ctk.CTkFrame(self.products_frame, fg_color="transparent")
-        buttons_section.pack(fill="x")
-        
-        button_container = ctk.CTkFrame(buttons_section, fg_color="transparent")
-        button_container.pack(anchor="center")
+        # === Buttons Section === - ON BLACK BACKGROUND, separate from table
+        button_frame = ctk.CTkFrame(self.products_frame, fg_color="transparent")
+        button_frame.pack(pady=(0, 20))
         
         # Add button
         add_btn = ctk.CTkButton(
-            button_container,
+            button_frame,
             text="Add",
             font=("Poppins", 16, "bold"),
             fg_color="#22C55E",
@@ -276,7 +276,7 @@ class AdminPanel:
         
         # Edit button
         edit_btn = ctk.CTkButton(
-            button_container,
+            button_frame,
             text="Edit",
             font=("Poppins", 16, "bold"),
             fg_color="#4B5563",
@@ -291,7 +291,7 @@ class AdminPanel:
         
         # Delete button
         delete_btn = ctk.CTkButton(
-            button_container,
+            button_frame,
             text="Delete",
             font=("Poppins", 16, "bold"),
             fg_color="#EF4444",
