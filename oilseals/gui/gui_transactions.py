@@ -109,12 +109,6 @@ class TransactionTab:
         search_entry.bind("<FocusIn>", on_widget_focus_in)
         search_entry.bind("<FocusOut>", on_widget_focus_out)
 
-        # Bind to date_frame to apply hover/focus visuals to its container
-        date_frame.bind("<Enter>", on_widget_enter)
-        date_frame.bind("<Leave>", on_widget_leave)
-        date_frame.bind("<FocusIn>", on_widget_focus_in)
-        date_frame.bind("<FocusOut>", on_widget_focus_out)
-
         # Spacer
         ctk.CTkLabel(row, text=" ", fg_color="transparent").pack(side="left", padx=10)
 
@@ -132,6 +126,12 @@ class TransactionTab:
         self.date_filter.pack(expand=True, padx=5, pady=2)
         self.date_var.set("")
         self.date_filter.bind('<<DateEntrySelected>>', self.on_date_selected)
+
+        # Bind hover/focus to date container after creation
+        date_frame.bind("<Enter>", on_widget_enter)
+        date_frame.bind("<Leave>", on_widget_leave)
+        date_frame.bind("<FocusIn>", on_widget_focus_in)
+        date_frame.bind("<FocusOut>", on_widget_focus_out)
 
         # All Dates
         self.clear_btn = ctk.CTkButton(
