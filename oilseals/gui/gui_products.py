@@ -91,7 +91,7 @@ class AdminPanel:
         self.transactions_tab_btn.pack(side="left")
         
         # Tab content frame - ADD padding here instead
-        self.tab_content = ctk.CTkFrame(parent, fg_color="#2b2b2b", corner_radius=40)
+        self.tab_content = ctk.CTkFrame(parent, fg_color="transparent", corner_radius=40)
         self.tab_content.pack(fill="both", expand=True, padx=20, pady=(0, 20))  # MOVED padding here
         
         # Create tab frames
@@ -160,8 +160,9 @@ class AdminPanel:
         )
 
         # === Search Section === - First grey container with corner radius
-        search_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=25)
+        search_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=40, height=90)
         search_container.pack(fill="x", pady=(20, 15), padx=20)
+        search_container.pack_propagate(False)
         
         search_inner = ctk.CTkFrame(search_container, fg_color="transparent")
         search_inner.pack(fill="x", padx=20, pady=15)
@@ -169,18 +170,9 @@ class AdminPanel:
         # Search container
         search_input_container = ctk.CTkFrame(search_inner, fg_color="transparent")
         search_input_container.pack(fill="x")
-        search_input_container.grid_columnconfigure(1, weight=1)
+        search_input_container.grid_columnconfigure(0, weight=1)
         
-        # Search label
-        search_label = ctk.CTkLabel(
-            search_input_container,
-            text="Search ITEM:",
-            font=("Poppins", 14, "bold"),
-            text_color="#FFFFFF"
-        )
-        search_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
-        
-        # Search entry
+        # Search entry (full width)
         self.prod_search_var = tk.StringVar()
         search_entry = ctk.CTkEntry(
             search_input_container,
@@ -192,32 +184,42 @@ class AdminPanel:
             height=35,
             border_width=1,
             border_color="#4B5563",
-            placeholder_text="Enter search term..."
+            placeholder_text="Search..."
         )
-        search_entry.grid(row=0, column=1, sticky="ew", padx=(0, 10))
+        search_entry.grid(row=0, column=0, sticky="ew")
         
-        # Hover effects
-        def on_search_enter(event):
-            if search_entry.focus_get() != search_entry:
-                search_entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
-        def on_search_leave(event):
-            if search_entry.focus_get() != search_entry:
-                search_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
-        def on_search_focus_in(event):
-            search_entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
-        def on_search_focus_out(event):
-            search_entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
-        
-        search_entry.bind("<Enter>", on_search_enter)
-        search_entry.bind("<Leave>", on_search_leave)
-        search_entry.bind("<FocusIn>", on_search_focus_in)
-        search_entry.bind("<FocusOut>", on_search_focus_out)
+        # Hover + Focus effects (standardized)
+        def on_widget_enter(event):
+            widget = event.widget
+            if widget.focus_get() != widget:
+                widget.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+
+        def on_widget_leave(event):
+            widget = event.widget
+            if widget.focus_get() != widget:
+                widget.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+
+        def on_widget_focus_in(event):
+            widget = event.widget
+            widget.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+
+        def on_widget_focus_out(event):
+            widget = event.widget
+            widget.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+
+        search_entry.bind("<Enter>", on_widget_enter)
+        search_entry.bind("<Leave>", on_widget_leave)
+        search_entry.bind("<FocusIn>", on_widget_focus_in)
+        search_entry.bind("<FocusOut>", on_widget_focus_out)
         
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
         # === Table Section === - Second grey container with corner radius (separate from buttons)
-        table_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=25)
+        table_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=40)
         table_container.pack(fill="both", expand=True, pady=(0, 15), padx=20)
+        
+        inner_table = ctk.CTkFrame(table_container, fg_color="transparent")
+        inner_table.pack(fill="both", expand=True, padx=20, pady=20)
         
         # Style the treeview
         style = ttk.Style()
@@ -239,18 +241,18 @@ class AdminPanel:
         columns = ("item", "brand", "part_no", "origin", "notes", "price")
         self.headers = ["ITEM", "BRAND", "PART_NO", "ORIGIN", "NOTES", "PRICE"]
         self.sort_direction = {col: None for col in columns}
-        self.prod_tree = ttk.Treeview(table_container, columns=columns, show="headings", style="Products.Treeview")
+        self.prod_tree = ttk.Treeview(inner_table, columns=columns, show="headings", style="Products.Treeview")
 
         for col, header in zip(columns, self.headers):
             self.prod_tree.heading(col, text=header, command=lambda c=col: self.sort_column(c))
             self.prod_tree.column(col, width=150, anchor="center")
 
         # Scrollbar
-        tree_scrollbar = ttk.Scrollbar(table_container, orient="vertical", command=self.prod_tree.yview)
+        tree_scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.prod_tree.yview)
         self.prod_tree.configure(yscrollcommand=tree_scrollbar.set)
         
-        self.prod_tree.pack(side="left", fill="both", expand=True, padx=(20, 0), pady=20)
-        tree_scrollbar.pack(side="right", fill="y", pady=20, padx=(0, 20))
+        self.prod_tree.pack(side="left", fill="both", expand=True)
+        tree_scrollbar.pack(side="right", fill="y")
         
         # Pass treeview to handler
         self.prod_form_handler.prod_tree = self.prod_tree
@@ -264,8 +266,8 @@ class AdminPanel:
             button_frame,
             text="Add",
             font=("Poppins", 16, "bold"),
-            fg_color="#22C55E",
-            hover_color="#16A34A",
+            fg_color="#000000",
+            hover_color="#111111",
             text_color="#FFFFFF",
             corner_radius=25,
             width=100,
@@ -279,8 +281,8 @@ class AdminPanel:
             button_frame,
             text="Edit",
             font=("Poppins", 16, "bold"),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
+            fg_color="#000000",
+            hover_color="#111111",
             text_color="#FFFFFF",
             corner_radius=25,
             width=100,
@@ -294,8 +296,8 @@ class AdminPanel:
             button_frame,
             text="Delete",
             font=("Poppins", 16, "bold"),
-            fg_color="#EF4444",
-            hover_color="#DC2626",
+            fg_color="#000000",
+            hover_color="#111111",
             text_color="#FFFFFF",
             corner_radius=25,
             width=100,
