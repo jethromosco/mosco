@@ -311,7 +311,7 @@ class InventoryApp(ctk.CTkFrame):
         table_section.pack(fill="both", expand=True, padx=20, pady=(0, 0))
 
         table_inner = ctk.CTkFrame(table_section, fg_color="transparent")
-        table_inner.pack(fill="both", expand=True, padx=20, pady=20)
+        table_inner.pack(fill="both", expand=True, padx=30, pady=30)
 
         self._setup_treeview_style()
         self._create_treeview(table_inner)
@@ -330,8 +330,19 @@ class InventoryApp(ctk.CTkFrame):
                         background="#000000",
                         foreground="#D00000",
                         font=("Poppins", 20, "bold"))
-        style.map("Custom.Treeview", background=[("selected", "#2b2b2b")])
+        style.map("Custom.Treeview", background=[("selected", "#374151")])
         style.map("Custom.Treeview.Heading", background=[("active", "#111111")])
+
+        # Red scrollbar styling
+        style.configure(
+            "Red.Vertical.TScrollbar",
+            background="#D00000",
+            troughcolor="#111111",
+            bordercolor="#111111",
+            lightcolor="#D00000",
+            darkcolor="#D00000",
+            arrowcolor="#FFFFFF"
+        )
 
     def _create_treeview(self, parent):
         """Create and configure treeview widget"""
@@ -360,14 +371,15 @@ class InventoryApp(ctk.CTkFrame):
             self.tree.column(col, anchor="center", width=120)
 
         # Add scrollbar
-        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview)
+        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Red.Vertical.TScrollbar")
         self.tree.configure(yscrollcommand=tree_scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scrollbar.pack(side="right", fill="y")
 
         # Setup tree bindings
-        self.tree.bind("<<TreeviewSelect>>", lambda e: self.tree.selection_remove(self.tree.selection()))
+        # Highlight selection; remove highlight when clicking outside
         self.tree.bind("<Double-1>", self.open_transaction_page)
+        self.bind("<Button-1>", lambda e: self.tree.selection_remove(self.tree.selection()))
 
     def _create_bottom_section(self):
         """Create bottom section with status and admin button"""

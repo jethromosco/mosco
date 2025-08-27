@@ -286,7 +286,7 @@ class TransactionWindow(ctk.CTkFrame):
         history_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
         history_section.pack(fill="both", expand=True)
 
-        # Make the table occupy the full card by removing header spacer and increasing paddings
+        # Make the table occupy the full card with consistent margins (match mm.py)
         table_container = ctk.CTkFrame(history_section, fg_color="transparent")
         table_container.pack(fill="both", expand=True, padx=30, pady=30)
 
@@ -308,6 +308,17 @@ class TransactionWindow(ctk.CTkFrame):
                         font=("Poppins", 20, "bold"))
         style.map("Transaction.Treeview", background=[("selected", "#374151")])
         style.map("Transaction.Treeview.Heading", background=[("active", "#111111")])
+
+        # Red scrollbar styling
+        style.configure(
+            "Red.Vertical.TScrollbar",
+            background="#D00000",
+            troughcolor="#111111",
+            bordercolor="#111111",
+            lightcolor="#D00000",
+            darkcolor="#D00000",
+            arrowcolor="#FFFFFF"
+        )
 
     def _create_history_table(self, parent):
         columns = ("date", "qty_restock", "cost", "name", "qty", "price", "stock")
@@ -332,7 +343,7 @@ class TransactionWindow(ctk.CTkFrame):
             self.tree.heading(col, text=config["text"])
             self.tree.column(col, anchor=config["anchor"], width=config["width"])
 
-        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview)
+        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Red.Vertical.TScrollbar")
         self.tree.configure(yscrollcommand=tree_scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scrollbar.pack(side="right", fill="y")
