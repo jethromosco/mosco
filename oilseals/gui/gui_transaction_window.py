@@ -136,20 +136,22 @@ class TransactionWindow(ctk.CTkFrame):
         stock_srp_frame = ctk.CTkFrame(parent, fg_color="transparent")
         stock_srp_frame.grid(row=0, column=1)
 
+        # Emphasized stock label (headline)
         self.stock_label = ctk.CTkLabel(
             stock_srp_frame, 
             text="", 
-            font=("Poppins", 24, "bold"), 
+            font=("Poppins", 26, "bold"), 
             text_color="#FFFFFF", 
             cursor="hand2"
         )
         self.stock_label.pack(anchor="center")
         self.stock_label.bind("<Button-1>", self.open_stock_settings)
 
+        # Emphasized SRP label/value (headline)
         self.srp_display = ctk.CTkLabel(
             stock_srp_frame, 
             textvariable=self.srp_var, 
-            font=("Poppins", 24, "bold"), 
+            font=("Poppins", 26, "bold"), 
             text_color="#FFFFFF"
         )
         self.srp_display.pack(anchor="center", pady=(10, 0))
@@ -157,7 +159,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.srp_entry = ctk.CTkEntry(
             stock_srp_frame, 
             textvariable=self.srp_var, 
-            font=("Poppins", 18), 
+            font=("Poppins", 22, "bold"), 
             fg_color="#374151", 
             text_color="#FFFFFF", 
             corner_radius=20, 
@@ -268,11 +270,12 @@ class TransactionWindow(ctk.CTkFrame):
             hover_color="#6B7280", 
             text_color="#FFFFFF", 
             corner_radius=25, 
-            width=100, 
-            height=40, 
+            width=120, 
+            height=44, 
             command=self.toggle_edit_mode
         )
-        self.edit_btn.pack()
+        # Align with textfield baseline instead of label
+        self.edit_btn.pack(pady=(22, 0))
 
         self.save_status_label = ctk.CTkLabel(
             edit_frame, 
@@ -288,13 +291,9 @@ class TransactionWindow(ctk.CTkFrame):
         history_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
         history_section.pack(fill="both", expand=True)
 
-        history_header = ctk.CTkFrame(history_section, fg_color="transparent")
-        history_header.pack(fill="x", padx=30, pady=(30, 10))
-
-        # Removed explicit history label per requirements
-
+        # Make the table occupy the full card by removing header spacer and increasing paddings
         table_container = ctk.CTkFrame(history_section, fg_color="transparent")
-        table_container.pack(fill="both", expand=True, padx=30, pady=(0, 30))
+        table_container.pack(fill="both", expand=True, padx=30, pady=30)
 
         self._setup_treeview_style()
         self._create_history_table(table_container)

@@ -117,6 +117,51 @@ class InventoryApp(ctk.CTkFrame):
         self._create_search_fields(main_container)
         self._create_sort_controls(main_container)
 
+        # Converter to inch section
+        converter_container = ctk.CTkFrame(search_inner, fg_color="transparent")
+        converter_container.pack(fill="x", pady=(10, 0))
+
+        conv_label = ctk.CTkLabel(
+            converter_container,
+            text="Converter to inch",
+            font=("Poppins", 18, "bold"),
+            text_color="#FFFFFF"
+        )
+        conv_label.pack(side="left", padx=(0, 12))
+
+        if not hasattr(self, 'converter_var'):
+            self.converter_var = tk.StringVar()
+        conv_entry = ctk.CTkEntry(
+            converter_container,
+            textvariable=self.converter_var,
+            width=220,
+            height=40,
+            fg_color="#374151",
+            text_color="#FFFFFF",
+            font=("Poppins", 18),
+            corner_radius=40,
+            border_width=1,
+            border_color="#4B5563",
+            placeholder_text="e.g. 10/20/30 mm"
+        )
+        conv_entry.pack(side="left")
+
+        # Inches output label
+        if not hasattr(self, 'converter_out_label'):
+            self.converter_out_label = ctk.CTkLabel(
+                converter_container,
+                text="",
+                font=("Poppins", 18, "bold"),
+                text_color="#FFFFFF"
+            )
+        self.converter_out_label.pack(side="left", padx=12)
+
+        def on_conv_change(*args):
+            text, is_err = convert_mm_to_inches_display(self.converter_var.get())
+            self.converter_out_label.configure(text=text, text_color=("#FF4444" if is_err else "#FFFFFF"))
+
+        self.converter_var.trace_add("write", on_conv_change)
+
     def _create_search_fields(self, parent):
         """Create search input fields"""
         search_fields = [
