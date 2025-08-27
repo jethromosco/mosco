@@ -258,7 +258,8 @@ class TransactionWindow(ctk.CTkFrame):
 
     def _create_edit_section(self, parent):
         edit_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        edit_frame.grid(row=0, column=2, sticky="e")
+        # Align vertically with the text fields by adding matching top padding
+        edit_frame.grid(row=0, column=2, sticky="e", pady=(30, 0))
 
         self.edit_btn = ctk.CTkButton(
             edit_frame, 
@@ -272,7 +273,8 @@ class TransactionWindow(ctk.CTkFrame):
             height=40, 
             command=self.toggle_edit_mode
         )
-        self.edit_btn.pack()
+        # Nudge the button down slightly to align with adjacent entry fields
+        self.edit_btn.pack(pady=(5, 0))
 
         self.save_status_label = ctk.CTkLabel(
             edit_frame, 
@@ -343,7 +345,19 @@ class TransactionWindow(ctk.CTkFrame):
             self.tree.heading(col, text=config["text"])
             self.tree.column(col, anchor=config["anchor"], width=config["width"])
 
-        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview)
+        # Styled scrollbar to match clean, elegant look
+        sb_style = ttk.Style()
+        sb_style.theme_use("clam")
+        sb_style.configure(
+            "Clean.Vertical.TScrollbar",
+            background="#D00000",
+            troughcolor="#111827",
+            bordercolor="#111827",
+            lightcolor="#D00000",
+            darkcolor="#B71C1C",
+            arrowcolor="#FFFFFF"
+        )
+        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Clean.Vertical.TScrollbar")
         self.tree.configure(yscrollcommand=tree_scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scrollbar.pack(side="right", fill="y")
@@ -461,6 +475,17 @@ class TransactionWindow(ctk.CTkFrame):
         settings.configure(fg_color="#000000")
         settings.transient(self)
         settings.grab_set()
+        # Center the window on the screen
+        try:
+            settings.update_idletasks()
+            screen_width = settings.winfo_screenwidth()
+            screen_height = settings.winfo_screenheight()
+            win_w, win_h = 400, 300
+            x = (screen_width - win_w) // 2
+            y = (screen_height - win_h) // 2
+            settings.geometry(f"{win_w}x{win_h}+{x}+{y}")
+        except Exception:
+            pass
         return settings
 
     def _populate_settings_form(self, settings_window):

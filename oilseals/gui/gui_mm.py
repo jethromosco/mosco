@@ -360,7 +360,20 @@ class InventoryApp(ctk.CTkFrame):
             self.tree.column(col, anchor="center", width=120)
 
         # Add scrollbar
-        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview)
+        # Style the scrollbar to match the clean look used on the home page
+        sb_style = ttk.Style()
+        sb_style.theme_use("clam")
+        sb_style.configure(
+            "Clean.Vertical.TScrollbar",
+            background="#D00000",
+            troughcolor="#111827",
+            bordercolor="#111827",
+            lightcolor="#D00000",
+            darkcolor="#B71C1C",
+            arrowcolor="#FFFFFF"
+        )
+
+        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Clean.Vertical.TScrollbar")
         self.tree.configure(yscrollcommand=tree_scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scrollbar.pack(side="right", fill="y")

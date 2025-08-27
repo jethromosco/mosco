@@ -225,7 +225,19 @@ class TransactionTab:
             self.tran_tree.heading(col, text=header, command=lambda c=col: self.sort_by_column(c))
             self.tran_tree.column(col, **column_config[col])
 
-        scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.tran_tree.yview)
+        # Styled scrollbar to match the clean look
+        sb_style = ttk.Style()
+        sb_style.theme_use("clam")
+        sb_style.configure(
+            "Clean.Vertical.TScrollbar",
+            background="#D00000",
+            troughcolor="#111827",
+            bordercolor="#111827",
+            lightcolor="#D00000",
+            darkcolor="#B71C1C",
+            arrowcolor="#FFFFFF"
+        )
+        scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.tran_tree.yview, style="Clean.Vertical.TScrollbar")
         self.tran_tree.configure(yscrollcommand=scrollbar.set)
         self.tran_tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
