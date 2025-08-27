@@ -277,13 +277,8 @@ class TransactionWindow(ctk.CTkFrame):
         # Align with textfield baseline instead of label
         self.edit_btn.pack(pady=(22, 0))
 
-        self.save_status_label = ctk.CTkLabel(
-            edit_frame, 
-            text="", 
-            font=("Poppins", 18), 
-            text_color="#22C55E"
-        )
-        self.save_status_label.pack(pady=(6, 0))
+        # Remove status label to keep Edit button aligned with fields
+        self.save_status_label = None
 
     def _create_history_section(self):
         main_container = self.winfo_children()[1] # Get main container
@@ -343,8 +338,8 @@ class TransactionWindow(ctk.CTkFrame):
         tree_scrollbar.pack(side="right", fill="y")
 
     def show_save_status(self, message="Saved!", duration=2000):
-        self.save_status_label.configure(text=message)
-        self.after(duration, lambda: self.save_status_label.configure(text=""))
+        # No-op to avoid adding extra text under the button
+        return
 
     def set_details(self, details: Dict[str, Any], main_app):
         self.details = details
