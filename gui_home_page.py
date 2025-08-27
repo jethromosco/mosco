@@ -14,7 +14,6 @@ class HomePage(ctk.CTkFrame):
         self.controller = controller
         self.categories = categories
         self.category_buttons = {}
-        self.colors = colors
         
         # === Scrollable main container with faster scroll speed ===
         main_scroll = ctk.CTkScrollableFrame(
