@@ -143,6 +143,10 @@ class TransactionFormHandler:
         form.grab_set()
         form.bind("<Escape>", lambda e: form.destroy())
 
+        # Reset per-form widget references for conditional show/hide
+        self.field_frames = {}
+        self.fab_section = None
+
         # Main containers
         container = ctk.CTkFrame(form, fg_color="#2b2b2b", corner_radius=40)
         container.pack(fill="both", expand=True, padx=20, pady=20)
@@ -214,11 +218,9 @@ class TransactionFormHandler:
         )
         type_label.pack(pady=(0, 10))
 
-        top_btn_container = ctk.CTkFrame(type_inner, fg_color="transparent")
-        top_btn_container.pack(pady=(0, 10))
-        
-        bottom_btn_container = ctk.CTkFrame(type_inner, fg_color="transparent")
-        bottom_btn_container.pack()
+        # Single horizontal container for all type buttons
+        btn_container = ctk.CTkFrame(type_inner, fg_color="transparent")
+        btn_container.pack()
 
         # Store buttons for later access
         self.type_buttons = {}
@@ -246,7 +248,7 @@ class TransactionFormHandler:
 
         # Create buttons
         self.type_buttons["restock"] = ctk.CTkButton(
-            top_btn_container,
+            btn_container,
             text="Restock",
             font=("Poppins", 14, "bold"),
             fg_color="#4B5563",
@@ -260,7 +262,7 @@ class TransactionFormHandler:
         self.type_buttons["restock"].pack(side="left", padx=(0, 10))
         
         self.type_buttons["sale"] = ctk.CTkButton(
-            top_btn_container,
+            btn_container,
             text="Sale",
             font=("Poppins", 14, "bold"),
             fg_color="#4B5563",
@@ -271,10 +273,10 @@ class TransactionFormHandler:
             height=40,
             command=lambda: select_transaction_type("Sale")
         )
-        self.type_buttons["sale"].pack(side="left")
+        self.type_buttons["sale"].pack(side="left", padx=(0, 10))
         
         self.type_buttons["actual"] = ctk.CTkButton(
-            bottom_btn_container,
+            btn_container,
             text="Actual",
             font=("Poppins", 14, "bold"),
             fg_color="#4B5563",
@@ -288,7 +290,7 @@ class TransactionFormHandler:
         self.type_buttons["actual"].pack(side="left", padx=(0, 10))
         
         self.type_buttons["fabrication"] = ctk.CTkButton(
-            bottom_btn_container,
+            btn_container,
             text="Fabrication",
             font=("Poppins", 14, "bold"),
             fg_color="#4B5563",
@@ -444,6 +446,13 @@ class TransactionFormHandler:
         entry.grid(row=0, column=1, sticky="ew")
         
         self._add_entry_effects(entry)
+        # Register this field frame for conditional show/hide
+        try:
+            if not hasattr(self, 'field_frames'):
+                self.field_frames = {}
+            self.field_frames[label_text] = field_frame
+        except Exception:
+            pass
         return entry
 
 
@@ -460,21 +469,79 @@ class TransactionFormHandler:
                     if hasattr(w, 'configure'):
                         w.configure(state=state)
 
+            # Helpers to show/hide field rows without leaving gaps
+            def hide_field_row(name):
+                frame = self.field_frames.get(name)
+                if frame is not None:
+                    try:
+                        frame.pack_forget()
+                    except Exception:
+                        pass
+
+            def show_field_row(name):
+                frame = self.field_frames.get(name)
+                if frame is not None and frame.winfo_manager() == "":
+                    try:
+                        frame.pack(fill="x", pady=8)
+                    except Exception:
+                        pass
+
+            def hide_fabrication_section():
+                if getattr(self, 'fab_section', None) is not None:
+                    try:
+                        self.fab_section.pack_forget()
+                    except Exception:
+                        pass
+
+            def show_fabrication_section():
+                if getattr(self, 'fab_section', None) is not None and self.fab_section.winfo_manager() == "":
+                    try:
+                        self.fab_section.pack(fill="x", pady=(0, 20))
+                    except Exception:
+                        pass
+
             if trans_type in ["Restock", "Sale"]:
                 enable_disable([entry_widgets["Quantity"]], True)
                 enable_disable([entry_widgets["Price"]], True)
                 enable_disable([entry_widgets["Stock"]], False)
                 enable_disable([self.qty_restock_entry, self.qty_customer_entry], False)
+
+                # Show only Quantity and Price; hide Stock and Fabrication
+                hide_field_row("Stock")
+                hide_fabrication_section()
+                show_field_row("Quantity")
+                show_field_row("Price")
             elif trans_type == "Actual":
                 enable_disable([entry_widgets["Quantity"]], False)
                 enable_disable([entry_widgets["Price"]], False)
                 enable_disable([entry_widgets["Stock"]], True)
                 enable_disable([self.qty_restock_entry, self.qty_customer_entry], False)
+
+                # Show only Stock; hide Quantity, Price and Fabrication
+                hide_field_row("Quantity")
+                hide_field_row("Price")
+                hide_fabrication_section()
+                show_field_row("Stock")
             elif trans_type == "Fabrication":
                 enable_disable([entry_widgets["Quantity"]], False)
                 enable_disable([entry_widgets["Price"]], True)
                 enable_disable([entry_widgets["Stock"]], False)
                 enable_disable([self.qty_restock_entry, self.qty_customer_entry], True)
+
+                # Show Price and Fabrication section; hide Quantity and Stock
+                hide_field_row("Quantity")
+                hide_field_row("Stock")
+                show_field_row("Price")
+                show_fabrication_section()
+
+            # Auto-resize and re-center the window to fit visible content
+            try:
+                form.update_idletasks()
+                w = form.winfo_reqwidth()
+                h = form.winfo_reqheight()
+                center_window(form, w, h)
+            except Exception:
+                pass
 
         transaction_type_var.trace_add("write", on_type_change)
         on_type_change()  # Initial setup
@@ -797,3 +864,6 @@ class TransactionFormHandler:
 
         qty_restock_var.trace_add("write", update_stock_left)
         qty_customer_var.trace_add("write", update_stock_left)
+
+        # Register fabrication section for conditional show/hide
+        self.fab_section = fab_section
