@@ -406,7 +406,7 @@ class InventoryApp(ctk.CTkFrame):
             font=("Poppins", 20, "bold"),
             fg_color=self.colors["primary"],
             hover_color=self.colors["primary_hover"],
-            text_color=self.colors["text"],
+            text_color="#FFFFFF",
             corner_radius=40,
             width=120,
             height=50,
