@@ -11,11 +11,12 @@ from ..ui.mm import (
 )
 from .gui_transaction_window import TransactionWindow
 from .gui_products import AdminPanel
+from theme import theme
 
 
 class InventoryApp(ctk.CTkFrame):
     def __init__(self, master, controller=None):
-        super().__init__(master, fg_color="#000000")
+        super().__init__(master, fg_color=theme.get("bg"))
         self.controller = controller
         self.root = controller.root if controller else self.winfo_toplevel()
 
@@ -43,6 +44,7 @@ class InventoryApp(ctk.CTkFrame):
         self.create_widgets()
         self.refresh_product_list()
         self._setup_bindings()
+        theme.subscribe(self.apply_theme)
 
     def _setup_bindings(self):
         """Setup keyboard bindings"""
@@ -73,7 +75,7 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_header_section(self):
         """Create header with back button"""
-        header_frame = ctk.CTkFrame(self, fg_color="#000000", height=120)
+        header_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=120)
         header_frame.pack(fill="x", padx=20, pady=(20, 0))
         header_frame.pack_propagate(False)
         header_frame.grid_columnconfigure(0, weight=1)
@@ -83,9 +85,9 @@ class InventoryApp(ctk.CTkFrame):
             header_frame,
             text="← Back",
             font=("Poppins", 20, "bold"),
-            fg_color="#D00000",
-            hover_color="#B71C1C",
-            text_color="#FFFFFF",
+            fg_color=theme.get("primary"),
+            hover_color=theme.get("primary_hover"),
+            text_color=theme.get("text"),
             corner_radius=40,
             width=120,
             height=50,
@@ -102,7 +104,7 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_search_section(self):
         """Create search filters section"""
-        search_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
+        search_section = ctk.CTkFrame(self, fg_color=theme.get("card"), corner_radius=40)
         search_section.pack(fill="x", padx=20, pady=(20, 10))
 
         search_inner = ctk.CTkFrame(search_section, fg_color="transparent")
@@ -143,7 +145,7 @@ class InventoryApp(ctk.CTkFrame):
             field_frame, 
             text=display_name,
             font=("Poppins", 18, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
@@ -166,12 +168,12 @@ class InventoryApp(ctk.CTkFrame):
             textvariable=var,
             width=120,
             height=40,
-            fg_color="#374151",
-            text_color="#FFFFFF",
+            fg_color=theme.get("input"),
+            text_color=theme.get("text"),
             font=("Poppins", 18),
             corner_radius=40,
             border_width=1,
-            border_color="#4B5563",
+            border_color=theme.get("border"),
             placeholder_text=f"Enter {display_name}"
         )
         return entry
@@ -195,16 +197,16 @@ class InventoryApp(ctk.CTkFrame):
         """Handle entry hover effects"""
         if entry.focus_get() != entry:
             if is_enter:
-                entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                entry.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("accent"))
             else:
-                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                entry.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
 
     def _on_entry_focus(self, entry, has_focus):
         """Handle entry focus effects"""
         if has_focus:
-            entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+            entry.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("input_focus"))
         else:
-            entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            entry.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
 
     def _create_inch_label(self, parent, key, var):
         """Create inch conversion label for size fields"""
@@ -212,7 +214,7 @@ class InventoryApp(ctk.CTkFrame):
             parent,
             text="",
             font=("Poppins", 18, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         inch_label.grid(row=2, column=0, pady=(6, 0), sticky="ew")
         self.inch_labels[key] = inch_label
@@ -224,7 +226,7 @@ class InventoryApp(ctk.CTkFrame):
     def _update_inch_label(self, key: str):
         """Update inch conversion label"""
         text, is_err = convert_mm_to_inches_display(self.get_var(key))
-        color = "#FF4444" if is_err else "#FFFFFF"
+        color = "#FF4444" if is_err else theme.get("text")
         self.inch_labels[key].configure(text=text, text_color=color)
 
     def _create_sort_controls(self, parent):
@@ -239,7 +241,7 @@ class InventoryApp(ctk.CTkFrame):
             sort_frame, 
             text="Sort By",
             font=("Poppins", 18, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         sort_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
@@ -261,7 +263,7 @@ class InventoryApp(ctk.CTkFrame):
             stock_frame, 
             text="Stock Filter",
             font=("Poppins", 18, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         stock_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
@@ -282,15 +284,15 @@ class InventoryApp(ctk.CTkFrame):
             state="readonly",
             width=120,
             height=40,
-            fg_color="#374151",
-            button_color="#374151",
-            button_hover_color="#D00000",
-            dropdown_hover_color="#4B5563",
-            text_color="#FFFFFF",
+            fg_color=theme.get("input"),
+            button_color=theme.get("input"),
+            button_hover_color=theme.get("primary"),
+            dropdown_hover_color=theme.get("combo_hover"),
+            text_color=theme.get("text"),
             font=("Poppins", 18),
             corner_radius=40,
             border_width=1,
-            border_color="#4B5563"
+            border_color=theme.get("border")
         )
         
         combo.bind("<Enter>", lambda e: self._on_combo_hover(combo, True))
@@ -301,13 +303,13 @@ class InventoryApp(ctk.CTkFrame):
     def _on_combo_hover(self, combo, is_enter):
         """Handle combo box hover effects"""
         if is_enter:
-            combo.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+            combo.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("accent"))
         else:
-            combo.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            combo.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
 
     def _create_table_section(self):
         """Create data table section"""
-        table_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
+        table_section = ctk.CTkFrame(self, fg_color=theme.get("card"), corner_radius=40)
         table_section.pack(fill="both", expand=True, padx=20, pady=(0, 0))
 
         table_inner = ctk.CTkFrame(table_section, fg_color="transparent")
@@ -321,27 +323,27 @@ class InventoryApp(ctk.CTkFrame):
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Custom.Treeview",
-                        background="#2b2b2b",
-                        foreground="#FFFFFF",
-                        fieldbackground="#2b2b2b",
+                        background=theme.get("card"),
+                        foreground=theme.get("text"),
+                        fieldbackground=theme.get("card"),
                         font=("Poppins", 18),
                         rowheight=40)
         style.configure("Custom.Treeview.Heading",
-                        background="#000000",
-                        foreground="#D00000",
+                        background=theme.get("heading_bg"),
+                        foreground=theme.get("heading_fg"),
                         font=("Poppins", 20, "bold"))
-        style.map("Custom.Treeview", background=[("selected", "#374151")])
-        style.map("Custom.Treeview.Heading", background=[("active", "#111111")])
+        style.map("Custom.Treeview", background=[("selected", theme.get("table_selected"))])
+        style.map("Custom.Treeview.Heading", background=[("active", theme.get("accent_hover"))])
 
         # Red scrollbar styling
         style.configure(
             "Red.Vertical.TScrollbar",
-            background="#D00000",
-            troughcolor="#111111",
-            bordercolor="#111111",
-            lightcolor="#D00000",
-            darkcolor="#D00000",
-            arrowcolor="#FFFFFF"
+            background=theme.get("primary"),
+            troughcolor=theme.get("scroll_trough"),
+            bordercolor=theme.get("scroll_trough"),
+            lightcolor=theme.get("primary"),
+            darkcolor=theme.get("primary"),
+            arrowcolor=theme.get("text")
         )
 
     def _create_treeview(self, parent):
@@ -383,7 +385,7 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_bottom_section(self):
         """Create bottom section with status and admin button"""
-        bottom_frame = ctk.CTkFrame(self, fg_color="#000000", height=60)
+        bottom_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=60)
         bottom_frame.pack(fill="x", padx=20, pady=(10, 20))
         bottom_frame.pack_propagate(False)
 
@@ -391,7 +393,7 @@ class InventoryApp(ctk.CTkFrame):
             bottom_frame, 
             text="",
             font=("Poppins", 18),
-            text_color="#CCCCCC"
+            text_color=theme.get("muted")
         )
         self.status_label.pack(side="left", pady=15)
 
@@ -399,9 +401,9 @@ class InventoryApp(ctk.CTkFrame):
             bottom_frame,
             text="Admin",
             font=("Poppins", 20, "bold"),
-            fg_color="#D00000",
-            hover_color="#B71C1C",
-            text_color="#FFFFFF",
+            fg_color=theme.get("primary"),
+            hover_color=theme.get("primary_hover"),
+            text_color=theme.get("text"),
             corner_radius=40,
             width=120,
             height=50,
@@ -419,7 +421,7 @@ class InventoryApp(ctk.CTkFrame):
         password_window.title("Admin Access")
         password_window.geometry("450x350")
         password_window.resizable(False, False)
-        password_window.configure(fg_color="#000000")
+        password_window.configure(fg_color=theme.get("bg"))
         password_window.transient(self.root)
         password_window.grab_set()
         
@@ -444,15 +446,15 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_password_content(self, window, callback):
         """Create password dialog content"""
-        main_frame = ctk.CTkFrame(window, fg_color="#000000", corner_radius=0)
+        main_frame = ctk.CTkFrame(window, fg_color=theme.get("bg"), corner_radius=0)
         main_frame.pack(fill="both", expand=True)
         
         content_frame = ctk.CTkFrame(
             main_frame, 
-            fg_color="#2b2b2b", 
+            fg_color=theme.get("card"), 
             corner_radius=40, 
             border_width=1, 
-            border_color="#4B5563"
+            border_color=theme.get("border")
         )
         content_frame.pack(fill="both", expand=True, padx=30, pady=30)
 
@@ -461,7 +463,7 @@ class InventoryApp(ctk.CTkFrame):
             content_frame, 
             text="Admin Access", 
             font=("Poppins", 28, "bold"), 
-            text_color="#D00000"
+            text_color=theme.get("heading_fg")
         )
         title_label.pack(pady=(40, 20))
         
@@ -469,7 +471,7 @@ class InventoryApp(ctk.CTkFrame):
             content_frame, 
             text="Enter admin password to continue", 
             font=("Poppins", 16), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         subtitle_label.pack(pady=(0, 40))
 
@@ -481,7 +483,7 @@ class InventoryApp(ctk.CTkFrame):
             entry_container, 
             text="Password", 
             font=("Poppins", 16, "bold"), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         password_label.pack(pady=(0, 10))
         
@@ -489,12 +491,12 @@ class InventoryApp(ctk.CTkFrame):
             entry_container, 
             width=280, 
             height=40, 
-            fg_color="#374151", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("input"), 
+            text_color=theme.get("text"), 
             font=("Poppins", 14), 
             corner_radius=40, 
             border_width=2, 
-            border_color="#4B5563", 
+            border_color=theme.get("border"), 
             placeholder_text="Enter password", 
             show="*"
         )
@@ -524,17 +526,17 @@ class InventoryApp(ctk.CTkFrame):
         """Setup password entry hover and focus effects"""
         def on_enter(event):
             if entry.focus_get() != entry:
-                entry.configure(border_color="#D00000", fg_color="#4B5563")
+                entry.configure(border_color=theme.get("primary"), fg_color=theme.get("accent"))
         
         def on_leave(event):
             if entry.focus_get() != entry:
-                entry.configure(border_color="#4B5563", fg_color="#374151")
+                entry.configure(border_color=theme.get("border"), fg_color=theme.get("input"))
         
         def on_focus_in(event):
-            entry.configure(border_color="#D00000", fg_color="#1F2937")
+            entry.configure(border_color=theme.get("primary"), fg_color=theme.get("input_focus"))
         
         def on_focus_out(event):
-            entry.configure(border_color="#4B5563", fg_color="#374151")
+            entry.configure(border_color=theme.get("border"), fg_color=theme.get("input"))
         
         entry.bind("<Enter>", on_enter)
         entry.bind("<Leave>", on_leave)
@@ -550,9 +552,9 @@ class InventoryApp(ctk.CTkFrame):
             button_container, 
             text="Cancel", 
             font=("Poppins", 16, "bold"), 
-            fg_color="#6B7280", 
-            hover_color="#4B5563", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("accent_hover"), 
+            hover_color=theme.get("accent"), 
+            text_color=theme.get("text"), 
             corner_radius=40, 
             width=120, 
             height=45, 
@@ -564,9 +566,9 @@ class InventoryApp(ctk.CTkFrame):
             button_container, 
             text="Submit", 
             font=("Poppins", 16, "bold"), 
-            fg_color="#D00000", 
-            hover_color="#B71C1C", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("primary"), 
+            hover_color=theme.get("primary_hover"), 
+            text_color=theme.get("text"), 
             corner_radius=40, 
             width=120, 
             height=45, 
@@ -658,3 +660,16 @@ class InventoryApp(ctk.CTkFrame):
         else:
             win = tk.Toplevel(self)
             TransactionWindow(win, details, self)
+
+    def apply_theme(self):
+        try:
+            self.configure(fg_color=theme.get("bg"))
+            self.root.configure(bg=theme.get("bg"))
+            # Reapply styles for treeview and inputs by calling setup
+            self._setup_treeview_style()
+            for key, entry in self.entry_widgets.items():
+                entry.configure(fg_color=theme.get("input"), text_color=theme.get("text"), border_color=theme.get("border"))
+            if hasattr(self, 'status_label'):
+                self.status_label.configure(text_color=theme.get("muted"))
+        except Exception:
+            pass

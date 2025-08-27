@@ -5,6 +5,7 @@ from tkcalendar import DateEntry
 from datetime import datetime
 from ..admin.trans_aed import TransactionLogic, center_window
 import re
+from theme import theme
 
 
 class TransactionFormHandler:
@@ -59,7 +60,7 @@ class TransactionFormHandler:
         confirm_window.title("Confirm Delete")
         confirm_window.geometry("400x200")
         confirm_window.resizable(False, False)
-        confirm_window.configure(fg_color="#000000")
+        confirm_window.configure(fg_color=theme.get("bg"))
         
         confirm_window.transient(parent_window)
         confirm_window.grab_set()
@@ -75,14 +76,14 @@ class TransactionFormHandler:
         y = parent_y + (parent_height - 200) // 2
         confirm_window.geometry(f"400x200+{x}+{y}")
         
-        main_frame = ctk.CTkFrame(confirm_window, fg_color="#2b2b2b", corner_radius=40)
+        main_frame = ctk.CTkFrame(confirm_window, fg_color=theme.get("card"), corner_radius=40)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
         question_label = ctk.CTkLabel(
             main_frame,
             text=f"Delete selected {len(items)} transaction(s)?",
             font=("Poppins", 16, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         question_label.pack(pady=(30, 40))
         
@@ -102,9 +103,9 @@ class TransactionFormHandler:
             button_container,
             text="Cancel",
             font=("Poppins", 14, "bold"),
-            fg_color="#6B7280",
-            hover_color="#4B5563",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent_hover"),
+            hover_color=theme.get("accent"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=100,
             height=40,
@@ -118,7 +119,7 @@ class TransactionFormHandler:
             font=("Poppins", 14, "bold"),
             fg_color="#EF4444",
             hover_color="#DC2626",
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             corner_radius=25,
             width=100,
             height=40,
@@ -138,7 +139,7 @@ class TransactionFormHandler:
         
         form.withdraw()
         form.resizable(False, False)
-        form.configure(fg_color="#000000")
+        form.configure(fg_color=theme.get("bg"))
         form.transient(self.parent_frame.winfo_toplevel())
         form.grab_set()
         form.bind("<Escape>", lambda e: form.destroy())
@@ -148,7 +149,7 @@ class TransactionFormHandler:
         self.fab_section = None
 
         # Main containers
-        container = ctk.CTkFrame(form, fg_color="#2b2b2b", corner_radius=40)
+        container = ctk.CTkFrame(form, fg_color=theme.get("card"), corner_radius=40)
         container.pack(fill="both", expand=True, padx=20, pady=20)
 
         inner_container = ctk.CTkFrame(container, fg_color="transparent")
@@ -159,7 +160,7 @@ class TransactionFormHandler:
             inner_container,
             text=f"{mode} Transaction",
             font=("Poppins", 20, "bold"),
-            text_color="#D00000"
+            text_color=theme.get("heading_fg")
         )
         title_label.pack(pady=(0, 20))
 
@@ -204,7 +205,7 @@ class TransactionFormHandler:
 
     def _create_transaction_type_section(self, parent, transaction_type_var, price_label_var):
         """Create transaction type selection section"""
-        type_section = ctk.CTkFrame(parent, fg_color="#374151", corner_radius=25)
+        type_section = ctk.CTkFrame(parent, fg_color=theme.get("input"), corner_radius=25)
         type_section.pack(fill="x", pady=(0, 20))
         
         type_inner = ctk.CTkFrame(type_section, fg_color="transparent")
@@ -214,7 +215,7 @@ class TransactionFormHandler:
             type_inner,
             text="Transaction Type:",
             font=("Poppins", 14, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         type_label.pack(pady=(0, 10))
 
@@ -230,7 +231,7 @@ class TransactionFormHandler:
             
             # Reset all buttons
             for btn in self.type_buttons.values():
-                btn.configure(fg_color="#4B5563", hover_color="#6B7280")
+                btn.configure(fg_color=theme.get("accent"), hover_color=theme.get("accent_hover"))
 
             # Highlight selected button and set price label
             if value == "Restock":
@@ -243,7 +244,7 @@ class TransactionFormHandler:
                 self.type_buttons["actual"].configure(fg_color="#22C55E", hover_color="#16A34A")
                 price_label_var.set("Price:")
             elif value == "Fabrication":
-                self.type_buttons["fabrication"].configure(fg_color="#6B7280", hover_color="#4B5563")
+                self.type_buttons["fabrication"].configure(fg_color=theme.get("accent_hover"), hover_color=theme.get("accent"))
                 price_label_var.set("Price:")
 
         # Create buttons
@@ -251,9 +252,9 @@ class TransactionFormHandler:
             btn_container,
             text="Restock",
             font=("Poppins", 14, "bold"),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent"),
+            hover_color=theme.get("accent_hover"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=120,
             height=40,
@@ -265,9 +266,9 @@ class TransactionFormHandler:
             btn_container,
             text="Sale",
             font=("Poppins", 14, "bold"),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent"),
+            hover_color=theme.get("accent_hover"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=120,
             height=40,
@@ -279,9 +280,9 @@ class TransactionFormHandler:
             btn_container,
             text="Actual",
             font=("Poppins", 14, "bold"),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent"),
+            hover_color=theme.get("accent_hover"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=120,
             height=40,
@@ -293,9 +294,9 @@ class TransactionFormHandler:
             btn_container,
             text="Fabrication",
             font=("Poppins", 14, "bold"),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent"),
+            hover_color=theme.get("accent_hover"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=120,
             height=40,
@@ -347,13 +348,13 @@ class TransactionFormHandler:
             date_frame,
             text="Date:",
             font=("Poppins", 14, "bold"),
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             width=80,
             anchor="w"
         )
         date_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
         
-        date_picker_frame = ctk.CTkFrame(date_frame, fg_color="#374151", corner_radius=20, height=35)
+        date_picker_frame = ctk.CTkFrame(date_frame, fg_color=theme.get("input"), corner_radius=20, height=35)
         date_picker_frame.grid(row=0, column=1, sticky="ew")
         date_picker_frame.pack_propagate(False)
         
@@ -362,8 +363,8 @@ class TransactionFormHandler:
             textvariable=date_var,
             date_pattern="mm/dd/yy",
             width=12,
-            background='#374151',
-            foreground='#FFFFFF',
+            background=theme.get("input"),
+            foreground=theme.get("text"),
             borderwidth=0,
             relief='flat'
         )
@@ -380,7 +381,7 @@ class TransactionFormHandler:
             field_frame,
             text=f"{label_text}:",
             font=("Poppins", 14, "bold"),
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             width=80,
             anchor="w"
         )
@@ -390,12 +391,12 @@ class TransactionFormHandler:
             field_frame,
             textvariable=text_var,
             font=("Poppins", 13),
-            fg_color="#374151",
-            text_color="#FFFFFF",
+            fg_color=theme.get("input"),
+            text_color=theme.get("text"),
             corner_radius=20,
             height=35,
             border_width=1,
-            border_color="#4B5563"
+            border_color=theme.get("border")
         )
         entry.grid(row=0, column=1, sticky="ew")
         
@@ -422,7 +423,7 @@ class TransactionFormHandler:
             textvariable=label_var if label_var else None,
             text=f"{label_text}:" if not label_var else None,
             font=("Poppins", 14, "bold"),
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             width=80,
             anchor="w"
         )
@@ -434,12 +435,12 @@ class TransactionFormHandler:
             field_frame,
             textvariable=text_var,
             font=("Poppins", 13),
-            fg_color="#374151",
-            text_color="#FFFFFF",
+            fg_color=theme.get("input"),
+            text_color=theme.get("text"),
             corner_radius=20,
             height=35,
             border_width=1,
-            border_color="#4B5563",
+            border_color=theme.get("border"),
             validate='key',
             validatecommand=(form.register(validate_func), '%P')
         )
@@ -599,9 +600,9 @@ class TransactionFormHandler:
             button_container,
             text="Cancel",
             font=("Poppins", 16, "bold"),
-            fg_color="#6B7280",
-            hover_color="#4B5563",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent_hover"),
+            hover_color=theme.get("accent"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=120,
             height=45,
@@ -615,7 +616,7 @@ class TransactionFormHandler:
             font=("Poppins", 16, "bold"),
             fg_color="#22C55E",
             hover_color="#16A34A",
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             corner_radius=25,
             width=120,
             height=45,
@@ -694,17 +695,17 @@ class TransactionFormHandler:
         """Add hover and focus effects to entry widget"""
         def on_entry_enter(event, ent=entry):
             if ent.focus_get() != ent:
-                ent.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                ent.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("accent"))
         
         def on_entry_leave(event, ent=entry):
             if ent.focus_get() != ent:
-                ent.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                ent.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
         
         def on_entry_focus_in(event, ent=entry):
-            ent.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+            ent.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("input_focus"))
         
         def on_entry_focus_out(event, ent=entry):
-            ent.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            ent.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
         
         entry.bind("<Enter>", on_entry_enter)
         entry.bind("<Leave>", on_entry_leave)
@@ -742,7 +743,7 @@ class TransactionFormHandler:
 
     def _create_fabrication_section(self, parent, qty_restock_var, qty_customer_var, stock_left_var, form):
         """Create fabrication details section"""
-        fab_section = ctk.CTkFrame(parent, fg_color="#374151", corner_radius=25)
+        fab_section = ctk.CTkFrame(parent, fg_color=theme.get("input"), corner_radius=25)
         fab_section.pack(fill="x", pady=(0, 20))
         
         fab_inner = ctk.CTkFrame(fab_section, fg_color="transparent")
@@ -752,7 +753,7 @@ class TransactionFormHandler:
             fab_inner,
             text="Fabrication Details:",
             font=("Poppins", 14, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         fab_label.pack(pady=(0, 10))
 
@@ -765,7 +766,7 @@ class TransactionFormHandler:
             qty_restock_frame,
             text="Qty Restock:",
             font=("Poppins", 13, "bold"),
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             width=100,
             anchor="w"
         )
@@ -775,12 +776,12 @@ class TransactionFormHandler:
             qty_restock_frame,
             textvariable=qty_restock_var,
             font=("Poppins", 13),
-            fg_color="#2b2b2b",
-            text_color="#FFFFFF",
+            fg_color=theme.get("card"),
+            text_color=theme.get("text"),
             corner_radius=20,
             height=35,
             border_width=1,
-            border_color="#4B5563",
+            border_color=theme.get("border"),
             validate='key',
             validatecommand=(form.register(self._validate_integer), '%P')
         )
@@ -795,7 +796,7 @@ class TransactionFormHandler:
             qty_customer_frame,
             text="Qty Sold:",
             font=("Poppins", 13, "bold"),
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             width=100,
             anchor="w"
         )
@@ -805,12 +806,12 @@ class TransactionFormHandler:
             qty_customer_frame,
             textvariable=qty_customer_var,
             font=("Poppins", 13),
-            fg_color="#2b2b2b",
-            text_color="#FFFFFF",
+            fg_color=theme.get("card"),
+            text_color=theme.get("text"),
             corner_radius=20,
             height=35,
             border_width=1,
-            border_color="#4B5563",
+            border_color=theme.get("border"),
             validate='key',
             validatecommand=(form.register(self._validate_integer), '%P')
         )
@@ -825,7 +826,7 @@ class TransactionFormHandler:
             stock_left_frame,
             text="Stock Left:",
             font=("Poppins", 13, "bold"),
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             width=100,
             anchor="w"
         )
@@ -835,8 +836,8 @@ class TransactionFormHandler:
             stock_left_frame,
             textvariable=stock_left_var,
             font=("Poppins", 13),
-            text_color="#FFFFFF",
-            fg_color="#2b2b2b",
+            text_color=theme.get("text"),
+            fg_color=theme.get("card"),
             corner_radius=20,
             height=35,
             anchor="w"
@@ -860,7 +861,7 @@ class TransactionFormHandler:
                 self.stock_left_label.configure(text_color="#EF4444")
             else:
                 stock_left_var.set(str(stock_left))
-                self.stock_left_label.configure(text_color="#FFFFFF")
+                self.stock_left_label.configure(text_color=theme.get("text"))
 
         qty_restock_var.trace_add("write", update_stock_left)
         qty_customer_var.trace_add("write", update_stock_left)

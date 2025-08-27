@@ -2,6 +2,7 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
 from ..admin.prod_aed import ProductFormLogic
+from theme import theme
 
 
 def center_window(win, width, height):
@@ -67,7 +68,7 @@ class ProductFormHandler:
         confirm_window.title("Confirm Delete")
         confirm_window.geometry("400x200")
         confirm_window.resizable(False, False)
-        confirm_window.configure(fg_color="#000000")
+        confirm_window.configure(fg_color=theme.get("bg"))
         
         confirm_window.transient(self.parent_window)
         confirm_window.grab_set()
@@ -83,14 +84,14 @@ class ProductFormHandler:
         y = parent_y + (parent_height - 200) // 2
         confirm_window.geometry(f"400x200+{x}+{y}")
         
-        main_frame = ctk.CTkFrame(confirm_window, fg_color="#2b2b2b", corner_radius=40)
+        main_frame = ctk.CTkFrame(confirm_window, fg_color=theme.get("card"), corner_radius=40)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
         
         question_label = ctk.CTkLabel(
             main_frame,
             text=f"Delete {item_str} {brand}?",
             font=("Poppins", 16, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         question_label.pack(pady=(30, 40))
         
@@ -114,9 +115,9 @@ class ProductFormHandler:
             button_container,
             text="Cancel",
             font=("Poppins", 14, "bold"),
-            fg_color="#6B7280",
-            hover_color="#4B5563",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent_hover"),
+            hover_color=theme.get("accent"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=100,
             height=40,
@@ -130,7 +131,7 @@ class ProductFormHandler:
             font=("Poppins", 14, "bold"),
             fg_color="#EF4444",
             hover_color="#DC2626",
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             corner_radius=25,
             width=100,
             height=40,
@@ -147,12 +148,12 @@ class ProductFormHandler:
         form = ctk.CTkToplevel(self.parent_window)
         form.title(title)
         form.resizable(False, False)
-        form.configure(fg_color="#000000")
+        form.configure(fg_color=theme.get("bg"))
         form.transient(self.parent_window)
         form.grab_set()
         form.bind("<Escape>", lambda e: form.destroy())
 
-        container = ctk.CTkFrame(form, fg_color="#2b2b2b", corner_radius=40)
+        container = ctk.CTkFrame(form, fg_color=theme.get("card"), corner_radius=40)
         container.pack(fill="both", expand=True, padx=20, pady=20)
 
         inner_container = ctk.CTkFrame(container, fg_color="transparent")
@@ -162,7 +163,7 @@ class ProductFormHandler:
             inner_container,
             text=title,
             font=("Poppins", 20, "bold"),
-            text_color="#D00000"
+            text_color=theme.get("heading_fg")
         )
         title_label.pack(pady=(0, 20))
 
@@ -176,7 +177,7 @@ class ProductFormHandler:
                 inner_container,
                 text=f"Editing: {item_str}",
                 font=("Poppins", 14, "bold"),
-                text_color="#CCCCCC"
+                text_color=theme.get("muted")
             )
             current_item_label.pack(pady=(0, 20))
 
@@ -211,7 +212,7 @@ class ProductFormHandler:
                 field_frame,
                 text=f"{field.replace('_', ' ')}:",
                 font=("Poppins", 14, "bold"),
-                text_color="#FFFFFF",
+                text_color=theme.get("text"),
                 width=80,
                 anchor="w"
             )
@@ -221,12 +222,12 @@ class ProductFormHandler:
                 field_frame,
                 textvariable=vars[field],
                 font=("Poppins", 13),
-                fg_color="#374151",
-                text_color="#FFFFFF",
+                fg_color=theme.get("input"),
+                text_color=theme.get("text"),
                 corner_radius=20,
                 height=35,
                 border_width=1,
-                border_color="#4B5563"
+                border_color=theme.get("border")
             )
             entry.grid(row=0, column=1, sticky="ew")
             entries[field] = entry
@@ -265,9 +266,9 @@ class ProductFormHandler:
             button_container,
             text="Cancel",
             font=("Poppins", 16, "bold"),
-            fg_color="#6B7280",
-            hover_color="#4B5563",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent_hover"),
+            hover_color=theme.get("accent"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=120,
             height=45,
@@ -281,7 +282,7 @@ class ProductFormHandler:
             font=("Poppins", 16, "bold"),
             fg_color="#22C55E",
             hover_color="#16A34A",
-            text_color="#FFFFFF",
+            text_color=theme.get("text"),
             corner_radius=25,
             width=120,
             height=45,
@@ -304,17 +305,17 @@ class ProductFormHandler:
         """Add hover and focus effects to entry widgets."""
         def on_entry_enter(event):
             if entry.focus_get() != entry:
-                entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                entry.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("accent"))
         
         def on_entry_leave(event):
             if entry.focus_get() != entry:
-                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                entry.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
         
         def on_entry_focus_in(event):
-            entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+            entry.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("input_focus"))
         
         def on_entry_focus_out(event):
-            entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            entry.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
         
         entry.bind("<Enter>", on_entry_enter)
         entry.bind("<Leave>", on_entry_leave)

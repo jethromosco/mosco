@@ -4,6 +4,7 @@ from tkinter import ttk, messagebox
 from .gui_transactions import TransactionTab
 from .gui_prod_aed import ProductFormHandler
 from ..admin.products import ProductsLogic
+from theme import theme
 
 
 class AdminPanel:
@@ -31,7 +32,7 @@ class AdminPanel:
         # Reapply titlebar AFTER it's full screen (optional)
         self.win.overrideredirect(False)
         self.win.title("Manage Database")
-        self.win.configure(fg_color="#000000")  # Set window background to black
+        self.win.configure(fg_color=theme.get("bg"))  # Set window background to theme
 
         # Now show without resize flash
         self.win.deiconify()
@@ -65,9 +66,9 @@ class AdminPanel:
             tab_buttons_frame,
             text="Products",
             font=("Poppins", 16, "bold"),
-            fg_color="#D00000",
-            hover_color="#B71C1C",
-            text_color="#FFFFFF",
+            fg_color=theme.get("primary"),
+            hover_color=theme.get("primary_hover"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=150,
             height=40,
@@ -80,9 +81,9 @@ class AdminPanel:
             tab_buttons_frame,
             text="Transactions",
             font=("Poppins", 16, "bold"),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
-            text_color="#FFFFFF",
+            fg_color=theme.get("accent"),
+            hover_color=theme.get("accent_hover"),
+            text_color=theme.get("text"),
             corner_radius=25,
             width=150,
             height=40,
@@ -122,13 +123,13 @@ class AdminPanel:
         
         # Update button colors
         if tab_name == "products":
-            self.products_tab_btn.configure(fg_color="#D00000", hover_color="#B71C1C")
-            self.transactions_tab_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
+            self.products_tab_btn.configure(fg_color=theme.get("primary"), hover_color=theme.get("primary_hover"))
+            self.transactions_tab_btn.configure(fg_color=theme.get("accent"), hover_color=theme.get("accent_hover"))
             # CONSISTENT padding for products frame
             self.products_frame.pack(fill="both", expand=True)  # REMOVED padx, pady here
         else:
-            self.products_tab_btn.configure(fg_color="#4B5563", hover_color="#6B7280")
-            self.transactions_tab_btn.configure(fg_color="#D00000", hover_color="#B71C1C")
+            self.products_tab_btn.configure(fg_color=theme.get("accent"), hover_color=theme.get("accent_hover"))
+            self.transactions_tab_btn.configure(fg_color=theme.get("primary"), hover_color=theme.get("primary_hover"))
             # CONSISTENT padding for transactions frame
             self.transactions_frame.pack(fill="both", expand=True)  # REMOVED padx, pady here
             
@@ -160,7 +161,7 @@ class AdminPanel:
         )
 
         # === Search Section === - First grey container with corner radius
-        search_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=40, height=90)
+        search_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card"), corner_radius=40, height=90)
         search_container.pack(fill="x", pady=(20, 15), padx=20)
         search_container.pack_propagate(False)
         
@@ -177,7 +178,7 @@ class AdminPanel:
             search_input_container,
             text="Search:",
             font=("Poppins", 14, "bold"),
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         search_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
         
@@ -187,12 +188,12 @@ class AdminPanel:
             search_input_container,
             textvariable=self.prod_search_var,
             font=("Poppins", 13),
-            fg_color="#374151",
-            text_color="#FFFFFF",
+            fg_color=theme.get("input"),
+            text_color=theme.get("text"),
             corner_radius=20,
             height=35,
             border_width=1,
-            border_color="#4B5563",
+            border_color=theme.get("border"),
             placeholder_text="Enter search term..."
         )
         search_entry.grid(row=0, column=1, sticky="ew")
@@ -201,15 +202,15 @@ class AdminPanel:
         def on_entry_hover(entry, is_enter):
             if entry.focus_get() != entry:
                 if is_enter:
-                    entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                    entry.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("accent"))
                 else:
-                    entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                    entry.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
 
         def on_entry_focus(entry, has_focus):
             if has_focus:
-                entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+                entry.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("input_focus"))
             else:
-                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                entry.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
 
         search_entry.bind("<Enter>", lambda e: on_entry_hover(search_entry, True))
         search_entry.bind("<Leave>", lambda e: on_entry_hover(search_entry, False))

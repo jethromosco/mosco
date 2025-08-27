@@ -34,11 +34,12 @@ from ..ui.transaction_window import (
     create_thumbnail_size,
     get_photos_directory,
 )
+from theme import theme
 
 
 class TransactionWindow(ctk.CTkFrame):
     def __init__(self, parent, details: Dict[str, Any], controller, return_to):
-        super().__init__(parent, fg_color="#000000")
+        super().__init__(parent, fg_color=theme.get("bg"))
         self.controller = controller
         self.return_to = return_to
         self.main_app = None
@@ -63,7 +64,7 @@ class TransactionWindow(ctk.CTkFrame):
         self._create_history_section()
 
     def _create_header_section(self):
-        header_frame = ctk.CTkFrame(self, fg_color="#000000", height=120)
+        header_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=120)
         header_frame.pack(fill="x", padx=20, pady=(20, 0))
         header_frame.pack_propagate(False)
         header_frame.columnconfigure(0, weight=1)
@@ -72,9 +73,9 @@ class TransactionWindow(ctk.CTkFrame):
             header_frame,
             text="← Back",
             font=("Poppins", 20, "bold"),
-            fg_color="#D00000",
-            hover_color="#B71C1C",
-            text_color="#FFFFFF",
+            fg_color=theme.get("primary"),
+            hover_color=theme.get("primary_hover"),
+            text_color=theme.get("text"),
             corner_radius=40,
             width=120,
             height=50,
@@ -89,10 +90,10 @@ class TransactionWindow(ctk.CTkFrame):
             self.master.destroy()
 
     def _create_main_content(self):
-        main_container = ctk.CTkFrame(self, fg_color="#000000")
+        main_container = ctk.CTkFrame(self, fg_color=theme.get("bg"))
         main_container.pack(fill="both", expand=True, padx=20, pady=10)
 
-        combined_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
+        combined_section = ctk.CTkFrame(main_container, fg_color=theme.get("card"), corner_radius=40)
         combined_section.pack(fill="x", pady=(0, 10))
 
         combined_inner = ctk.CTkFrame(combined_section, fg_color="transparent")
@@ -120,7 +121,7 @@ class TransactionWindow(ctk.CTkFrame):
             title_left, 
             text="", 
             font=("Poppins", 24, "bold"), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         self.header_label.pack(anchor="w")
 
@@ -128,7 +129,7 @@ class TransactionWindow(ctk.CTkFrame):
             title_left, 
             text="", 
             font=("Poppins", 20, "bold"), 
-            text_color="#CCCCCC"
+            text_color=theme.get("muted")
         )
         self.sub_header_label.pack(anchor="w", pady=(5, 0))
 
@@ -141,7 +142,7 @@ class TransactionWindow(ctk.CTkFrame):
             stock_srp_frame, 
             text="", 
             font=("Poppins", 26, "bold"), 
-            text_color="#FFFFFF", 
+            text_color=theme.get("text"), 
             cursor="hand2"
         )
         self.stock_label.pack(anchor="center")
@@ -152,7 +153,7 @@ class TransactionWindow(ctk.CTkFrame):
             stock_srp_frame, 
             textvariable=self.srp_var, 
             font=("Poppins", 26, "bold"), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         )
         self.srp_display.pack(anchor="center", pady=(10, 0))
 
@@ -160,8 +161,8 @@ class TransactionWindow(ctk.CTkFrame):
             stock_srp_frame, 
             textvariable=self.srp_var, 
             font=("Poppins", 22, "bold"), 
-            fg_color="#374151", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("input"), 
+            text_color=theme.get("text"), 
             corner_radius=20, 
             height=44, 
             width=150, 
@@ -173,7 +174,7 @@ class TransactionWindow(ctk.CTkFrame):
         photo_container2.grid(row=0, column=2, sticky="e")
         photo_container2.grid_propagate(False)
 
-        photo_frame2 = ctk.CTkFrame(photo_container2, width=100, height=100, fg_color="#374151", corner_radius=20)
+        photo_frame2 = ctk.CTkFrame(photo_container2, width=100, height=100, fg_color=theme.get("input"), corner_radius=20)
         photo_frame2.pack_propagate(False)
         photo_frame2.pack(fill="both", expand=True)
 
@@ -181,7 +182,7 @@ class TransactionWindow(ctk.CTkFrame):
             photo_frame2, 
             text="📷", 
             font=("Poppins", 24), 
-            text_color="#CCCCCC", 
+            text_color=theme.get("muted"), 
             cursor="hand2"
         )
         self.photo_label.pack(fill="both", expand=True)
@@ -191,9 +192,9 @@ class TransactionWindow(ctk.CTkFrame):
             photo_container2, 
             text="Upload", 
             font=("Poppins", 12, "bold"), 
-            fg_color="#4B5563", 
-            hover_color="#6B7280", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("accent"), 
+            hover_color=theme.get("accent_hover"), 
+            text_color=theme.get("text"), 
             corner_radius=20, 
             height=30, 
             width=80, 
@@ -219,15 +220,15 @@ class TransactionWindow(ctk.CTkFrame):
             loc_frame, 
             text="LOCATION", 
             font=("Poppins", 18, "bold"), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         ).pack(anchor="w", pady=(0, 5))
 
         self.location_entry = ctk.CTkEntry(
             loc_frame, 
             textvariable=self.location_var, 
             font=("Poppins", 18), 
-            fg_color="#374151", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("input"), 
+            text_color=theme.get("text"), 
             corner_radius=20, 
             height=44, 
             width=120, 
@@ -243,15 +244,15 @@ class TransactionWindow(ctk.CTkFrame):
             notes_frame, 
             text="NOTES", 
             font=("Poppins", 18, "bold"), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         ).pack(anchor="w", pady=(0, 5))
 
         self.notes_entry = ctk.CTkEntry(
             notes_frame, 
             textvariable=self.notes_var, 
             font=("Poppins", 18), 
-            fg_color="#374151", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("input"), 
+            text_color=theme.get("text"), 
             corner_radius=20, 
             height=44, 
             state="readonly"
@@ -283,7 +284,7 @@ class TransactionWindow(ctk.CTkFrame):
     def _create_history_section(self):
         main_container = self.winfo_children()[1] # Get main container
         
-        history_section = ctk.CTkFrame(main_container, fg_color="#2b2b2b", corner_radius=40)
+        history_section = ctk.CTkFrame(main_container, fg_color=theme.get("card"), corner_radius=40)
         history_section.pack(fill="both", expand=True)
 
         # Make the table occupy the full card with consistent margins (match mm.py)
@@ -297,17 +298,17 @@ class TransactionWindow(ctk.CTkFrame):
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Transaction.Treeview",
-                        background="#2b2b2b",
-                        foreground="#FFFFFF",
-                        fieldbackground="#2b2b2b",
+                        background=theme.get("card"),
+                        foreground=theme.get("text"),
+                        fieldbackground=theme.get("card"),
                         font=("Poppins", 18),
                         rowheight=40)
         style.configure("Transaction.Treeview.Heading",
-                        background="#000000",
-                        foreground="#D00000",
+                        background=theme.get("heading_bg"),
+                        foreground=theme.get("heading_fg"),
                         font=("Poppins", 20, "bold"))
-        style.map("Transaction.Treeview", background=[("selected", "#374151")])
-        style.map("Transaction.Treeview.Heading", background=[("active", "#111111")])
+        style.map("Transaction.Treeview", background=[("selected", theme.get("table_selected"))])
+        style.map("Transaction.Treeview.Heading", background=[("active", theme.get("accent_hover"))])
 
         # Red scrollbar styling
         style.configure(
@@ -458,20 +459,20 @@ class TransactionWindow(ctk.CTkFrame):
         settings.title("Stock Color Settings")
         settings.geometry("400x300")
         settings.resizable(False, False)
-        settings.configure(fg_color="#000000")
+        settings.configure(fg_color=theme.get("bg"))
         settings.transient(self)
         settings.grab_set()
         return settings
 
     def _populate_settings_form(self, settings_window):
-        main_frame = ctk.CTkFrame(settings_window, fg_color="#2b2b2b", corner_radius=40)
+        main_frame = ctk.CTkFrame(settings_window, fg_color=theme.get("card"), corner_radius=40)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         ctk.CTkLabel(
             main_frame, 
             text="Stock Threshold Settings", 
             font=("Poppins", 20, "bold"), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         ).pack(pady=(30, 20))
 
         form_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
@@ -487,15 +488,15 @@ class TransactionWindow(ctk.CTkFrame):
             form_frame, 
             text="LOW THRESHOLD (Red)", 
             font=("Poppins", 14, "bold"), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         ).pack(anchor="w", pady=(0, 5))
 
         low_entry = ctk.CTkEntry(
             form_frame, 
             textvariable=low_var, 
             font=("Poppins", 12), 
-            fg_color="#374151", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("input"), 
+            text_color=theme.get("text"), 
             corner_radius=20, 
             height=35
         )
@@ -505,15 +506,15 @@ class TransactionWindow(ctk.CTkFrame):
             form_frame, 
             text="WARNING THRESHOLD (Orange)", 
             font=("Poppins", 14, "bold"), 
-            text_color="#FFFFFF"
+            text_color=theme.get("text")
         ).pack(anchor="w", pady=(0, 5))
 
         warn_entry = ctk.CTkEntry(
             form_frame, 
             textvariable=warn_var, 
             font=("Poppins", 12), 
-            fg_color="#374151", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("input"), 
+            text_color=theme.get("text"), 
             corner_radius=20, 
             height=35
         )
@@ -529,9 +530,9 @@ class TransactionWindow(ctk.CTkFrame):
             button_frame, 
             text="Cancel", 
             font=("Poppins", 14, "bold"), 
-            fg_color="#6B7280", 
-            hover_color="#4B5563", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("accent_hover"), 
+            hover_color=theme.get("accent"), 
+            text_color=theme.get("text"), 
             corner_radius=25, 
             width=100, 
             height=40, 
@@ -690,7 +691,7 @@ class TransactionWindow(ctk.CTkFrame):
         photo_viewer.title("Photo Viewer")
         photo_viewer.transient(self)
         photo_viewer.grab_set()
-        photo_viewer.configure(fg_color="#000000")
+        photo_viewer.configure(fg_color=theme.get("bg"))
 
         screen_width = photo_viewer.winfo_screenwidth()
         screen_height = photo_viewer.winfo_screenheight()
@@ -703,7 +704,7 @@ class TransactionWindow(ctk.CTkFrame):
         return photo_viewer
 
     def _display_fullscreen_image(self, photo_viewer):
-        container = ctk.CTkFrame(photo_viewer, fg_color="#000000")
+        container = ctk.CTkFrame(photo_viewer, fg_color=theme.get("bg"))
         container.pack(fill="both", expand=True, padx=20, pady=20)
 
         original_img = Image.open(self.image_path)

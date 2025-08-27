@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from theme import theme
 from oilseals.gui.gui_transaction_window import TransactionWindow
 from oilseals.gui.gui_mm import InventoryApp
 from home_page import HomePage, CategoryPage, ComingSoonPage
@@ -30,10 +31,10 @@ class AppController:
     def __init__(self, root):
         self.root = root
         self.root.attributes('-fullscreen', True)
-        self.root.configure(bg="#000000")
+        self.root.configure(bg=theme.get("bg"))
 
         # Create container frame using CustomTkinter
-        self.container = ctk.CTkFrame(root, fg_color="#000000")
+        self.container = ctk.CTkFrame(root, fg_color=theme.get("bg"))
         self.container.pack(fill="both", expand=True)
 
         self.frames = {}
