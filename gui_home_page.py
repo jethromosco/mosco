@@ -8,9 +8,9 @@ from home_page import categories, icon_mapping, ICON_PATH
 
 class HomePage(ctk.CTkFrame):
     def __init__(self, parent, controller):
-        ThemeManager.set_mode("dark")
-        colors = ThemeManager.colors()
-        super().__init__(parent, fg_color=colors["bg"])
+        # Do not force mode here; use current ThemeManager setting
+        self.colors = ThemeManager.colors()
+        super().__init__(parent, fg_color=self.colors["bg"])
         self.controller = controller
         self.categories = categories
         self.category_buttons = {}
@@ -19,10 +19,10 @@ class HomePage(ctk.CTkFrame):
         # === Scrollable main container with faster scroll speed ===
         main_scroll = ctk.CTkScrollableFrame(
             self,
-            fg_color=colors["bg"],
-            scrollbar_fg_color=colors["scroll_trough"],
-            scrollbar_button_color=colors["scroll_thumb"],
-            scrollbar_button_hover_color=colors["scroll_thumb_hover"],
+            fg_color=self.colors["bg"],
+            scrollbar_fg_color=self.colors["scroll_trough"],
+            scrollbar_button_color=self.colors["scroll_thumb"],
+            scrollbar_button_hover_color=self.colors["scroll_thumb_hover"],
         )
         main_scroll.pack(fill="both", expand=True)
         
@@ -42,10 +42,10 @@ class HomePage(ctk.CTkFrame):
         self.search_entry = ctk.CTkEntry(
             top_row,
             placeholder_text="🔍 Search",
-            fg_color=colors["primary"],
+            fg_color=self.colors["primary"],
             corner_radius=40,
-            text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else colors["heading_fg"],
-            placeholder_text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else colors["heading_fg"],
+            text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else self.colors["text"],
+            placeholder_text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else self.colors["text"],
             font=("Poppins", 24, "bold"),
             width=176,
             height=56,
@@ -53,8 +53,8 @@ class HomePage(ctk.CTkFrame):
         )
         self.search_entry.pack(side="right", padx=(0, 10))
         self.search_entry.bind("<KeyRelease>", self.on_search_change)
-        self.search_entry.bind("<Enter>", lambda e: self.search_entry.configure(fg_color=colors["primary_hover"]))
-        self.search_entry.bind("<Leave>", lambda e: self.search_entry.configure(fg_color=colors["primary"]))
+        self.search_entry.bind("<Enter>", lambda e: self.search_entry.configure(fg_color=self.colors["primary_hover"]))
+        self.search_entry.bind("<Leave>", lambda e: self.search_entry.configure(fg_color=self.colors["primary"]))
 
         # Theme toggle button (sun/moon), circular
         self.theme_btn = ctk.CTkButton(
@@ -63,16 +63,16 @@ class HomePage(ctk.CTkFrame):
             width=56,
             height=56,
             corner_radius=28,
-            fg_color=colors["card_alt"],
-            hover_color=colors["combo_hover"],
-            text_color=colors["text"],
+            fg_color=self.colors["card_alt"],
+            hover_color=self.colors["combo_hover"],
+            text_color=self.colors["text"],
             font=("Poppins", 24, "bold"),
             command=self.toggle_theme
         )
         self.theme_btn.pack(side="right", padx=(0, 10))
 
         # === Logo row ===
-        logo_frame = ctk.CTkFrame(main_scroll, fg_color=colors["bg"])
+        logo_frame = ctk.CTkFrame(main_scroll, fg_color=self.colors["bg"])
         logo_frame.pack(pady=20)
         logo_frame.bind("<Button-1>", self.remove_search_focus)
 
@@ -80,8 +80,8 @@ class HomePage(ctk.CTkFrame):
             logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(240, 240))
             logo_img2 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco text.png"), size=(847, 240))
 
-            lbl1 = ctk.CTkLabel(logo_frame, image=logo_img1, text="", bg_color=colors["bg"])
-            lbl2 = ctk.CTkLabel(logo_frame, image=logo_img2, text="", bg_color=colors["bg"])
+            lbl1 = ctk.CTkLabel(logo_frame, image=logo_img1, text="", bg_color=self.colors["bg"])
+            lbl2 = ctk.CTkLabel(logo_frame, image=logo_img2, text="", bg_color=self.colors["bg"])
 
             lbl1.pack(side="left", padx=(0, 10))
             lbl2.pack(side="left")
@@ -90,12 +90,12 @@ class HomePage(ctk.CTkFrame):
             lbl2.bind("<Button-1>", self.remove_search_focus)
         except Exception as e:
             print(f"Error loading logos: {e}")
-            title_label = ctk.CTkLabel(logo_frame, text="MOSCO", font=("Hero", 48, "bold"), text_color=colors["text"])
+            title_label = ctk.CTkLabel(logo_frame, text="MOSCO", font=("Hero", 48, "bold"), text_color=self.colors["text"])
             title_label.pack()
             title_label.bind("<Button-1>", self.remove_search_focus)
 
         # === Grid of category buttons ===
-        self.grid_frame = ctk.CTkFrame(main_scroll, fg_color=colors["bg"])
+        self.grid_frame = ctk.CTkFrame(main_scroll, fg_color=self.colors["bg"])
         self.grid_frame.pack(pady=20)
         self.grid_frame.bind("<Button-1>", self.remove_search_focus)
 
