@@ -138,9 +138,9 @@ class HomePage(ctk.CTkFrame):
                     image=tk_img,
                     compound="top",
                     font=("Poppins", 24, "bold"),
-                    fg_color=colors["card"],
-                    hover_color=colors["card_alt"],
-                    text_color=colors["text"],
+                    fg_color=self.colors["card"],
+                    hover_color=self.colors["card_alt"],
+                    text_color=self.colors["text"],
                     corner_radius=40,
                     width=504,
                     height=268,
@@ -152,7 +152,7 @@ class HomePage(ctk.CTkFrame):
                 btn.grid(row=row, column=col, padx=20, pady=20)
 
                 self.category_buttons[label] = {'button': btn, 'original_row': row, 'original_col': col}
-                btn.bind("<Enter>", lambda e, b=btn: b.configure(border_width=3, border_color=colors["primary"], text_color=self.colors["muted"]))
+                btn.bind("<Enter>", lambda e, b=btn: b.configure(border_width=3, border_color=self.colors["primary"], text_color=self.colors["muted"]))
                 btn.bind("<Leave>", lambda e, b=btn: b.configure(border_width=0, text_color=self.colors["text"]))
                 btn.bind("<Button-1>", self.remove_search_focus)
             except Exception as e:
