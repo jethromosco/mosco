@@ -162,6 +162,27 @@ class HomePage(ctk.CTkFrame):
             row, col = divmod(idx, cols)
             btn.grid(row=row, column=col, padx=20, pady=20)
 
+    # === Theme related helpers (HomePage only) ===
+    def _toggle_theme(self):
+        theme.toggle()
+        if hasattr(self, 'theme_toggle_btn'):
+            self.theme_toggle_btn.configure(text="🌙" if theme.mode == "dark" else "🌞")
+        try:
+            self.apply_theme()
+        except Exception:
+            pass
+
+    def apply_theme(self):
+        self.configure(fg_color=theme.get("bg"))
+        try:
+            self.search_entry.configure(
+                text_color=theme.get("text"),
+                placeholder_text_color=theme.get("text"),
+                fg_color=theme.get("primary"),
+            )
+        except Exception:
+            pass
+
 
 class CategoryPage(ctk.CTkFrame):
     def __init__(self, parent, controller, category_name, sub_data, return_to="HomePage"):
@@ -262,19 +283,3 @@ class ComingSoonPage(ctk.CTkFrame):
         msg_label = ctk.CTkLabel(center_frame, text="Coming Soon",
                                font=("Poppins", 24), text_color=theme.get("muted_alt"))
         msg_label.pack()
-
-    # === Theme related helpers ===
-    def _toggle_theme(self):
-        theme.toggle()
-        # Update toggle icon text
-        if hasattr(self, 'theme_toggle_btn'):
-            self.theme_toggle_btn.configure(text="🌙" if theme.mode == "dark" else "🌞")
-
-    def apply_theme(self):
-        # HomePage elements will pick up theme via configure
-        self.configure(fg_color=theme.get("bg"))
-        # Update descendants basic colors where reachable
-        try:
-            self.search_entry.configure(text_color=theme.get("text"), placeholder_text_color=theme.get("text"))
-        except Exception:
-            pass
