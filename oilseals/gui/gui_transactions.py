@@ -47,6 +47,29 @@ class TransactionTab:
         self.setup_buttons()
         self.refresh_transactions()
 
+    def update_theme(self):
+        colors = ThemeManager.colors()
+        try:
+            # Controls
+            for w in self.frame.winfo_children():
+                if isinstance(w, ctk.CTkFrame):
+                    try:
+                        w.configure(fg_color="transparent")
+                    except Exception:
+                        pass
+            # Treeview style
+            style = ttk.Style()
+            style.configure("Transactions.Treeview",
+                            background=colors["card"], foreground=colors["text"],
+                            fieldbackground=colors["card"], font=("Poppins", 12),
+                            rowheight=35)
+            style.configure("Transactions.Treeview.Heading",
+                            background=colors["heading_bg"], foreground=colors["heading_fg"],
+                            font=("Poppins", 12, "bold"))
+            style.map("Transactions.Treeview", background=[["selected", colors["table_selected"]]])
+        except Exception:
+            pass
+
     # ─────────────── controls (search, filters, date) ───────────────
     def setup_controls(self):
         """Create search and filter controls."""

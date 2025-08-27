@@ -416,8 +416,12 @@ class InventoryApp(ctk.CTkFrame):
     def update_theme(self):
         self.colors = ThemeManager.colors()
         self.configure(fg_color=self.colors["bg"])
-        # Re-apply styles to reflect new palette
         try:
+            # Header/back
+            for child in self.winfo_children():
+                if isinstance(child, ctk.CTkFrame):
+                    child.configure(fg_color=self.colors.get("bg", "transparent"))
+            # Reapply table and controls style
             self._setup_treeview_style()
             if hasattr(self, "tree"):
                 self.tree.tag_configure("normal", background=self.colors["card"], foreground=self.colors["text"])

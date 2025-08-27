@@ -99,6 +99,34 @@ class HomePage(ctk.CTkFrame):
         self.grid_frame.bind("<Button-1>", self.remove_search_focus)
 
         self.create_category_buttons()
+        
+    def update_theme(self):
+        # Reapply colors to main elements when theme changes
+        self.colors = ThemeManager.colors()
+        self.configure(fg_color=self.colors["bg"])
+        try:
+            # Update search entry and toggle button
+            self.search_entry.configure(
+                fg_color=self.colors["primary"],
+                text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else self.colors["text"],
+                placeholder_text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else self.colors["text"],
+            )
+            self.theme_btn.configure(
+                fg_color=self.colors["card_alt"],
+                hover_color=self.colors["combo_hover"],
+                text_color=self.colors["text"],
+                text="🌙" if ThemeManager.current_mode == "dark" else "🌞",
+            )
+            self.grid_frame.configure(fg_color=self.colors["bg"])
+            for info in self.category_buttons.values():
+                btn = info["button"]
+                btn.configure(
+                    fg_color=self.colors["card"],
+                    hover_color=self.colors["card_alt"],
+                    text_color=self.colors["text"],
+                )
+        except Exception:
+            pass
     
     def toggle_theme(self):
         ThemeManager.toggle_mode()
