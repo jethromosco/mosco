@@ -119,7 +119,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.header_label = ctk.CTkLabel(
             title_left, 
             text="", 
-            font=("Arial", 24, "bold"), 
+            font=("Poppins", 24, "bold"), 
             text_color="#FFFFFF"
         )
         self.header_label.pack(anchor="w")
@@ -127,7 +127,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.sub_header_label = ctk.CTkLabel(
             title_left, 
             text="", 
-            font=("Arial", 20, "bold"), 
+            font=("Poppins", 20, "bold"), 
             text_color="#CCCCCC"
         )
         self.sub_header_label.pack(anchor="w", pady=(5, 0))
@@ -139,7 +139,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.stock_label = ctk.CTkLabel(
             stock_srp_frame, 
             text="", 
-            font=("Arial", 24, "bold"), 
+            font=("Poppins", 24, "bold"), 
             text_color="#FFFFFF", 
             cursor="hand2"
         )
@@ -149,7 +149,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.srp_display = ctk.CTkLabel(
             stock_srp_frame, 
             textvariable=self.srp_var, 
-            font=("Arial", 24, "bold"), 
+            font=("Poppins", 24, "bold"), 
             text_color="#FFFFFF"
         )
         self.srp_display.pack(anchor="center", pady=(10, 0))
@@ -157,7 +157,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.srp_entry = ctk.CTkEntry(
             stock_srp_frame, 
             textvariable=self.srp_var, 
-            font=("Arial", 18), 
+            font=("Poppins", 18), 
             fg_color="#374151", 
             text_color="#FFFFFF", 
             corner_radius=20, 
@@ -178,7 +178,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.photo_label = ctk.CTkLabel(
             photo_frame2, 
             text="📷", 
-            font=("Arial", 24), 
+            font=("Poppins", 24), 
             text_color="#CCCCCC", 
             cursor="hand2"
         )
@@ -216,14 +216,14 @@ class TransactionWindow(ctk.CTkFrame):
         ctk.CTkLabel(
             loc_frame, 
             text="LOCATION", 
-            font=("Arial", 18, "bold"), 
+            font=("Poppins", 18, "bold"), 
             text_color="#FFFFFF"
         ).pack(anchor="w", pady=(0, 5))
 
         self.location_entry = ctk.CTkEntry(
             loc_frame, 
             textvariable=self.location_var, 
-            font=("Arial", 18), 
+            font=("Poppins", 18), 
             fg_color="#374151", 
             text_color="#FFFFFF", 
             corner_radius=20, 
@@ -240,14 +240,14 @@ class TransactionWindow(ctk.CTkFrame):
         ctk.CTkLabel(
             notes_frame, 
             text="NOTES", 
-            font=("Arial", 18, "bold"), 
+            font=("Poppins", 18, "bold"), 
             text_color="#FFFFFF"
         ).pack(anchor="w", pady=(0, 5))
 
         self.notes_entry = ctk.CTkEntry(
             notes_frame, 
             textvariable=self.notes_var, 
-            font=("Arial", 18), 
+            font=("Poppins", 18), 
             fg_color="#374151", 
             text_color="#FFFFFF", 
             corner_radius=20, 
@@ -263,7 +263,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.edit_btn = ctk.CTkButton(
             edit_frame, 
             text="Edit", 
-            font=("Arial", 18, "bold"), 
+            font=("Poppins", 18, "bold"), 
             fg_color="#4B5563", 
             hover_color="#6B7280", 
             text_color="#FFFFFF", 
@@ -277,7 +277,7 @@ class TransactionWindow(ctk.CTkFrame):
         self.save_status_label = ctk.CTkLabel(
             edit_frame, 
             text="", 
-            font=("Arial", 18), 
+            font=("Poppins", 18), 
             text_color="#22C55E"
         )
         self.save_status_label.pack(pady=(6, 0))
@@ -306,12 +306,12 @@ class TransactionWindow(ctk.CTkFrame):
                         background="#2b2b2b",
                         foreground="#FFFFFF",
                         fieldbackground="#2b2b2b",
-                        font=("Arial", 18),
+                        font=("Poppins", 18),
                         rowheight=40)
         style.configure("Transaction.Treeview.Heading",
                         background="#000000",
                         foreground="#D00000",
-                        font=("Arial", 20, "bold"))
+                        font=("Poppins", 20, "bold"))
         style.map("Transaction.Treeview", background=[("selected", "#374151")])
         style.map("Transaction.Treeview.Heading", background=[("active", "#111111")])
 
