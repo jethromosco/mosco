@@ -1,4 +1,5 @@
 from ..database import connect_db
+from .brand_utils import canonicalize_brand
 import ast
 import sqlite3
 
@@ -127,6 +128,36 @@ class ProductFormLogic:
 		# Update price in data
 		validated_data = data.copy()
 		validated_data[price_idx] = price
+
+		# Canonicalize brand and set origin automatically
+		brand_idx = self.FIELDS.index("BRAND")
+		origin_idx = self.FIELDS.index("ORIGIN")
+		canonical_brand, mapped_origin = canonicalize_brand(validated_data[brand_idx])
+		validated_data[brand_idx] = canonical_brand
+		if mapped_origin is not None:
+			validated_data[origin_idx] = mapped_origin
+
+		# Enforce uniqueness on canonical brand for the same TYPE/ID/OD/TH
+		try:
+			conn = connect_db()
+			cur = conn.cursor()
+			cur.execute(
+				"""
+				SELECT 1 FROM products
+				WHERE type=? AND id=? AND od=? AND th=? AND brand=?
+				LIMIT 1
+				""",
+				(
+					validated_data[0], validated_data[1], validated_data[2], validated_data[3],
+					validated_data[brand_idx]
+				),
+			)
+			dup = cur.fetchone()
+			conn.close()
+			if dup:
+				return False, "This product already exists under the canonical brand."
+		except Exception:
+			pass
 		
 		try:
 			conn = connect_db()
@@ -172,6 +203,37 @@ class ProductFormLogic:
 	
 	def update_product(self, product_id, product_data):
 		"""Update an existing product in the database."""
+		# Canonicalize brand and origin
+		try:
+			canonical_brand, mapped_origin = canonicalize_brand(product_data.get('brand', ''))
+			product_data['brand'] = canonical_brand
+			if mapped_origin is not None:
+				product_data['origin'] = mapped_origin
+		except Exception:
+			pass
+
+		# Enforce uniqueness on canonical brand for the same TYPE/ID/OD/TH (excluding this row)
+		try:
+			conn = connect_db()
+			cur = conn.cursor()
+			cur.execute(
+				"""
+				SELECT 1 FROM products
+				WHERE type=? AND id=? AND od=? AND th=? AND brand=? AND rowid<>?
+				LIMIT 1
+				""",
+				(
+					product_data['type'], product_data['id'], product_data['od'], product_data['th'],
+					product_data['brand'], product_id
+				),
+			)
+			dup = cur.fetchone()
+			conn.close()
+			if dup:
+				return False, "Another product with this canonical brand already exists."
+		except Exception:
+			pass
+
 		conn = connect_db()
 		cur = conn.cursor()
 		try:

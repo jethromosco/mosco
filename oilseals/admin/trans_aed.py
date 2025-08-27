@@ -1,5 +1,6 @@
 from datetime import datetime
 from ..database import connect_db
+from .brand_utils import canonicalize_brand
 import re
 from fractions import Fraction
 
@@ -61,6 +62,9 @@ def _resolve_part_no(item_type, id_size, od_size, th_size, brand):
 	try:
 		item_type = (item_type or "").strip().upper()
 		brand = (brand or "").strip().upper()
+		# Canonicalize brand for product lookup
+		canonical_brand, _ = canonicalize_brand(brand)
+		brand = canonical_brand
 		id_val = _normalize_number_for_db(id_size)
 		od_val = _normalize_number_for_db(od_size)
 		th_val = _normalize_number_for_db(th_size)
@@ -148,6 +152,9 @@ class TransactionLogic:
 		try:
 			item_type = (item_type or "").strip().upper()
 			brand = (brand or "").strip().upper()
+			# Canonicalize brand for existence check
+			canonical_brand, _ = canonicalize_brand(brand)
+			brand = canonical_brand
 			id_val = _normalize_number_for_db(id_size)
 			od_val = _normalize_number_for_db(od_size)
 			th_val = _normalize_number_for_db(th_size)
