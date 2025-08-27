@@ -271,11 +271,11 @@ class TransactionWindow(ctk.CTkFrame):
             text_color="#FFFFFF", 
             corner_radius=25, 
             width=120, 
-            height=44, 
+            height=46, 
             command=self.toggle_edit_mode
         )
         # Align with textfield baseline instead of label
-        self.edit_btn.pack(pady=(22, 0))
+        self.edit_btn.pack(pady=(20, 0))
 
         # Remove status label to keep Edit button aligned with fields
         self.save_status_label = None

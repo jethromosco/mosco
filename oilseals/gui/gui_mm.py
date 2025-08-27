@@ -230,7 +230,7 @@ class InventoryApp(ctk.CTkFrame):
     def _create_sort_controls(self, parent):
         """Create sort and filter controls"""
         # Sort control
-        sort_frame = ctk.CTkFrame(parent, fg_color="transparent", height=90)
+        sort_frame = ctk.CTkFrame(parent, fg_color="transparent", height=130)
         sort_frame.grid(row=0, column=6, padx=5, sticky="ew")
         sort_frame.grid_propagate(False)
         sort_frame.grid_columnconfigure(0, weight=1)
@@ -241,18 +241,18 @@ class InventoryApp(ctk.CTkFrame):
             font=("Poppins", 18, "bold"),
             text_color="#FFFFFF"
         )
-        sort_label.grid(row=0, column=0, pady=(0, 5), sticky="ew")
+        sort_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
         sort_combo = self._create_combo_widget(
             sort_frame, 
             self.sort_by, 
             ["Size", "Quantity"]
         )
-        sort_combo.grid(row=1, column=0, pady=(0, 5), sticky="ew")
+        sort_combo.grid(row=1, column=0, pady=(0, 8), sticky="ew")
         self.sort_by.trace_add("write", lambda *args: self.refresh_product_list())
 
         # Stock filter control
-        stock_frame = ctk.CTkFrame(parent, fg_color="transparent", height=90)
+        stock_frame = ctk.CTkFrame(parent, fg_color="transparent", height=130)
         stock_frame.grid(row=0, column=7, padx=5, sticky="ew")
         stock_frame.grid_propagate(False)
         stock_frame.grid_columnconfigure(0, weight=1)
@@ -263,14 +263,14 @@ class InventoryApp(ctk.CTkFrame):
             font=("Poppins", 18, "bold"),
             text_color="#FFFFFF"
         )
-        stock_label.grid(row=0, column=0, pady=(0, 5), sticky="ew")
+        stock_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
         stock_combo = self._create_combo_widget(
             stock_frame, 
             self.stock_filter, 
             ["All", "In Stock", "Low Stock", "Out of Stock"]
         )
-        stock_combo.grid(row=1, column=0, pady=(0, 5), sticky="ew")
+        stock_combo.grid(row=1, column=0, pady=(0, 8), sticky="ew")
         self.stock_filter.trace_add("write", lambda *args: self.refresh_product_list())
 
     def _create_combo_widget(self, parent, variable, values):
