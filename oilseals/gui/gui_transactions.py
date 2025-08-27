@@ -5,6 +5,7 @@ from tkcalendar import DateEntry
 from datetime import datetime
 from .gui_trans_aed import TransactionFormHandler
 from ..admin.transactions import TransactionsLogic, parse_date
+from theme_manager import ThemeManager
 
 
 class TransactionTab:
@@ -46,10 +47,34 @@ class TransactionTab:
         self.setup_buttons()
         self.refresh_transactions()
 
+    def update_theme(self):
+        colors = ThemeManager.colors()
+        try:
+            # Controls
+            for w in self.frame.winfo_children():
+                if isinstance(w, ctk.CTkFrame):
+                    try:
+                        w.configure(fg_color="transparent")
+                    except Exception:
+                        pass
+            # Treeview style
+            style = ttk.Style()
+            style.configure("Transactions.Treeview",
+                            background=colors["card"], foreground=colors["text"],
+                            fieldbackground=colors["card"], font=("Poppins", 12),
+                            rowheight=35)
+            style.configure("Transactions.Treeview.Heading",
+                            background=colors["heading_bg"], foreground=colors["heading_fg"],
+                            font=("Poppins", 12, "bold"))
+            style.map("Transactions.Treeview", background=[["selected", colors["table_selected"]]])
+        except Exception:
+            pass
+
     # ─────────────── controls (search, filters, date) ───────────────
     def setup_controls(self):
         """Create search and filter controls."""
-        controls_section = ctk.CTkFrame(self.frame, fg_color="#2b2b2b", corner_radius=40, height=90)
+        colors = ThemeManager.colors()
+        controls_section = ctk.CTkFrame(self.frame, fg_color=colors["card"], corner_radius=40, height=90)
         controls_section.pack(fill="x", padx=20, pady=(20, 15))
         controls_section.pack_propagate(False)
 
@@ -61,15 +86,15 @@ class TransactionTab:
         row.pack(fill="x")
 
         # Search label
-        search_label = ctk.CTkLabel(row, text="Search:", font=("Poppins", 14, "bold"), text_color="#FFFFFF")
+        search_label = ctk.CTkLabel(row, text="Search:", font=("Poppins", 14, "bold"), text_color=colors["text"]) 
         search_label.pack(side="left", padx=(0, 10))
 
         # Search
         self.tran_search_var = tk.StringVar()
         search_entry = ctk.CTkEntry(
             row, textvariable=self.tran_search_var,
-            font=("Poppins", 13), fg_color="#374151", text_color="#FFFFFF",
-            corner_radius=20, height=35, border_width=1, border_color="#4B5563",
+            font=("Poppins", 13), fg_color=colors["input"], text_color=colors["text"],
+            corner_radius=20, height=35, border_width=1, border_color=colors["border"],
             placeholder_text="Enter search term...", width=260
         )
         search_entry.pack(side="left")
@@ -79,15 +104,15 @@ class TransactionTab:
         def on_entry_hover(entry, is_enter):
             if entry.focus_get() != entry:
                 if is_enter:
-                    entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                    entry.configure(border_color=colors["primary"], border_width=2, fg_color=colors["combo_hover"])
                 else:
-                    entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                    entry.configure(border_color=colors["border"], border_width=1, fg_color=colors["input"])
 
         def on_entry_focus(entry, has_focus):
             if has_focus:
-                entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+                entry.configure(border_color=colors["primary"], border_width=2, fg_color=colors["input_focus"])
             else:
-                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                entry.configure(border_color=colors["border"], border_width=1, fg_color=colors["input"])
 
         search_entry.bind("<Enter>", lambda e: on_entry_hover(search_entry, True))
         search_entry.bind("<Leave>", lambda e: on_entry_hover(search_entry, False))
@@ -98,12 +123,12 @@ class TransactionTab:
         ctk.CTkLabel(row, text=" ", fg_color="transparent").pack(side="left", padx=10)
 
         # Date label
-        date_label = ctk.CTkLabel(row, text="Date:", font=("Poppins", 14, "bold"), text_color="#FFFFFF")
+        date_label = ctk.CTkLabel(row, text="Date:", font=("Poppins", 14, "bold"), text_color=colors["text"]) 
         date_label.pack(side="left", padx=(10, 10))
 
         # Date
         self.date_var = tk.StringVar()
-        date_frame = ctk.CTkFrame(row, fg_color="#374151", corner_radius=20, height=35)
+        date_frame = ctk.CTkFrame(row, fg_color=colors["input"], corner_radius=20, height=35)
         date_frame.pack(side="left")
         date_frame.pack_propagate(False)
 
@@ -120,9 +145,9 @@ class TransactionTab:
         def on_frame_hover(frame, is_enter):
             # mimic entry-like hover by changing fg_color subtly
             if is_enter:
-                frame.configure(fg_color="#4B5563")
+                frame.configure(fg_color=colors["combo_hover"]) 
             else:
-                frame.configure(fg_color="#374151")
+                frame.configure(fg_color=colors["input"]) 
 
         date_frame.bind("<Enter>", lambda e: on_frame_hover(date_frame, True))
         date_frame.bind("<Leave>", lambda e: on_frame_hover(date_frame, False))
@@ -130,13 +155,13 @@ class TransactionTab:
         # All Dates
         self.clear_btn = ctk.CTkButton(
             row, text="All Dates", font=("Poppins", 13, "bold"),
-            fg_color="#000000", hover_color="#111111", text_color="#FFFFFF",
+            fg_color=colors["heading_bg"], hover_color=colors["card_alt"], text_color=colors["text"],
             corner_radius=20, width=110, height=35, command=self.clear_date_filter
         )
         self.clear_btn.pack(side="left", padx=10)
 
         # Filter label
-        filter_label = ctk.CTkLabel(row, text="Filter:", font=("Poppins", 14, "bold"), text_color="#FFFFFF")
+        filter_label = ctk.CTkLabel(row, text="Filter:", font=("Poppins", 14, "bold"), text_color=colors["text"]) 
         filter_label.pack(side="left", padx=(10, 10))
 
         # Filter
@@ -145,10 +170,10 @@ class TransactionTab:
             row, variable=self.restock_filter,
             values=["All", "Restock", "Sale", "Actual", "Fabrication"],
             font=("Poppins", 13), dropdown_font=("Poppins", 12),
-            fg_color="#374151", text_color="#FFFFFF",
-            dropdown_fg_color="#2b2b2b", dropdown_text_color="#FFFFFF",
-            button_color="#4B5563", button_hover_color="#6B7280",
-            border_color="#4B5563", corner_radius=20, width=160, height=35, state="readonly"
+            fg_color=colors["input"], text_color=colors["text"],
+            dropdown_fg_color=colors["card"], dropdown_text_color=colors["text"],
+            button_color=colors["border"], button_hover_color=colors["accent_hover"],
+            border_color=colors["border"], corner_radius=20, width=160, height=35, state="readonly"
         )
         restock_combo.pack(side="left", padx=(0, 0))
         self.restock_filter.trace_add("write", lambda *args: self.refresh_transactions())
@@ -156,7 +181,7 @@ class TransactionTab:
         # Hover/focus binds for combo (visual only)
         def on_combo_hover(is_enter):
             try:
-                restock_combo.configure(fg_color="#4B5563" if is_enter else "#374151")
+                restock_combo.configure(fg_color=colors["combo_hover"] if is_enter else colors["input"])
             except Exception:
                 pass
         restock_combo.bind("<Enter>", lambda e: on_combo_hover(True))
@@ -182,7 +207,7 @@ class TransactionTab:
     # ─────────────── treeview ───────────────
     def setup_treeview(self):
         """Create and configure the transactions treeview."""
-        table_container = ctk.CTkFrame(self.frame, fg_color="#2b2b2b", corner_radius=40)
+        table_container = ctk.CTkFrame(self.frame, fg_color=colors["card"], corner_radius=40)
         table_container.pack(fill="both", expand=True, padx=20, pady=(0, 15))
 
         inner_table = ctk.CTkFrame(table_container, fg_color="transparent")
@@ -191,13 +216,25 @@ class TransactionTab:
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Transactions.Treeview",
-                        background="#2b2b2b", foreground="#FFFFFF",
-                        fieldbackground="#2b2b2b", font=("Poppins", 12),
+                        background=colors["card"], foreground=colors["text"],
+                        fieldbackground=colors["card"], font=("Poppins", 12),
                         rowheight=35)
         style.configure("Transactions.Treeview.Heading",
-                        background="#000000", foreground="#D00000",
+                        background=colors["heading_bg"], foreground=colors["heading_fg"],
                         font=("Poppins", 12, "bold"))
-        style.map("Transactions.Treeview", background=[("selected", "#374151")])
+        style.map("Transactions.Treeview", background=[("selected", colors["table_selected"])])
+
+        style.configure(
+            "Elegant.Vertical.TScrollbar",
+            gripcount=0,
+            background=colors["scroll_thumb"],
+            troughcolor=colors["scroll_trough"],
+            bordercolor=colors["scroll_trough"],
+            lightcolor=colors["scroll_thumb"],
+            darkcolor=colors["scroll_thumb"],
+            arrowcolor=colors["text"],
+            relief="flat"
+        )
 
         self.tran_tree = ttk.Treeview(
             inner_table,
@@ -225,7 +262,7 @@ class TransactionTab:
             self.tran_tree.heading(col, text=header, command=lambda c=col: self.sort_by_column(c))
             self.tran_tree.column(col, **column_config[col])
 
-        scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.tran_tree.yview)
+        scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.tran_tree.yview, style="Elegant.Vertical.TScrollbar")
         self.tran_tree.configure(yscrollcommand=scrollbar.set)
         self.tran_tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")

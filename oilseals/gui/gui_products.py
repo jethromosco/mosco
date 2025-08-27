@@ -4,6 +4,7 @@ from tkinter import ttk, messagebox
 from .gui_transactions import TransactionTab
 from .gui_prod_aed import ProductFormHandler
 from ..admin.products import ProductsLogic
+from theme_manager import ThemeManager
 
 
 class AdminPanel:
@@ -31,7 +32,8 @@ class AdminPanel:
         # Reapply titlebar AFTER it's full screen (optional)
         self.win.overrideredirect(False)
         self.win.title("Manage Database")
-        self.win.configure(fg_color="#000000")  # Set window background to black
+        self.colors = ThemeManager.colors()
+        self.win.configure(fg_color=self.colors["bg"])  # theme background
 
         # Now show without resize flash
         self.win.deiconify()
@@ -65,9 +67,9 @@ class AdminPanel:
             tab_buttons_frame,
             text="Products",
             font=("Poppins", 16, "bold"),
-            fg_color="#D00000",
-            hover_color="#B71C1C",
-            text_color="#FFFFFF",
+            fg_color=self.colors["primary"],
+            hover_color=self.colors["primary_hover"],
+            text_color=self.colors["text"],
             corner_radius=25,
             width=150,
             height=40,
@@ -80,9 +82,9 @@ class AdminPanel:
             tab_buttons_frame,
             text="Transactions",
             font=("Poppins", 16, "bold"),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
-            text_color="#FFFFFF",
+            fg_color=self.colors["accent"],
+            hover_color=self.colors["accent_hover"],
+            text_color=self.colors["text"],
             corner_radius=25,
             width=150,
             height=40,
@@ -160,7 +162,7 @@ class AdminPanel:
         )
 
         # === Search Section === - First grey container with corner radius
-        search_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=40, height=90)
+        search_container = ctk.CTkFrame(self.products_frame, fg_color=self.colors["card"], corner_radius=40, height=90)
         search_container.pack(fill="x", pady=(20, 15), padx=20)
         search_container.pack_propagate(False)
         
@@ -177,7 +179,7 @@ class AdminPanel:
             search_input_container,
             text="Search:",
             font=("Poppins", 14, "bold"),
-            text_color="#FFFFFF"
+            text_color=self.colors["text"]
         )
         search_label.grid(row=0, column=0, sticky="w", padx=(0, 10))
         
@@ -187,12 +189,12 @@ class AdminPanel:
             search_input_container,
             textvariable=self.prod_search_var,
             font=("Poppins", 13),
-            fg_color="#374151",
-            text_color="#FFFFFF",
+            fg_color=self.colors["input"],
+            text_color=self.colors["text"],
             corner_radius=20,
             height=35,
             border_width=1,
-            border_color="#4B5563",
+            border_color=self.colors["border"],
             placeholder_text="Enter search term..."
         )
         search_entry.grid(row=0, column=1, sticky="ew")
@@ -201,15 +203,15 @@ class AdminPanel:
         def on_entry_hover(entry, is_enter):
             if entry.focus_get() != entry:
                 if is_enter:
-                    entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                    entry.configure(border_color=self.colors["primary"], border_width=2, fg_color=self.colors["combo_hover"])
                 else:
-                    entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                    entry.configure(border_color=self.colors["border"], border_width=1, fg_color=self.colors["input"])
 
         def on_entry_focus(entry, has_focus):
             if has_focus:
-                entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+                entry.configure(border_color=self.colors["primary"], border_width=2, fg_color=self.colors["input_focus"])
             else:
-                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                entry.configure(border_color=self.colors["border"], border_width=1, fg_color=self.colors["input"])
 
         search_entry.bind("<Enter>", lambda e: on_entry_hover(search_entry, True))
         search_entry.bind("<Leave>", lambda e: on_entry_hover(search_entry, False))
@@ -219,7 +221,7 @@ class AdminPanel:
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
         # === Table Section === - Second grey container with corner radius (separate from buttons)
-        table_container = ctk.CTkFrame(self.products_frame, fg_color="#2b2b2b", corner_radius=40)
+        table_container = ctk.CTkFrame(self.products_frame, fg_color=self.colors["card"], corner_radius=40)
         table_container.pack(fill="both", expand=True, pady=(0, 15), padx=20)
         
         inner_table = ctk.CTkFrame(table_container, fg_color="transparent")
@@ -229,17 +231,17 @@ class AdminPanel:
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Products.Treeview",
-                        background="#2b2b2b",
-                        foreground="#FFFFFF",
-                        fieldbackground="#2b2b2b",
+                        background=self.colors["card"],
+                        foreground=self.colors["text"],
+                        fieldbackground=self.colors["card"],
                         font=("Poppins", 12),
                         rowheight=35)
         style.configure("Products.Treeview.Heading",
-                        background="#000000",
-                        foreground="#D00000",
+                        background=self.colors["heading_bg"],
+                        foreground=self.colors["heading_fg"],
                         font=("Poppins", 12, "bold"))
-        style.map("Products.Treeview", background=[("selected", "#374151")])
-        style.map("Products.Treeview.Heading", background=[("active", "#111111")])
+        style.map("Products.Treeview", background=[("selected", self.colors["table_selected"])])
+        style.map("Products.Treeview.Heading", background=[("active", self.colors["card_alt"])])
 
         # Create Treeview
         columns = ("item", "brand", "part_no", "origin", "notes", "price")
@@ -252,7 +254,19 @@ class AdminPanel:
             self.prod_tree.column(col, width=150, anchor="center")
 
         # Scrollbar
-        tree_scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.prod_tree.yview)
+        style.configure(
+            "Elegant.Vertical.TScrollbar",
+            gripcount=0,
+            background=self.colors["scroll_thumb"],
+            troughcolor=self.colors["scroll_trough"],
+            bordercolor=self.colors["scroll_trough"],
+            lightcolor=self.colors["scroll_thumb"],
+            darkcolor=self.colors["scroll_thumb"],
+            arrowcolor=self.colors["text"],
+            relief="flat"
+        )
+
+        tree_scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.prod_tree.yview, style="Elegant.Vertical.TScrollbar")
         self.prod_tree.configure(yscrollcommand=tree_scrollbar.set)
         
         self.prod_tree.pack(side="left", fill="both", expand=True)
@@ -285,9 +299,9 @@ class AdminPanel:
             button_frame,
             text="Edit",
             font=("Poppins", 16, "bold"),
-            fg_color="#4B5563",
-            hover_color="#6B7280",
-            text_color="#FFFFFF",
+            fg_color=self.colors["accent"],
+            hover_color=self.colors["accent_hover"],
+            text_color=self.colors["text"],
             corner_radius=25,
             width=100,
             height=45,
@@ -314,6 +328,13 @@ class AdminPanel:
         self.current_products_data = []
         
         self.refresh_products()
+
+    def update_theme(self):
+        self.colors = ThemeManager.colors()
+        try:
+            self.win.configure(fg_color=self.colors["bg"])
+        except Exception:
+            pass
 
     def refresh_products(self):
         """Refresh the products display using logic layer."""

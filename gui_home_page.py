@@ -1,20 +1,28 @@
 import customtkinter as ctk
 from PIL import Image
 import tkinter as tk
+from theme_manager import ThemeManager
 
 from home_page import categories, icon_mapping, ICON_PATH
 
 
 class HomePage(ctk.CTkFrame):
     def __init__(self, parent, controller):
-        super().__init__(parent, fg_color="#000000")
+        # Do not force mode here; use current ThemeManager setting
+        self.colors = ThemeManager.colors()
+        super().__init__(parent, fg_color=self.colors["bg"])
         self.controller = controller
         self.categories = categories
         self.category_buttons = {}
         
         # === Scrollable main container with faster scroll speed ===
-        main_scroll = ctk.CTkScrollableFrame(self, fg_color="#000000", scrollbar_fg_color="#111827",
-                                           scrollbar_button_color="#D00000", scrollbar_button_hover_color="#FF0000")
+        main_scroll = ctk.CTkScrollableFrame(
+            self,
+            fg_color=self.colors["bg"],
+            scrollbar_fg_color=self.colors["scroll_trough"],
+            scrollbar_button_color=self.colors["scroll_thumb"],
+            scrollbar_button_hover_color=self.colors["scroll_thumb_hover"],
+        )
         main_scroll.pack(fill="both", expand=True)
         
         # Configure faster scroll speed (20x faster)
@@ -26,26 +34,44 @@ class HomePage(ctk.CTkFrame):
         # Make the entire frame clickable to remove focus from search
         main_scroll.bind("<Button-1>", self.remove_search_focus)
         
-        # === Search box ===
+        # === Search + Theme toggle row ===
+        top_row = ctk.CTkFrame(main_scroll, fg_color="transparent")
+        top_row.pack(fill="x", pady=(40, 0))
+
         self.search_entry = ctk.CTkEntry(
-            main_scroll,
+            top_row,
             placeholder_text="🔍 Search",
-            fg_color="#D00000",
+            fg_color=self.colors["primary"],
             corner_radius=40,
-            text_color="#FFFFFF",
-            placeholder_text_color="#FFFFFF",
+            text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else self.colors["text"],
+            placeholder_text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else self.colors["text"],
             font=("Poppins", 24, "bold"),
             width=176,
             height=56,
             border_width=0
         )
-        self.search_entry.pack(anchor="ne", padx=40, pady=(40, 0))
+        self.search_entry.pack(side="right", padx=(0, 10))
         self.search_entry.bind("<KeyRelease>", self.on_search_change)
-        self.search_entry.bind("<Enter>", lambda e: self.search_entry.configure(fg_color="#B71C1C"))
-        self.search_entry.bind("<Leave>", lambda e: self.search_entry.configure(fg_color="#D00000"))
+        self.search_entry.bind("<Enter>", lambda e: self.search_entry.configure(fg_color=self.colors["primary_hover"]))
+        self.search_entry.bind("<Leave>", lambda e: self.search_entry.configure(fg_color=self.colors["primary"]))
+
+        # Theme toggle button (sun/moon), circular
+        self.theme_btn = ctk.CTkButton(
+            top_row,
+            text="🌙" if ThemeManager.current_mode == "dark" else "🌞",
+            width=56,
+            height=56,
+            corner_radius=28,
+            fg_color=self.colors["card_alt"],
+            hover_color=self.colors["combo_hover"],
+            text_color=self.colors["text"],
+            font=("Poppins", 24, "bold"),
+            command=self.toggle_theme
+        )
+        self.theme_btn.pack(side="right", padx=(0, 10))
 
         # === Logo row ===
-        logo_frame = ctk.CTkFrame(main_scroll, fg_color="#000000")
+        logo_frame = ctk.CTkFrame(main_scroll, fg_color=self.colors["bg"])
         logo_frame.pack(pady=20)
         logo_frame.bind("<Button-1>", self.remove_search_focus)
 
@@ -53,8 +79,8 @@ class HomePage(ctk.CTkFrame):
             logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(240, 240))
             logo_img2 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco text.png"), size=(847, 240))
 
-            lbl1 = ctk.CTkLabel(logo_frame, image=logo_img1, text="", bg_color="#000000")
-            lbl2 = ctk.CTkLabel(logo_frame, image=logo_img2, text="", bg_color="#000000")
+            lbl1 = ctk.CTkLabel(logo_frame, image=logo_img1, text="", bg_color=self.colors["bg"])
+            lbl2 = ctk.CTkLabel(logo_frame, image=logo_img2, text="", bg_color=self.colors["bg"])
 
             lbl1.pack(side="left", padx=(0, 10))
             lbl2.pack(side="left")
@@ -63,17 +89,57 @@ class HomePage(ctk.CTkFrame):
             lbl2.bind("<Button-1>", self.remove_search_focus)
         except Exception as e:
             print(f"Error loading logos: {e}")
-            title_label = ctk.CTkLabel(logo_frame, text="MOSCO", font=("Hero", 48, "bold"), text_color="#FFFFFF")
+            title_label = ctk.CTkLabel(logo_frame, text="MOSCO", font=("Hero", 48, "bold"), text_color=self.colors["text"])
             title_label.pack()
             title_label.bind("<Button-1>", self.remove_search_focus)
 
         # === Grid of category buttons ===
-        self.grid_frame = ctk.CTkFrame(main_scroll, fg_color="#000000")
+        self.grid_frame = ctk.CTkFrame(main_scroll, fg_color=self.colors["bg"])
         self.grid_frame.pack(pady=20)
         self.grid_frame.bind("<Button-1>", self.remove_search_focus)
 
         self.create_category_buttons()
+        
+    def update_theme(self):
+        # Reapply colors to main elements when theme changes
+        self.colors = ThemeManager.colors()
+        self.configure(fg_color=self.colors["bg"])
+        try:
+            # Update search entry and toggle button
+            self.search_entry.configure(
+                fg_color=self.colors["primary"],
+                text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else self.colors["text"],
+                placeholder_text_color="#FFFFFF" if ThemeManager.current_mode == "dark" else self.colors["text"],
+            )
+            self.theme_btn.configure(
+                fg_color=self.colors["card_alt"],
+                hover_color=self.colors["combo_hover"],
+                text_color=self.colors["text"],
+                text="🌙" if ThemeManager.current_mode == "dark" else "🌞",
+            )
+            self.grid_frame.configure(fg_color=self.colors["bg"])
+            for info in self.category_buttons.values():
+                btn = info["button"]
+                btn.configure(
+                    fg_color=self.colors["card"],
+                    hover_color=self.colors["card_alt"],
+                    text_color=self.colors["text"],
+                )
+        except Exception:
+            pass
     
+    def toggle_theme(self):
+        ThemeManager.toggle_mode()
+        # Update our own colors and ask controller to refresh all frames
+        self.colors = ThemeManager.colors()
+        self.configure(fg_color=self.colors["bg"])
+        try:
+            self.controller.apply_theme_to_all()
+        except Exception:
+            pass
+        # Update toggle icon
+        self.theme_btn.configure(text="🌙" if ThemeManager.current_mode == "dark" else "🌞")
+
     def remove_search_focus(self, event=None):
         self.focus()
     
@@ -95,9 +161,9 @@ class HomePage(ctk.CTkFrame):
                     image=tk_img,
                     compound="top",
                     font=("Poppins", 24, "bold"),
-                    fg_color="#0b0d1a",
-                    hover_color="#050510",
-                    text_color="#FFFFFF",
+                    fg_color=self.colors["card"],
+                    hover_color=self.colors["card_alt"],
+                    text_color=self.colors["text"],
                     corner_radius=40,
                     width=504,
                     height=268,
@@ -109,8 +175,8 @@ class HomePage(ctk.CTkFrame):
                 btn.grid(row=row, column=col, padx=20, pady=20)
 
                 self.category_buttons[label] = {'button': btn, 'original_row': row, 'original_col': col}
-                btn.bind("<Enter>", lambda e, b=btn: b.configure(border_width=3, border_color="#D00000", text_color="lightgrey"))
-                btn.bind("<Leave>", lambda e, b=btn: b.configure(border_width=0, text_color="#FFFFFF"))
+                btn.bind("<Enter>", lambda e, b=btn: b.configure(border_width=3, border_color=self.colors["primary"], text_color=self.colors["muted"]))
+                btn.bind("<Leave>", lambda e, b=btn: b.configure(border_width=0, text_color=self.colors["text"]))
                 btn.bind("<Button-1>", self.remove_search_focus)
             except Exception as e:
                 print(f"Error creating button for {label}: {e}")

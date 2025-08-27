@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk
+from theme_manager import ThemeManager
 from ..ui.mm import (
     convert_mm_to_inches_display,
     build_products_display_data,
@@ -15,7 +16,8 @@ from .gui_products import AdminPanel
 
 class InventoryApp(ctk.CTkFrame):
     def __init__(self, master, controller=None):
-        super().__init__(master, fg_color="#000000")
+        self.colors = ThemeManager.colors()
+        super().__init__(master, fg_color=self.colors["bg"])
         self.controller = controller
         self.root = controller.root if controller else self.winfo_toplevel()
 
@@ -73,7 +75,7 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_header_section(self):
         """Create header with back button"""
-        header_frame = ctk.CTkFrame(self, fg_color="#000000", height=120)
+        header_frame = ctk.CTkFrame(self, fg_color=self.colors["bg"], height=120)
         header_frame.pack(fill="x", padx=20, pady=(20, 0))
         header_frame.pack_propagate(False)
         header_frame.grid_columnconfigure(0, weight=1)
@@ -83,9 +85,9 @@ class InventoryApp(ctk.CTkFrame):
             header_frame,
             text="← Back",
             font=("Poppins", 20, "bold"),
-            fg_color="#D00000",
-            hover_color="#B71C1C",
-            text_color="#FFFFFF",
+            fg_color=self.colors["primary"],
+            hover_color=self.colors["primary_hover"],
+            text_color=self.colors["text"],
             corner_radius=40,
             width=120,
             height=50,
@@ -102,7 +104,7 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_search_section(self):
         """Create search filters section"""
-        search_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
+        search_section = ctk.CTkFrame(self, fg_color=self.colors["card"], corner_radius=40)
         search_section.pack(fill="x", padx=20, pady=(20, 10))
 
         search_inner = ctk.CTkFrame(search_section, fg_color="transparent")
@@ -143,7 +145,7 @@ class InventoryApp(ctk.CTkFrame):
             field_frame, 
             text=display_name,
             font=("Poppins", 18, "bold"),
-            text_color="#FFFFFF"
+            text_color=self.colors["text"]
         )
         label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
@@ -166,12 +168,12 @@ class InventoryApp(ctk.CTkFrame):
             textvariable=var,
             width=120,
             height=40,
-            fg_color="#374151",
-            text_color="#FFFFFF",
+            fg_color=self.colors["input"],
+            text_color=self.colors["text"],
             font=("Poppins", 18),
             corner_radius=40,
             border_width=1,
-            border_color="#4B5563",
+            border_color=self.colors["border"],
             placeholder_text=f"Enter {display_name}"
         )
         return entry
@@ -195,16 +197,16 @@ class InventoryApp(ctk.CTkFrame):
         """Handle entry hover effects"""
         if entry.focus_get() != entry:
             if is_enter:
-                entry.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+                entry.configure(border_color=self.colors["primary"], border_width=2, fg_color=self.colors["combo_hover"])
             else:
-                entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+                entry.configure(border_color=self.colors["border"], border_width=1, fg_color=self.colors["input"])
 
     def _on_entry_focus(self, entry, has_focus):
         """Handle entry focus effects"""
         if has_focus:
-            entry.configure(border_color="#D00000", border_width=2, fg_color="#1F2937")
+            entry.configure(border_color=self.colors["primary"], border_width=2, fg_color=self.colors["input_focus"])
         else:
-            entry.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            entry.configure(border_color=self.colors["border"], border_width=1, fg_color=self.colors["input"])
 
     def _create_inch_label(self, parent, key, var):
         """Create inch conversion label for size fields"""
@@ -212,7 +214,7 @@ class InventoryApp(ctk.CTkFrame):
             parent,
             text="",
             font=("Poppins", 18, "bold"),
-            text_color="#FFFFFF"
+            text_color=self.colors["text"]
         )
         inch_label.grid(row=2, column=0, pady=(6, 0), sticky="ew")
         self.inch_labels[key] = inch_label
@@ -239,7 +241,7 @@ class InventoryApp(ctk.CTkFrame):
             sort_frame, 
             text="Sort By",
             font=("Poppins", 18, "bold"),
-            text_color="#FFFFFF"
+            text_color=self.colors["text"]
         )
         sort_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
@@ -282,15 +284,15 @@ class InventoryApp(ctk.CTkFrame):
             state="readonly",
             width=120,
             height=40,
-            fg_color="#374151",
-            button_color="#374151",
-            button_hover_color="#D00000",
-            dropdown_hover_color="#4B5563",
-            text_color="#FFFFFF",
+            fg_color=self.colors["input"],
+            button_color=self.colors["input"],
+            button_hover_color=self.colors["primary"],
+            dropdown_hover_color=self.colors["combo_hover"],
+            text_color=self.colors["text"],
             font=("Poppins", 18),
             corner_radius=40,
             border_width=1,
-            border_color="#4B5563"
+            border_color=self.colors["border"]
         )
         
         combo.bind("<Enter>", lambda e: self._on_combo_hover(combo, True))
@@ -301,13 +303,13 @@ class InventoryApp(ctk.CTkFrame):
     def _on_combo_hover(self, combo, is_enter):
         """Handle combo box hover effects"""
         if is_enter:
-            combo.configure(border_color="#D00000", border_width=2, fg_color="#4B5563")
+            combo.configure(border_color=self.colors["primary"], border_width=2, fg_color=self.colors["combo_hover"])
         else:
-            combo.configure(border_color="#4B5563", border_width=1, fg_color="#374151")
+            combo.configure(border_color=self.colors["border"], border_width=1, fg_color=self.colors["input"])
 
     def _create_table_section(self):
         """Create data table section"""
-        table_section = ctk.CTkFrame(self, fg_color="#2b2b2b", corner_radius=40)
+        table_section = ctk.CTkFrame(self, fg_color=self.colors["card"], corner_radius=40)
         table_section.pack(fill="both", expand=True, padx=20, pady=(0, 0))
 
         table_inner = ctk.CTkFrame(table_section, fg_color="transparent")
@@ -321,27 +323,29 @@ class InventoryApp(ctk.CTkFrame):
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Custom.Treeview",
-                        background="#2b2b2b",
-                        foreground="#FFFFFF",
-                        fieldbackground="#2b2b2b",
+                        background=self.colors["card"],
+                        foreground=self.colors["text"],
+                        fieldbackground=self.colors["card"],
                         font=("Poppins", 18),
                         rowheight=40)
         style.configure("Custom.Treeview.Heading",
-                        background="#000000",
-                        foreground="#D00000",
+                        background=self.colors["heading_bg"],
+                        foreground=self.colors["heading_fg"],
                         font=("Poppins", 20, "bold"))
-        style.map("Custom.Treeview", background=[("selected", "#374151")])
-        style.map("Custom.Treeview.Heading", background=[("active", "#111111")])
+        style.map("Custom.Treeview", background=[("selected", self.colors["table_selected"])])
+        style.map("Custom.Treeview.Heading", background=[("active", self.colors["card_alt"])])
 
-        # Red scrollbar styling
+        # Elegant scrollbar styling matching home page
         style.configure(
-            "Red.Vertical.TScrollbar",
-            background="#D00000",
-            troughcolor="#111111",
-            bordercolor="#111111",
-            lightcolor="#D00000",
-            darkcolor="#D00000",
-            arrowcolor="#FFFFFF"
+            "Elegant.Vertical.TScrollbar",
+            gripcount=0,
+            background=self.colors["scroll_thumb"],
+            troughcolor=self.colors["scroll_trough"],
+            bordercolor=self.colors["scroll_trough"],
+            lightcolor=self.colors["scroll_thumb"],
+            darkcolor=self.colors["scroll_thumb"],
+            arrowcolor=self.colors["text"],
+            relief="flat"
         )
 
     def _create_treeview(self, parent):
@@ -350,9 +354,10 @@ class InventoryApp(ctk.CTkFrame):
         self.tree = ttk.Treeview(parent, columns=columns, show="headings", style="Custom.Treeview")
         
         # Configure tags for stock status
+        # Preserve tag color coding
         self.tree.tag_configure("low", background="#8B4513", foreground="#FFFFFF")
         self.tree.tag_configure("out", background="#8B0000", foreground="#FFFFFF")
-        self.tree.tag_configure("normal", background="#2b2b2b", foreground="#FFFFFF")
+        self.tree.tag_configure("normal", background=self.colors["card"], foreground=self.colors["text"])
 
         # Configure columns
         display_names = {
@@ -371,7 +376,7 @@ class InventoryApp(ctk.CTkFrame):
             self.tree.column(col, anchor="center", width=120)
 
         # Add scrollbar
-        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Red.Vertical.TScrollbar")
+        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Elegant.Vertical.TScrollbar")
         self.tree.configure(yscrollcommand=tree_scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scrollbar.pack(side="right", fill="y")
@@ -383,7 +388,7 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_bottom_section(self):
         """Create bottom section with status and admin button"""
-        bottom_frame = ctk.CTkFrame(self, fg_color="#000000", height=60)
+        bottom_frame = ctk.CTkFrame(self, fg_color=self.colors["bg"], height=60)
         bottom_frame.pack(fill="x", padx=20, pady=(10, 20))
         bottom_frame.pack_propagate(False)
 
@@ -391,7 +396,7 @@ class InventoryApp(ctk.CTkFrame):
             bottom_frame, 
             text="",
             font=("Poppins", 18),
-            text_color="#CCCCCC"
+            text_color=self.colors["muted"]
         )
         self.status_label.pack(side="left", pady=15)
 
@@ -399,14 +404,29 @@ class InventoryApp(ctk.CTkFrame):
             bottom_frame,
             text="Admin",
             font=("Poppins", 20, "bold"),
-            fg_color="#D00000",
-            hover_color="#B71C1C",
+            fg_color=self.colors["primary"],
+            hover_color=self.colors["primary_hover"],
             text_color="#FFFFFF",
             corner_radius=40,
             width=120,
             height=50,
             command=self.open_admin_panel
         )
+
+    def update_theme(self):
+        self.colors = ThemeManager.colors()
+        self.configure(fg_color=self.colors["bg"])
+        try:
+            # Header/back
+            for child in self.winfo_children():
+                if isinstance(child, ctk.CTkFrame):
+                    child.configure(fg_color=self.colors.get("bg", "transparent"))
+            # Reapply table and controls style
+            self._setup_treeview_style()
+            if hasattr(self, "tree"):
+                self.tree.tag_configure("normal", background=self.colors["card"], foreground=self.colors["text"])
+        except Exception:
+            pass
         admin_btn.pack(side="right", pady=15, padx=40)
 
     def remove_focus(self, event=None):

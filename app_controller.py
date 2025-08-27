@@ -2,6 +2,7 @@ import customtkinter as ctk
 from oilseals.gui.gui_transaction_window import TransactionWindow
 from oilseals.gui.gui_mm import InventoryApp
 from home_page import HomePage, CategoryPage, ComingSoonPage
+from theme_manager import ThemeManager
 
 
 CATEGORY_FOLDER_MAP = {
@@ -44,6 +45,19 @@ class AppController:
         home_page.place(x=0, y=0, relwidth=1, relheight=1)
 
         self.show_frame("HomePage")
+
+    def apply_theme_to_all(self):
+        # Refresh colors for current mode
+        for name, frame in list(self.frames.items()):
+            try:
+                if hasattr(frame, "update_theme"):
+                    frame.update_theme()
+            except Exception:
+                continue
+        # Re-show current frame to ensure it repaints
+        current = self.get_current_frame_name()
+        if current:
+            self.show_frame(current)
 
     def add_category_page(self, name, sub_data, return_to="HomePage"):
         frame = CategoryPage(self.container, self, name, sub_data, return_to=return_to)
