@@ -52,19 +52,19 @@ if __name__ == "__main__":
 # quad tabi ng v-ring /
 # bushing palit bearings / 
 
-# ok na yung recent ilagay na lang sa read me 
+# ok na yung recent ilagay na lang sa read me /
 
 # di functional na maayos nasira after gui /
 # paghiwalayin ui sa functions para mas madali magedit /
 
 
-# NOK - NOK NACTEC
-# TY - lahat ng taiwan brands
+# NOK - NOK NACTEC /
+# TY - lahat ng taiwan brands /
 # C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
 
-# TRANS AED BIG PROBLEM !!!
-# gawin din consistent yung cards styles pati table size and margins UI
-# dapat seamless parang sa admin
+# TRANS AED BIG PROBLEM !!! /
+# gawin din consistent yung cards styles pati table size and margins UI /
+# dapat seamless parang sa admin /
 # LAKIHAN TEXT SA UI
 
 # back button sa subcategories di maayos kasi bumabalik sa home page
