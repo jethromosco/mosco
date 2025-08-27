@@ -103,19 +103,15 @@ class HomePage(ctk.CTkFrame):
     
     def toggle_theme(self):
         ThemeManager.toggle_mode()
-        # Rebuild HomePage to apply new theme cleanly
+        # Update our own colors and ask controller to refresh all frames
+        self.colors = ThemeManager.colors()
+        self.configure(fg_color=self.colors["bg"])
         try:
-            # Replace frame in controller
-            old = self.controller.frames.get("HomePage")
-            if old is not None:
-                old.destroy()
-            new_home = HomePage(self.controller.container, controller=self.controller)
-            self.controller.frames["HomePage"] = new_home
-            new_home.place(x=0, y=0, relwidth=1, relheight=1)
-            self.controller.show_frame("HomePage")
+            self.controller.apply_theme_to_all()
         except Exception:
-            # Fallback: just update button icon
-            self.theme_btn.configure(text="🌙" if ThemeManager.current_mode == "dark" else "🌞")
+            pass
+        # Update toggle icon
+        self.theme_btn.configure(text="🌙" if ThemeManager.current_mode == "dark" else "🌞")
 
     def remove_search_focus(self, event=None):
         self.focus()
