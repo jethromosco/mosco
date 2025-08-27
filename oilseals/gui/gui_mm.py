@@ -142,10 +142,10 @@ class InventoryApp(ctk.CTkFrame):
         label = ctk.CTkLabel(
             field_frame, 
             text=display_name,
-            font=("Poppins", 14, "bold"),
+            font=("Arial", 18, "bold"),
             text_color="#FFFFFF"
         )
-        label.grid(row=0, column=0, pady=(0, 5), sticky="ew")
+        label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
         # Entry
         var = self.search_vars[key]
@@ -165,10 +165,10 @@ class InventoryApp(ctk.CTkFrame):
             parent,
             textvariable=var,
             width=120,
-            height=32,
+            height=40,
             fg_color="#374151",
             text_color="#FFFFFF",
-            font=("Poppins", 13),
+            font=("Arial", 18),
             corner_radius=40,
             border_width=1,
             border_color="#4B5563",
@@ -211,10 +211,10 @@ class InventoryApp(ctk.CTkFrame):
         inch_label = ctk.CTkLabel(
             parent,
             text="",
-            font=("Poppins", 12, "bold"),
+            font=("Arial", 18, "bold"),
             text_color="#FFFFFF"
         )
-        inch_label.grid(row=2, column=0, pady=(2, 0), sticky="ew")
+        inch_label.grid(row=2, column=0, pady=(4, 0), sticky="ew")
         self.inch_labels[key] = inch_label
 
         # Initialize and setup trace
@@ -238,7 +238,7 @@ class InventoryApp(ctk.CTkFrame):
         sort_label = ctk.CTkLabel(
             sort_frame, 
             text="Sort By",
-            font=("Poppins", 16, "bold"),
+            font=("Arial", 18, "bold"),
             text_color="#FFFFFF"
         )
         sort_label.grid(row=0, column=0, pady=(0, 5), sticky="ew")
@@ -260,7 +260,7 @@ class InventoryApp(ctk.CTkFrame):
         stock_label = ctk.CTkLabel(
             stock_frame, 
             text="Stock Filter",
-            font=("Poppins", 16, "bold"),
+            font=("Arial", 18, "bold"),
             text_color="#FFFFFF"
         )
         stock_label.grid(row=0, column=0, pady=(0, 5), sticky="ew")
@@ -281,13 +281,14 @@ class InventoryApp(ctk.CTkFrame):
             values=values,
             state="readonly",
             width=120,
-            height=32,
+            height=40,
             fg_color="#374151",
             button_color="#374151",
             button_hover_color="#D00000",
             dropdown_hover_color="#4B5563",
             text_color="#FFFFFF",
-            font=("Poppins", 13),
+            font=("Arial", 18),
+            dropdown_font=("Arial", 18),
             corner_radius=40,
             border_width=1,
             border_color="#4B5563"
@@ -324,12 +325,12 @@ class InventoryApp(ctk.CTkFrame):
                         background="#2b2b2b",
                         foreground="#FFFFFF",
                         fieldbackground="#2b2b2b",
-                        font=("Poppins", 13),
-                        rowheight=35)
+                        font=("Arial", 18),
+                        rowheight=40)
         style.configure("Custom.Treeview.Heading",
                         background="#000000",
                         foreground="#D00000",
-                        font=("Poppins", 13, "bold"))
+                        font=("Arial", 20, "bold"))
         style.map("Custom.Treeview", background=[("selected", "#2b2b2b")])
         style.map("Custom.Treeview.Heading", background=[("active", "#111111")])
 
@@ -378,7 +379,7 @@ class InventoryApp(ctk.CTkFrame):
         self.status_label = ctk.CTkLabel(
             bottom_frame, 
             text="",
-            font=("Poppins", 16),
+            font=("Arial", 18),
             text_color="#CCCCCC"
         )
         self.status_label.pack(side="left", pady=15)
