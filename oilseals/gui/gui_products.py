@@ -30,6 +30,7 @@ class AdminPanel:
         # Configure minimum usable size to avoid too-small layouts
         try:
             self.win.minsize(1000, 700)
+            self.win.resizable(True, True)
         except Exception:
             pass
 
@@ -58,35 +59,31 @@ class AdminPanel:
         content when toggling maximize.
         """
         try:
-            # Request maximize via WM
+            # Request maximize via WM and trust the workarea sizing
             self.win.update_idletasks()
             self.win.state("zoomed")
 
-            # Validate maximize took effect; if not, fall back
+            # If the window is not realized or remains tiny, fallback once
             self.win.update_idletasks()
-            max_w, max_h = self.win.wm_maxsize()
             cur_w = self.win.winfo_width()
             cur_h = self.win.winfo_height()
             if cur_w <= 1 or cur_h <= 1:
-                # Window not yet realized; compute after another update
-                self.win.update()
-                cur_w = self.win.winfo_width()
-                cur_h = self.win.winfo_height()
-
-            # If not close to WM max size, apply fallback geometry
-            if max_w and max_h and (abs(cur_w - max_w) > 10 or abs(cur_h - max_h) > 10):
-                self.win.geometry(f"{max_w}x{max_h}+0+0")
+                try:
+                    max_w, max_h = self.win.wm_maxsize()
+                    if max_w and max_h:
+                        self.win.geometry(f"{max_w}x{max_h}+0+0")
+                    else:
+                        screen_w = self.win.winfo_screenwidth()
+                        screen_h = self.win.winfo_screenheight()
+                        self.win.geometry(f"{screen_w}x{screen_h}+0+0")
+                except Exception:
+                    pass
         except Exception:
-            # Fallback purely to wm_maxsize if zoomed is unsupported
+            # As a last resort, attempt a conservative maximize via wm_maxsize
             try:
                 max_w, max_h = self.win.wm_maxsize()
                 if max_w and max_h:
                     self.win.geometry(f"{max_w}x{max_h}+0+0")
-                else:
-                    # Last-resort: use screen size
-                    screen_w = self.win.winfo_screenwidth()
-                    screen_h = self.win.winfo_screenheight()
-                    self.win.geometry(f"{screen_w}x{screen_h}+0+0")
             except Exception:
                 pass
 
@@ -231,6 +228,13 @@ class AdminPanel:
 
 
     def create_products_tab(self):
+        # Ensure the products frame uses grid so the table area expands properly
+        try:
+            self.products_frame.grid_rowconfigure(1, weight=1)
+            self.products_frame.grid_columnconfigure(0, weight=1)
+        except Exception:
+            pass
+
         self.prod_form_handler = ProductFormHandler(
             self.win,
             None,
@@ -238,7 +242,7 @@ class AdminPanel:
         )
 
         self.search_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card"), corner_radius=40, height=90)
-        self.search_container.pack(fill="x", pady=(20, 15), padx=20)
+        self.search_container.grid(row=0, column=0, sticky="ew", pady=(20, 15), padx=20)
         self.search_container.pack_propagate(False)
 
         search_inner = ctk.CTkFrame(self.search_container, fg_color="transparent")
@@ -292,7 +296,7 @@ class AdminPanel:
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
         self.table_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card_alt"), corner_radius=40)
-        self.table_container.pack(fill="both", expand=True, pady=(0, 15), padx=20)
+        self.table_container.grid(row=1, column=0, sticky="nsew", pady=(0, 15), padx=20)
 
         inner_table = ctk.CTkFrame(self.table_container, fg_color="transparent")
         inner_table.pack(fill="both", expand=True, padx=20, pady=20)
@@ -333,7 +337,7 @@ class AdminPanel:
         self.prod_form_handler.prod_tree = self.prod_tree
 
         button_frame = ctk.CTkFrame(self.products_frame, fg_color="transparent")
-        button_frame.pack(pady=(0, 20))
+        button_frame.grid(row=2, column=0, sticky="ew", pady=(0, 20))
 
         add_btn = ctk.CTkButton(
             button_frame,
