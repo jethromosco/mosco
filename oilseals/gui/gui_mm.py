@@ -329,9 +329,9 @@ class InventoryApp(ctk.CTkFrame):
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Custom.Treeview",
-                        background=theme.get("card"),
+                        background=theme.get("card_alt"),
                         foreground=theme.get("text"),
-                        fieldbackground=theme.get("card"),
+                        fieldbackground=theme.get("card_alt"),
                         font=("Poppins", 18),
                         rowheight=40)
         style.configure("Custom.Treeview.Heading",
@@ -675,10 +675,10 @@ class InventoryApp(ctk.CTkFrame):
         """Apply tag colors for tree rows based on current theme/mode."""
         try:
             # Normal rows use themed foreground
-            self.tree.tag_configure("normal", background=theme.get("card"), foreground=theme.get("text"))
+            self.tree.tag_configure("normal", background=theme.get("card_alt"), foreground=theme.get("text"))
             # Alternate stripes for normal rows
-            self.tree.tag_configure("alt_even", background=theme.get("card"))
-            self.tree.tag_configure("alt_odd", background=theme.get("card_alt"))
+            self.tree.tag_configure("alt_even", background=theme.get("card_alt"))
+            self.tree.tag_configure("alt_odd", background=theme.get("card"))
             # Stock highlight tags (paler in light mode)
             if theme.mode == "dark":
                 low_bg = "#8B4513"

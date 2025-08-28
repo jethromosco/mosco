@@ -180,58 +180,73 @@ class TransactionTab:
         self.refresh_transactions()
 
     # ─────────────── treeview ───────────────
-    def setup_treeview(self):
-        """Create and configure the transactions treeview."""
-        table_container = ctk.CTkFrame(self.frame, fg_color=theme.get("card"), corner_radius=40)
-        table_container.pack(fill="both", expand=True, padx=20, pady=(0, 15))
+def setup_treeview(self):
+    """Create and configure the transactions treeview."""
+    table_container = ctk.CTkFrame(self.frame, fg_color=theme.get("card"), corner_radius=40)
+    table_container.pack(fill="both", expand=True, padx=20, pady=(0, 15))
 
-        inner_table = ctk.CTkFrame(table_container, fg_color="transparent")
-        inner_table.pack(fill="both", expand=True, padx=20, pady=20)
+    inner_table = ctk.CTkFrame(table_container, fg_color="transparent")
+    inner_table.pack(fill="both", expand=True, padx=20, pady=20)
 
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure("Transactions.Treeview",
-                        background=theme.get("card"), foreground=theme.get("text"),
-                        fieldbackground=theme.get("card"), font=("Poppins", 12),
-                        rowheight=35)
-        style.configure("Transactions.Treeview.Heading",
-                        background=theme.get("heading_bg"), foreground=theme.get("heading_fg"),
-                        font=("Poppins", 12, "bold"))
-        # Set selected background to grey and keep text color unchanged on selection
-        style.map("Transactions.Treeview",
-                  background=[("selected", theme.get("table_selected"))],
-                  foreground=[("selected", theme.get("text"))])
+    style = ttk.Style()
+    style.theme_use("clam")
+    style.configure("Transactions.Treeview",
+                    background=theme.get("card_alt"),
+                    foreground=theme.get("text"),
+                    fieldbackground=theme.get("card_alt"),
+                    font=("Poppins", 12),
+                    rowheight=35)
 
-        self.tran_tree = ttk.Treeview(
-            inner_table,
-            columns=("item", "date", "qty_restock", "cost", "name", "qty", "price", "stock"),
-            show="headings", selectmode="extended",
-            style="Transactions.Treeview"
-        )
-        self.tran_tree.tag_configure("red", foreground="#EF4444")
-        self.tran_tree.tag_configure("blue", foreground="#3B82F6")
-        self.tran_tree.tag_configure("green", foreground="#22C55E")
-        self.tran_tree.tag_configure("gray", foreground="#9CA3AF")
+    style.configure("Transactions.Treeview.Heading",
+                    background=theme.get("heading_bg"), foreground=theme.get("heading_fg"),
+                    font=("Poppins", 12, "bold"))
+    # Set selected background to grey and keep text color unchanged on selection
+    style.map("Transactions.Treeview",
+              background=[("selected", theme.get("table_selected"))],
+              foreground=[("selected", theme.get("text"))])
 
-        column_config = {
-            "item": {"anchor": "center", "width": 180},
-            "date": {"anchor": "center", "width": 90},
-            "qty_restock": {"anchor": "center", "width": 60},
-            "cost": {"anchor": "center", "width": 80},
-            "name": {"anchor": "w", "width": 160},
-            "qty": {"anchor": "center", "width": 60},
-            "price": {"anchor": "center", "width": 80},
-            "stock": {"anchor": "center", "width": 80},
-        }
-        for col in self.tran_tree["columns"]:
-            header = col.upper().replace("_", " ")
-            self.tran_tree.heading(col, text=header, command=lambda c=col: self.sort_by_column(c))
-            self.tran_tree.column(col, **column_config[col])
+    self.tran_tree = ttk.Treeview(
+        inner_table,
+        columns=("item", "date", "qty_restock", "cost", "name", "qty", "price", "stock"),
+        show="headings", selectmode="extended",
+        style="Transactions.Treeview"
+    )
 
-        scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.tran_tree.yview)
-        self.tran_tree.configure(yscrollcommand=scrollbar.set)
-        self.tran_tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+    # Set darker colors in light mode
+    if theme.mode == "light":
+        red_color = "#B22222"   # Dark red
+        blue_color = "#1E40AF"  # Dark blue
+        green_color = "#166534" # Dark green
+    else:
+        red_color = "#EF4444"   # Brighter red in dark mode
+        blue_color = "#3B82F6"  # Brighter blue in dark mode
+        green_color = "#22C55E" # Brighter green in dark mode
+
+    self.tran_tree.tag_configure("red", foreground=red_color)
+    self.tran_tree.tag_configure("blue", foreground=blue_color)
+    self.tran_tree.tag_configure("green", foreground=green_color)
+    self.tran_tree.tag_configure("gray", foreground="#9CA3AF")
+
+    column_config = {
+        "item": {"anchor": "center", "width": 180},
+        "date": {"anchor": "center", "width": 90},
+        "qty_restock": {"anchor": "center", "width": 60},
+        "cost": {"anchor": "center", "width": 80},
+        "name": {"anchor": "w", "width": 160},
+        "qty": {"anchor": "center", "width": 60},
+        "price": {"anchor": "center", "width": 80},
+        "stock": {"anchor": "center", "width": 80},
+    }
+    for col in self.tran_tree["columns"]:
+        header = col.upper().replace("_", " ")
+        self.tran_tree.heading(col, text=header, command=lambda c=col: self.sort_by_column(c))
+        self.tran_tree.column(col, **column_config[col])
+
+    scrollbar = ttk.Scrollbar(inner_table, orient="vertical", command=self.tran_tree.yview)
+    self.tran_tree.configure(yscrollcommand=scrollbar.set)
+    self.tran_tree.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
 
     # ─────────────── buttons (Add / Edit / Delete) ───────────────
     def setup_buttons(self):

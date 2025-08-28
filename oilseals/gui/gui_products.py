@@ -291,7 +291,7 @@ class AdminPanel:
 
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
-        self.table_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card_alt"), corner_radius=40)
+        self.table_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card"), corner_radius=40)
         self.table_container.pack(fill="both", expand=True, pady=(0, 15), padx=20)
 
         inner_table = ctk.CTkFrame(self.table_container, fg_color="transparent")

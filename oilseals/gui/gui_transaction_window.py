@@ -301,9 +301,9 @@ class TransactionWindow(ctk.CTkFrame):
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Transaction.Treeview",
-                        background=theme.get("card"),
+                        background=theme.get("card_alt"),
                         foreground=theme.get("text"),
-                        fieldbackground=theme.get("card"),
+                        fieldbackground=theme.get("card_alt"),
                         font=("Poppins", 18),
                         rowheight=40)
         style.configure("Transaction.Treeview.Heading",
@@ -499,6 +499,17 @@ class TransactionWindow(ctk.CTkFrame):
         settings.configure(fg_color=theme.get("bg"))
         settings.transient(self)
         settings.grab_set()
+
+        # Center the window on the screen
+        settings.update_idletasks()  # Make sure geometry info is accurate
+        width = settings.winfo_width()
+        height = settings.winfo_height()
+        screen_width = settings.winfo_screenwidth()
+        screen_height = settings.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        settings.geometry(f"{width}x{height}+{x}+{y}")
+
         return settings
 
     def _populate_settings_form(self, settings_window):
@@ -523,7 +534,7 @@ class TransactionWindow(ctk.CTkFrame):
 
         ctk.CTkLabel(
             form_frame, 
-            text="LOW THRESHOLD (Red)", 
+            text="RESTOCK NEEDED (Red)", 
             font=("Poppins", 14, "bold"), 
             text_color=theme.get("text")
         ).pack(anchor="w", pady=(0, 5))
@@ -541,7 +552,7 @@ class TransactionWindow(ctk.CTkFrame):
 
         ctk.CTkLabel(
             form_frame, 
-            text="WARNING THRESHOLD (Orange)", 
+            text="LOW ON STOCK (Orange)", 
             font=("Poppins", 14, "bold"), 
             text_color=theme.get("text")
         ).pack(anchor="w", pady=(0, 5))

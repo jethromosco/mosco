@@ -27,26 +27,26 @@ DarkPalette: Dict[str, str] = {
 }
 
 LightPalette: Dict[str, str] = {
-    "bg": "#FFFFFF",
-    "card": "#F5F5F5",
-    "card_alt": "#EAEAEA",
-    "input": "#E0E0E0",
-    "input_focus": "#CCCCCC",
-    "text": "#000000",
-    "muted": "#4B4B4B",
-    "muted_alt": "#6E6E6E",
-    "border": "#BDBDBD",
-    "primary": "#D00000",
-    "primary_hover": "#B71C1C",
-    "accent": "#E0E0E0",
-    "accent_hover": "#D5D5D5",
-    "table_selected": "#D1D1D1",    # updated grey (was #EAEAEA)
-    "heading_fg": "#D00000",
-    "heading_bg": "#FFFFFF",
-    "scroll_trough": "#F0F0F0",
-    "scroll_thumb": "#C4C4C4",
-    "scroll_thumb_hover": "#AFAFAF",
-    "combo_hover": "#D5D5D5",
+    "bg": "#E8E8E8",           # Softer off-white background
+    "card": "#D8D8D8",         # Light grey card background
+    "card_alt": "#C0C0C0",     # Slightly darker card alternative
+    "input": "#C0C0C0",        # Softer grey input background
+    "input_focus": "#A8A8A8",  # Softer focus color
+    "text": "#1A1A1A",         # Very dark grey text instead of pure black
+    "muted": "#3A3A3A",        # Muted text darker for contrast
+    "muted_alt": "#525252",    # Alternative muted a bit lighter
+    "border": "#9A9A9A",       # Softer border grey
+    "primary": "#D00000",      # Keep primary red as is
+    "primary_hover": "#B71C1C",# Keep hover red as is
+    "accent": "#C0C0C0",       # Sofmer accents
+    "accent_hover": "#A8A8A8", # Softer hover accents
+    "table_selected": "#A8A8A8",# Softer grey for selected rows
+    "heading_fg": "#D00000",   # Keep heading foreground red
+    "heading_bg": "#E8E8E8",   # Softer heading background
+    "scroll_trough": "#D0D0D0",# Scrollbar trough softer grey
+    "scroll_thumb": "#A8A8A8", # Scrollbar thumb soft grey
+    "scroll_thumb_hover": "#909090", # Scrollbar thumb hover slight darker
+    "combo_hover": "#A8A8A8",  # Combo hover soft grey
 }
 
 class ThemeManager:
