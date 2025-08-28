@@ -75,14 +75,14 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_header_section(self):
         """Create header with back button"""
-        header_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=120)
-        header_frame.pack(fill="x", padx=20, pady=(20, 0))
-        header_frame.pack_propagate(False)
-        header_frame.grid_columnconfigure(0, weight=1)
-        header_frame.grid_columnconfigure(1, weight=0)
+        self.header_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=120)
+        self.header_frame.pack(fill="x", padx=20, pady=(20, 0))
+        self.header_frame.pack_propagate(False)
+        self.header_frame.grid_columnconfigure(0, weight=1)
+        self.header_frame.grid_columnconfigure(1, weight=0)
 
         back_btn = ctk.CTkButton(
-            header_frame,
+            self.header_frame,
             text="← Back",
             font=("Poppins", 20, "bold"),
             fg_color=theme.get("primary"),
@@ -104,10 +104,10 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_search_section(self):
         """Create search filters section"""
-        search_section = ctk.CTkFrame(self, fg_color=theme.get("card"), corner_radius=40)
-        search_section.pack(fill="x", padx=20, pady=(20, 10))
+        self.search_section = ctk.CTkFrame(self, fg_color=theme.get("card"), corner_radius=40)
+        self.search_section.pack(fill="x", padx=20, pady=(20, 10))
 
-        search_inner = ctk.CTkFrame(search_section, fg_color="transparent")
+        search_inner = ctk.CTkFrame(self.search_section, fg_color="transparent")
         search_inner.pack(fill="both", expand=True, padx=20, pady=20)
 
         main_container = ctk.CTkFrame(search_inner, fg_color="transparent")
@@ -309,10 +309,10 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_table_section(self):
         """Create data table section"""
-        table_section = ctk.CTkFrame(self, fg_color=theme.get("card"), corner_radius=40)
-        table_section.pack(fill="both", expand=True, padx=20, pady=(0, 0))
+        self.table_section = ctk.CTkFrame(self, fg_color=theme.get("card"), corner_radius=40)
+        self.table_section.pack(fill="both", expand=True, padx=20, pady=(0, 0))
 
-        table_inner = ctk.CTkFrame(table_section, fg_color="transparent")
+        table_inner = ctk.CTkFrame(self.table_section, fg_color="transparent")
         table_inner.pack(fill="both", expand=True, padx=30, pady=30)
 
         self._setup_treeview_style()
@@ -383,12 +383,12 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_bottom_section(self):
         """Create bottom section with status and admin button"""
-        bottom_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=60)
-        bottom_frame.pack(fill="x", padx=20, pady=(10, 20))
-        bottom_frame.pack_propagate(False)
+        self.bottom_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=60)
+        self.bottom_frame.pack(fill="x", padx=20, pady=(10, 20))
+        self.bottom_frame.pack_propagate(False)
 
         self.status_label = ctk.CTkLabel(
-            bottom_frame, 
+            self.bottom_frame, 
             text="",
             font=("Poppins", 18),
             text_color=theme.get("muted")
@@ -396,7 +396,7 @@ class InventoryApp(ctk.CTkFrame):
         self.status_label.pack(side="left", pady=15)
 
         admin_btn = ctk.CTkButton(
-            bottom_frame,
+            self.bottom_frame,
             text="Admin",
             font=("Poppins", 20, "bold"),
             fg_color=theme.get("primary"),
@@ -689,6 +689,14 @@ class InventoryApp(ctk.CTkFrame):
         try:
             self.configure(fg_color=theme.get("bg"))
             self.root.configure(bg=theme.get("bg"))
+            if hasattr(self, 'header_frame'):
+                self.header_frame.configure(fg_color=theme.get("bg"))
+            if hasattr(self, 'search_section'):
+                self.search_section.configure(fg_color=theme.get("card"))
+            if hasattr(self, 'table_section'):
+                self.table_section.configure(fg_color=theme.get("card"))
+            if hasattr(self, 'bottom_frame'):
+                self.bottom_frame.configure(fg_color=theme.get("bg"))
             # Reapply styles for treeview and inputs by calling setup
             self._setup_treeview_style()
             for key, entry in self.entry_widgets.items():
