@@ -133,7 +133,7 @@ class HomePage(ctk.CTkFrame):
 
                 self.category_buttons[label] = {'button': btn, 'original_row': row, 'original_col': col}
                 btn.bind("<Enter>", lambda e, b=btn: b.configure(border_width=3, border_color=theme.get("primary"), text_color=theme.get("muted")))
-                btn.bind("<Leave>", lambda e, b=btn: b.configure(border_width=0, text_color=theme.get("text")))
+                btn.bind("<Leave>", lambda e, b=btn: b.configure(border_width=0, text_color=theme.get("text"), fg_color=theme.get("card")))
                 btn.bind("<Button-1>", self.remove_search_focus)
             except Exception as e:
                 print(f"Error creating button for {label}: {e}")
@@ -179,6 +179,8 @@ class HomePage(ctk.CTkFrame):
                 text_color=theme.get("text"),
                 placeholder_text_color=theme.get("text"),
                 fg_color=theme.get("primary"),
+                # Make search text white over red primary in both modes
+                text_color_disabled=theme.get("text")
             )
             # Update all category buttons and toggle to reflect theme text
             if hasattr(self, 'theme_toggle_btn'):
@@ -200,6 +202,7 @@ class CategoryPage(ctk.CTkFrame):
         self.controller = controller
         self.category_name = category_name
         self.return_to = return_to
+        theme.subscribe(self.apply_theme)
         
         main_scroll = ctk.CTkScrollableFrame(self, fg_color=theme.get("bg"), scrollbar_fg_color=theme.get("scroll_trough"),
                                            scrollbar_button_color=theme.get("scroll_thumb"), scrollbar_button_hover_color=theme.get("scroll_thumb_hover"))
@@ -230,6 +233,7 @@ class CategoryPage(ctk.CTkFrame):
         grid_frame = ctk.CTkFrame(main_scroll, fg_color=theme.get("bg"))
         grid_frame.pack(pady=20)
         self.create_subcategory_buttons(grid_frame, sub_data)
+        self.grid_frame = grid_frame
     
     def create_subcategory_buttons(self, grid_frame, sub_data):
         cols = 3
@@ -258,6 +262,25 @@ class CategoryPage(ctk.CTkFrame):
                 idx += 1
             except Exception as e:
                 print(f"Error creating subcategory button for {name}: {e}")
+
+    def apply_theme(self):
+        try:
+            self.configure(fg_color=theme.get("bg"))
+            # Update header labels if present
+            for child in self.winfo_children():
+                try:
+                    child.configure(fg_color=theme.get("bg"))
+                except Exception:
+                    pass
+            # Update all subcategory buttons to themed card/hover/text
+            for child in getattr(self, 'grid_frame', []).winfo_children():
+                try:
+                    if isinstance(child, ctk.CTkButton):
+                        child.configure(fg_color=theme.get("card"), hover_color=theme.get("accent_hover"), text_color=theme.get("text"))
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
 
 class ComingSoonPage(ctk.CTkFrame):

@@ -240,13 +240,13 @@ class InventoryApp(ctk.CTkFrame):
         sort_frame.grid_propagate(False)
         sort_frame.grid_columnconfigure(0, weight=1)
 
-        sort_label = ctk.CTkLabel(
+        self.sort_label = ctk.CTkLabel(
             sort_frame, 
             text="Sort By",
             font=("Poppins", 18, "bold"),
             text_color=theme.get("text")
         )
-        sort_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
+        self.sort_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
         sort_combo = self._create_combo_widget(
             sort_frame, 
@@ -262,13 +262,13 @@ class InventoryApp(ctk.CTkFrame):
         stock_frame.grid_propagate(False)
         stock_frame.grid_columnconfigure(0, weight=1)
 
-        stock_label = ctk.CTkLabel(
+        self.stock_label = ctk.CTkLabel(
             stock_frame, 
             text="Stock Filter",
             font=("Poppins", 18, "bold"),
             text_color=theme.get("text")
         )
-        stock_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
+        self.stock_label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
 
         stock_combo = self._create_combo_widget(
             stock_frame, 
@@ -721,6 +721,12 @@ class InventoryApp(ctk.CTkFrame):
                     lbl.configure(text_color=theme.get("text"))
                 except Exception:
                     pass
+            for lbl in (getattr(self, 'sort_label', None), getattr(self, 'stock_label', None)):
+                if lbl:
+                    try:
+                        lbl.configure(text_color=theme.get("text"))
+                    except Exception:
+                        pass
             # Ensure combobox foregrounds and dropdowns reflect theme
             for combo in getattr(self, 'combo_widgets', []):
                 try:
