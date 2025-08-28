@@ -351,10 +351,8 @@ class InventoryApp(ctk.CTkFrame):
         columns = ("type", "size", "brand", "part_no", "origin", "notes", "qty", "price")
         self.tree = ttk.Treeview(parent, columns=columns, show="headings", style="Custom.Treeview")
         
-        # Configure tags for stock status
-        self.tree.tag_configure("low", background="#8B4513", foreground="#FFFFFF")
-        self.tree.tag_configure("out", background="#8B0000", foreground="#FFFFFF")
-        self.tree.tag_configure("normal", background="#2b2b2b", foreground="#FFFFFF")
+        # Configure tags (colors applied dynamically based on theme)
+        self._apply_tree_tags_theme()
 
         # Configure columns
         display_names = {
@@ -629,14 +627,40 @@ class InventoryApp(ctk.CTkFrame):
         filters = {k: v.get().strip() for k, v in self.search_vars.items()}
         display_data = build_products_display_data(filters, self.sort_by.get(), self.stock_filter.get())
 
-        # Populate tree
-        for item in display_data:
+        # Populate tree with alternating rows for normal tag
+        for index, item in enumerate(display_data):
             qty = item[6]
-            tag = get_stock_tag(qty)
-            self.tree.insert("", tk.END, values=item[:8], tags=(tag,))
+            base_tag = get_stock_tag(qty)
+            if base_tag == "normal":
+                alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
+                self.tree.insert("", tk.END, values=item[:8], tags=(base_tag, alt_tag))
+            else:
+                self.tree.insert("", tk.END, values=item[:8], tags=(base_tag,))
 
         # Update status
         self.status_label.configure(text=f"Total products: {len(display_data)}")
+
+    def _apply_tree_tags_theme(self):
+        """Apply tag colors for tree rows based on current theme/mode."""
+        try:
+            # Normal rows use themed foreground
+            self.tree.tag_configure("normal", background=theme.get("card"), foreground=theme.get("text"))
+            # Alternate stripes for normal rows
+            self.tree.tag_configure("alt_even", background=theme.get("card"))
+            self.tree.tag_configure("alt_odd", background=theme.get("card_alt"))
+            # Stock highlight tags (paler in light mode)
+            if theme.mode == "dark":
+                low_bg = "#8B4513"
+                out_bg = "#8B0000"
+                txt = "#FFFFFF"
+            else:
+                low_bg = "#FFF1B8"
+                out_bg = "#F8B4B4"
+                txt = "#000000"
+            self.tree.tag_configure("low", background=low_bg, foreground=txt)
+            self.tree.tag_configure("out", background=out_bg, foreground=txt)
+        except Exception:
+            pass
 
     def open_transaction_page(self, event):
         """Open transaction window for selected product"""
@@ -671,5 +695,8 @@ class InventoryApp(ctk.CTkFrame):
                 entry.configure(fg_color=theme.get("input"), text_color=theme.get("text"), border_color=theme.get("border"))
             if hasattr(self, 'status_label'):
                 self.status_label.configure(text_color=theme.get("muted"))
+            # Re-apply row tag colors for normal/alternate and stock highlights
+            if hasattr(self, 'tree'):
+                self._apply_tree_tags_theme()
         except Exception:
             pass
