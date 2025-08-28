@@ -10,48 +10,44 @@ from theme import theme
 
 class TransactionFormHandler:
     """Handles all GUI-related functionality for transaction forms"""
-    
+
     def __init__(self, parent_frame, treeview, on_refresh_callback=None):
         self.parent_frame = parent_frame
         self.tran_tree = treeview
         self.on_refresh_callback = on_refresh_callback
         self.logic = TransactionLogic()
 
-
     def add_transaction(self):
         """Open form to add a new transaction"""
         self._transaction_form("Add")
-
 
     def edit_transaction(self):
         """Open form to edit selected transaction"""
         item = self.tran_tree.focus()
         if not item:
-            return messagebox.showwarning("Select", "Select a transaction to edit", 
+            return messagebox.showwarning("Select", "Select a transaction to edit",
                                           parent=self.parent_frame.winfo_toplevel())
 
         try:
             rowid = int(item)
             record = self.logic.get_record_by_id(rowid)
             if record is None:
-                messagebox.showerror("Error", "Selected record not found.", 
+                messagebox.showerror("Error", "Selected record not found.",
                                      parent=self.parent_frame.winfo_toplevel())
                 return
             self._transaction_form("Edit", record, rowid)
         except (ValueError, IndexError):
-            messagebox.showerror("Error", "Could not retrieve transaction details.", 
+            messagebox.showerror("Error", "Could not retrieve transaction details.",
                                  parent=self.parent_frame.winfo_toplevel())
-
 
     def delete_transaction(self):
         """Delete selected transaction(s) with confirmation"""
         items = self.tran_tree.selection()
         if not items:
-            return messagebox.showwarning("Select", "Select transaction(s) to delete", 
+            return messagebox.showwarning("Select", "Select transaction(s) to delete",
                                           parent=self.parent_frame.winfo_toplevel())
 
         self._show_delete_confirmation(items)
-
 
     def _show_delete_confirmation(self, items):
         """Show delete confirmation dialog"""
@@ -61,24 +57,24 @@ class TransactionFormHandler:
         confirm_window.geometry("400x200")
         confirm_window.resizable(False, False)
         confirm_window.configure(fg_color=theme.get("bg"))
-        
+
         confirm_window.transient(parent_window)
         confirm_window.grab_set()
-        
+
         # Center the confirmation window
         confirm_window.update_idletasks()
         parent_x = parent_window.winfo_rootx()
         parent_y = parent_window.winfo_rooty()
         parent_width = parent_window.winfo_width()
         parent_height = parent_window.winfo_height()
-        
+
         x = parent_x + (parent_width - 400) // 2
         y = parent_y + (parent_height - 200) // 2
         confirm_window.geometry(f"400x200+{x}+{y}")
-        
+
         main_frame = ctk.CTkFrame(confirm_window, fg_color=theme.get("card"), corner_radius=40)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
+
         question_label = ctk.CTkLabel(
             main_frame,
             text=f"Delete selected {len(items)} transaction(s)?",
@@ -86,19 +82,19 @@ class TransactionFormHandler:
             text_color=theme.get("text")
         )
         question_label.pack(pady=(30, 40))
-        
+
         button_container = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_container.pack(pady=(0, 20))
-        
+
         def confirm_delete():
             if self.logic.delete_transactions(items):
                 if self.on_refresh_callback:
                     self.on_refresh_callback()
             confirm_window.destroy()
-        
+
         def cancel_delete():
             confirm_window.destroy()
-        
+
         cancel_btn = ctk.CTkButton(
             button_container,
             text="Cancel",
@@ -112,7 +108,7 @@ class TransactionFormHandler:
             command=cancel_delete
         )
         cancel_btn.pack(side="left", padx=(0, 15))
-        
+
         confirm_btn = ctk.CTkButton(
             button_container,
             text="Delete",
@@ -126,17 +122,25 @@ class TransactionFormHandler:
             command=confirm_delete
         )
         confirm_btn.pack(side="right")
-        
+
         confirm_window.bind('<Escape>', lambda e: cancel_delete())
         confirm_window.bind('<Return>', lambda e: confirm_delete())
         confirm_window.focus()
 
+    def setup_auto_uppercase(self, text_var):
+        """Attach a trace to text_var to auto convert input to uppercase in real time."""
+        def on_change(*args):
+            value = text_var.get()
+            upper_val = value.upper()
+            if value != upper_val:
+                text_var.set(upper_val)
+        text_var.trace_add('write', on_change)
 
     def _transaction_form(self, mode, record=None, rowid=None):
         """Create and display transaction form"""
         form = ctk.CTkToplevel(self.parent_frame.winfo_toplevel())
         form.title(f"{mode} Transaction")
-        
+
         form.withdraw()
         form.resizable(False, False)
         form.configure(fg_color=theme.get("bg"))
@@ -176,23 +180,23 @@ class TransactionFormHandler:
         # Create form sections
         self._create_transaction_type_section(inner_container, transaction_type_var, price_label_var)
         entry_widgets = self._create_fields_section(inner_container, vars, date_var, form, price_label_var)
-        self._create_fabrication_section(inner_container, qty_restock_var, qty_customer_var, 
+        self._create_fabrication_section(inner_container, qty_restock_var, qty_customer_var,
                                          stock_left_var, form)
-        
+
         # Set up transaction type behavior
-        self._setup_transaction_type_behavior(transaction_type_var, entry_widgets, 
-                                              qty_restock_var, qty_customer_var, 
+        self._setup_transaction_type_behavior(transaction_type_var, entry_widgets,
+                                              qty_restock_var, qty_customer_var,
                                               stock_left_var, form)
-        
+
         # Populate form for editing
         if mode == "Edit" and record:
-            self._populate_edit_form(vars, date_var, transaction_type_var, 
-                                    qty_restock_var, qty_customer_var, record)
-        
+            self._populate_edit_form(vars, date_var, transaction_type_var,
+                                     qty_restock_var, qty_customer_var, record)
+
         # Create buttons
-        self._create_form_buttons(inner_container, form, mode, vars, date_var, 
+        self._create_form_buttons(inner_container, form, mode, vars, date_var,
                                   transaction_type_var, qty_restock_var, qty_customer_var, rowid)
-        
+
         # Show form
         form.update_idletasks()
         w = form.winfo_reqwidth()
@@ -202,15 +206,14 @@ class TransactionFormHandler:
         form.focus_force()
         form.lift()
 
-
     def _create_transaction_type_section(self, parent, transaction_type_var, price_label_var):
         """Create transaction type selection section"""
         type_section = ctk.CTkFrame(parent, fg_color=theme.get("input"), corner_radius=25)
         type_section.pack(fill="x", pady=(0, 20))
-        
+
         type_inner = ctk.CTkFrame(type_section, fg_color="transparent")
         type_inner.pack(fill="x", padx=20, pady=15)
-        
+
         type_label = ctk.CTkLabel(
             type_inner,
             text="Transaction Type:",
@@ -228,7 +231,7 @@ class TransactionFormHandler:
 
         def select_transaction_type(value):
             transaction_type_var.set(value)
-            
+
             # Reset all buttons
             for btn in self.type_buttons.values():
                 btn.configure(fg_color=theme.get("accent"), hover_color=theme.get("accent_hover"))
@@ -261,7 +264,7 @@ class TransactionFormHandler:
             command=lambda: select_transaction_type("Restock")
         )
         self.type_buttons["restock"].pack(side="left", padx=(0, 10))
-        
+
         self.type_buttons["sale"] = ctk.CTkButton(
             btn_container,
             text="Sale",
@@ -275,7 +278,7 @@ class TransactionFormHandler:
             command=lambda: select_transaction_type("Sale")
         )
         self.type_buttons["sale"].pack(side="left", padx=(0, 10))
-        
+
         self.type_buttons["actual"] = ctk.CTkButton(
             btn_container,
             text="Actual",
@@ -289,7 +292,7 @@ class TransactionFormHandler:
             command=lambda: select_transaction_type("Actual")
         )
         self.type_buttons["actual"].pack(side="left", padx=(0, 10))
-        
+
         self.type_buttons["fabrication"] = ctk.CTkButton(
             btn_container,
             text="Fabrication",
@@ -306,7 +309,6 @@ class TransactionFormHandler:
 
         self.select_transaction_type = select_transaction_type
 
-
     def _create_fields_section(self, parent, vars, date_var, form, price_label_var):
         """Create main fields section"""
         fields_section = ctk.CTkFrame(parent, fg_color="transparent")
@@ -314,7 +316,7 @@ class TransactionFormHandler:
 
         # Date field
         self._create_date_field(fields_section, date_var)
-        
+
         # Text fields
         fields = [
             ("Type", "Type"), ("ID", "ID"), ("OD", "OD"), ("TH", "TH"),
@@ -326,14 +328,18 @@ class TransactionFormHandler:
             entry = self._create_text_field(fields_section, label_text, vars[var_key], form)
             entry_widgets[var_key] = entry
 
+            # Auto uppercase for Type, Brand, Name during typing
+            if label_text in ["Type", "Brand", "Name"]:
+                self.setup_auto_uppercase(vars[var_key])
+
         # Quantity, Price, Stock fields
-        entry_widgets["Quantity"] = self._create_number_field(fields_section, "Quantity", 
-                                                               vars["Quantity"], form, "integer")
-        entry_widgets["Price"] = self._create_number_field(fields_section, "Price", 
-                                                            vars["Price"], form, "float", 
-                                                            label_var=price_label_var)
-        entry_widgets["Stock"] = self._create_number_field(fields_section, "Stock", 
-                                                            vars["Stock"], form, "integer")
+        entry_widgets["Quantity"] = self._create_number_field(fields_section, "Quantity",
+                                                              vars["Quantity"], form, "integer")
+        entry_widgets["Price"] = self._create_number_field(fields_section, "Price",
+                                                          vars["Price"], form, "float",
+                                                          label_var=price_label_var)
+        entry_widgets["Stock"] = self._create_number_field(fields_section, "Stock",
+                                                          vars["Stock"], form, "integer")
 
         return entry_widgets
 

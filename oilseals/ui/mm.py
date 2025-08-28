@@ -4,6 +4,37 @@ from ..database import connect_db
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
 
+BRAND_GROUPS = {
+    "JAPAN": {
+        "LABEL": "NOK",
+        "BRANDS": {"NOK", "NTC"},
+        "ORIGIN": "Japan",
+    },
+    "TAIWAN": {
+        "LABEL": "T.Y.",
+        "BRANDS": {"NQK", "SOG", "CHO", "NAK", "TTO", "PHLE", "SKF", "N/B", "ERIKS"},
+        "ORIGIN": "Taiwan",
+    },
+    "PHILIPPINES": {
+        "LABEL": "MOS",
+        "BRANDS": {"MOS"},
+        "ORIGIN": "Philippines",
+    },
+}
+
+def canonicalize_brand(raw_brand):
+    """Return (canonical_label, origin) for a given brand string.
+    If brand is not recognized, returns (normalized_brand, None).
+    """
+    try:
+        brand = (raw_brand or "").strip().upper()
+        for group in BRAND_GROUPS.values():
+            if brand in group["BRANDS"]:
+                return group["LABEL"], group["ORIGIN"]
+        return brand, None
+    except Exception:
+        return (raw_brand or "").strip().upper(), None
+
 
 def parse_number(val: Any) -> float:
     try:
@@ -59,18 +90,19 @@ def _build_query_and_params(search_filters: Dict[str, str]) -> Tuple[str, List[A
         if not val:
             continue
 
+        if key == "brand":
+            # Replace brand with canonical label for searching
+            canonical_label, _ = canonicalize_brand(val)
+            val = canonical_label
+
         if key in ("id", "od", "th"):
-            # Handle numeric search with decimals and slash
-            if val.isdigit():  
-                # if user searched "5", allow 5, 5.x, and 5/...
+            if val.isdigit():
                 query += f" AND ( {key} = ? OR {key} LIKE ? OR {key} LIKE ? )"
                 params.extend([val, f"{val}.%", f"{val}/%"])
             else:
-                # fallback: search as prefix
                 query += f" AND {key} LIKE ?"
                 params.append(f"{val}%")
         else:
-            # normal text fields
             query += f" AND UPPER({key}) LIKE UPPER(?)"
             params.append(f"{val}%")
 

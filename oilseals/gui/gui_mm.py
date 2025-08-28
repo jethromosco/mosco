@@ -83,19 +83,19 @@ class InventoryApp(ctk.CTkFrame):
         self.header_frame.grid_columnconfigure(0, weight=1)
         self.header_frame.grid_columnconfigure(1, weight=0)
 
-        back_btn = ctk.CTkButton(
+        self.back_btn = ctk.CTkButton(
             self.header_frame,
             text="← Back",
             font=("Poppins", 20, "bold"),
             fg_color=theme.get("primary"),
             hover_color=theme.get("primary_hover"),
-            text_color=theme.get("text"),
+            text_color="#FFFFFF",  # Always white text on red background
             corner_radius=40,
             width=120,
             height=50,
             command=self._handle_back_button
         )
-        back_btn.grid(row=0, column=0, sticky="w", padx=(40, 10), pady=35)
+        self.back_btn.grid(row=0, column=0, sticky="w", padx=(40, 10), pady=35)
 
     def _handle_back_button(self):
         """Handle back button click"""
@@ -338,10 +338,20 @@ class InventoryApp(ctk.CTkFrame):
                         background=theme.get("heading_bg"),
                         foreground=theme.get("heading_fg"),
                         font=("Poppins", 20, "bold"))
-        style.map("Custom.Treeview", background=[("selected", theme.get("table_selected"))])
+        
+        # Fixed selection styling for light/dark mode
+        if theme.mode == "dark":
+            style.map("Custom.Treeview", 
+                     background=[("selected", theme.get("table_selected"))],
+                     foreground=[("selected", "#FFFFFF")])  # White text on dark selection
+        else:
+            style.map("Custom.Treeview", 
+                     background=[("selected", "#D0D0D0")],  # Light grey selection in light mode
+                     foreground=[("selected", "#000000")])  # Black text on light selection
+        
         style.map("Custom.Treeview.Heading", background=[("active", theme.get("accent_hover"))])
 
-        # Red scrollbar styling
+        # Fixed scrollbar styling - always use theme colors
         style.configure(
             "Red.Vertical.TScrollbar",
             background=theme.get("primary"),
@@ -349,7 +359,16 @@ class InventoryApp(ctk.CTkFrame):
             bordercolor=theme.get("scroll_trough"),
             lightcolor=theme.get("primary"),
             darkcolor=theme.get("primary"),
-            arrowcolor=theme.get("text")
+            arrowcolor="#FFFFFF",  # Always white arrows for visibility on red
+            focuscolor="none"
+        )
+        
+        # Additional scrollbar states
+        style.map(
+            "Red.Vertical.TScrollbar",
+            background=[("active", theme.get("primary_hover"))],
+            lightcolor=[("active", theme.get("primary_hover"))],
+            darkcolor=[("active", theme.get("primary_hover"))]
         )
 
     def _create_treeview(self, parent):
@@ -401,19 +420,19 @@ class InventoryApp(ctk.CTkFrame):
         )
         self.status_label.pack(side="left", pady=15)
 
-        admin_btn = ctk.CTkButton(
+        self.admin_btn = ctk.CTkButton(
             self.bottom_frame,
             text="Admin",
             font=("Poppins", 20, "bold"),
             fg_color=theme.get("primary"),
             hover_color=theme.get("primary_hover"),
-            text_color=theme.get("text"),
+            text_color="#FFFFFF",  # Always white text on red background
             corner_radius=40,
             width=120,
             height=50,
             command=self.open_admin_panel
         )
-        admin_btn.pack(side="right", pady=15, padx=40)
+        self.admin_btn.pack(side="right", pady=15, padx=40)
 
     def remove_focus(self, event=None):
         """Remove focus from current widget"""
@@ -492,19 +511,25 @@ class InventoryApp(ctk.CTkFrame):
         password_label.pack(pady=(0, 10))
         
         password_entry = ctk.CTkEntry(
-            entry_container, 
-            width=280, 
-            height=40, 
-            fg_color=theme.get("input"), 
-            text_color=theme.get("text"), 
-            font=("Poppins", 14), 
-            corner_radius=40, 
-            border_width=2, 
-            border_color=theme.get("border"), 
-            placeholder_text="Enter password", 
-            show="*"
+        entry_container,
+        width=280,
+        height=40,
+        fg_color=theme.get("input"),
+        text_color=theme.get("text"),
+        font=("Poppins", 14),
+        corner_radius=40,
+        border_width=2,
+        border_color=theme.get("border"),
+        placeholder_text="Enter password",
+        show="*"
         )
         password_entry.pack(pady=(0, 10))
+
+        # Bind <Map> event to focus when widget appears
+        def focus_entry(event):
+            password_entry.focus()
+
+        password_entry.bind("<Map>", focus_entry)
 
         # Setup password entry bindings
         self._setup_password_entry_bindings(password_entry)
@@ -572,7 +597,7 @@ class InventoryApp(ctk.CTkFrame):
             font=("Poppins", 16, "bold"), 
             fg_color=theme.get("primary"), 
             hover_color=theme.get("primary_hover"), 
-            text_color=theme.get("text"), 
+            text_color="#FFFFFF",  # Always white on red
             corner_radius=40, 
             width=120, 
             height=45, 
@@ -693,8 +718,11 @@ class InventoryApp(ctk.CTkFrame):
 
     def apply_theme(self):
         try:
+            # Update main components
             self.configure(fg_color=theme.get("bg"))
             self.root.configure(bg=theme.get("bg"))
+            
+            # Update frames
             if hasattr(self, 'header_frame'):
                 self.header_frame.configure(fg_color=theme.get("bg"))
             if hasattr(self, 'search_section'):
@@ -703,23 +731,52 @@ class InventoryApp(ctk.CTkFrame):
                 self.table_section.configure(fg_color=theme.get("card"))
             if hasattr(self, 'bottom_frame'):
                 self.bottom_frame.configure(fg_color=theme.get("bg"))
-            # Reapply styles for treeview and inputs by calling setup
+            
+            # Update buttons with consistent white text on red
+            if hasattr(self, 'back_btn'):
+                self.back_btn.configure(
+                    fg_color=theme.get("primary"),
+                    hover_color=theme.get("primary_hover"),
+                    text_color="#FFFFFF"
+                )
+            if hasattr(self, 'admin_btn'):
+                self.admin_btn.configure(
+                    fg_color=theme.get("primary"),
+                    hover_color=theme.get("primary_hover"),
+                    text_color="#FFFFFF"
+                )
+            
+            # Reapply treeview styles (including selection colors)
             self._setup_treeview_style()
+            
+            # Update entry widgets
             for key, entry in self.entry_widgets.items():
-                entry.configure(fg_color=theme.get("input"), text_color=theme.get("text"), border_color=theme.get("border"))
-            # Ensure search labels reflect current theme text color
+                entry.configure(
+                    fg_color=theme.get("input"), 
+                    text_color=theme.get("text"), 
+                    border_color=theme.get("border")
+                )
+            
+            # Update inch labels
+            for key in self.inch_labels:
+                self._update_inch_label(key)
+            
+            # Update search labels
             for lbl in getattr(self, 'search_label_widgets', []):
                 try:
                     lbl.configure(text_color=theme.get("text"))
                 except Exception:
                     pass
+            
+            # Update sort and stock labels
             for lbl in (getattr(self, 'sort_label', None), getattr(self, 'stock_label', None)):
                 if lbl:
                     try:
                         lbl.configure(text_color=theme.get("text"))
                     except Exception:
                         pass
-            # Ensure combobox foregrounds and dropdowns reflect theme
+            
+            # Update combobox widgets
             for combo in getattr(self, 'combo_widgets', []):
                 try:
                     combo.configure(
@@ -734,10 +791,19 @@ class InventoryApp(ctk.CTkFrame):
                     )
                 except Exception:
                     pass
+            
+            # Update status label
             if hasattr(self, 'status_label'):
                 self.status_label.configure(text_color=theme.get("muted"))
+            
             # Re-apply row tag colors for normal/alternate and stock highlights
             if hasattr(self, 'tree'):
                 self._apply_tree_tags_theme()
-        except Exception:
-            pass
+                
+        except Exception as e:
+            print(f"Error applying theme: {e}")
+
+    def on_frame_show(self):
+        """Called when this frame is shown - refresh theme-dependent styles"""
+        self._setup_treeview_style()
+        self.refresh_product_list()

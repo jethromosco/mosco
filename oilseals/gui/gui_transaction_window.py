@@ -57,6 +57,9 @@ class TransactionWindow(ctk.CTkFrame):
 
         # Build UI
         self._build_ui()
+        
+        # Subscribe to theme changes
+        theme.subscribe(self.apply_theme)
 
     def _build_ui(self):
         self._create_header_section()
@@ -75,7 +78,7 @@ class TransactionWindow(ctk.CTkFrame):
             font=("Poppins", 20, "bold"),
             fg_color=theme.get("primary"),
             hover_color=theme.get("primary_hover"),
-            text_color=theme.get("text"),
+            text_color="#FFFFFF",  # Always white text on red background
             corner_radius=40,
             width=120,
             height=50,
@@ -307,27 +310,47 @@ class TransactionWindow(ctk.CTkFrame):
                         background=theme.get("heading_bg"),
                         foreground=theme.get("heading_fg"),
                         font=("Poppins", 20, "bold"))
-        style.map("Transaction.Treeview", background=[("selected", theme.get("table_selected"))])
+        
+        # Fix selection colors - set both background and text color for selected row
+        if theme.mode == "dark":
+            style.map("Transaction.Treeview", 
+                    background=[("selected", "#4A4A4A")],  # Gray bg
+                    foreground=[("selected", "#FFFFFF")])  # White text for dark mode selected
+        else:
+            style.map("Transaction.Treeview", 
+                    background=[("selected", "#D0D0D0")],  # Light gray bg for light mode
+                    foreground=[("selected", "#000000")])  # Black text for light mode selected
+        
+        # Keep heading color on hover as you had it
         style.map("Transaction.Treeview.Heading", background=[("active", theme.get("accent_hover"))])
 
-        # Red scrollbar styling
+        # Scrollbar styling, unchanged
         style.configure(
             "Red.Vertical.TScrollbar",
-            background="#D00000",
-            troughcolor="#111111",
-            bordercolor="#111111",
-            lightcolor="#D00000",
-            darkcolor="#D00000",
-            arrowcolor="#FFFFFF"
+            background=theme.get("primary"),
+            troughcolor=theme.get("scroll_trough"),
+            bordercolor=theme.get("scroll_trough"),
+            lightcolor=theme.get("primary"),
+            darkcolor=theme.get("primary"),
+            arrowcolor="#FFFFFF",
+            focuscolor="none"
+        )
+        
+        style.map(
+            "Red.Vertical.TScrollbar",
+            background=[("active", theme.get("primary_hover"))],
+            lightcolor=[("active", theme.get("primary_hover"))],
+            darkcolor=[("active", theme.get("primary_hover"))]
         )
 
     def _create_history_table(self, parent):
         columns = ("date", "qty_restock", "cost", "name", "qty", "price", "stock")
         self.tree = ttk.Treeview(parent, columns=columns, show="headings", style="Transaction.Treeview")
 
-        self.tree.tag_configure("red", foreground="#EF4444")
-        self.tree.tag_configure("blue", foreground="#3B82F6")
-        self.tree.tag_configure("green", foreground="#22C55E")
+        # Configure tags with priority to preserve colors even when selected
+        self.tree.tag_configure("red", foreground="#EF4444", font=("Poppins", 18))
+        self.tree.tag_configure("blue", foreground="#3B82F6", font=("Poppins", 18))
+        self.tree.tag_configure("green", foreground="#22C55E", font=("Poppins", 18))
 
         column_config = {
             "date": {"text": "DATE", "anchor": "center", "width": 90},
@@ -348,6 +371,20 @@ class TransactionWindow(ctk.CTkFrame):
         self.tree.configure(yscrollcommand=tree_scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
         tree_scrollbar.pack(side="right", fill="y")
+        
+        # Add binding to remove selection when clicking outside
+        parent.bind("<Button-1>", lambda e: self.tree.selection_remove(self.tree.selection()))
+        self.tree.bind("<Button-1>", self._on_tree_click)
+
+    def _on_tree_click(self, event):
+        """Handle tree click - select item but preserve tag colors"""
+        item = self.tree.identify_row(event.y)
+        if item:
+            self.tree.selection_set(item)
+        else:
+            self.tree.selection_remove(self.tree.selection())
+        # Stop event propagation to prevent parent handler
+        return "break"
 
     def show_save_status(self, message="Saved!", duration=2000):
         # No-op to avoid adding extra text under the button
@@ -631,7 +668,7 @@ class TransactionWindow(ctk.CTkFrame):
         popup = ctk.CTkToplevel(self)
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
-        popup.configure(fg_color="#2b2b2b")
+        popup.configure(fg_color=theme.get("card"))  # Use themed background
 
         x = self.photo_label.winfo_rootx() + self.photo_label.winfo_width() // 2 - 60
         y = self.photo_label.winfo_rooty() + self.photo_label.winfo_height() + 5
@@ -645,13 +682,14 @@ class TransactionWindow(ctk.CTkFrame):
             close_menu()
             self.show_fullscreen_photo()
 
+        # Themed View button
         ctk.CTkButton(
             popup, 
             text="🔍 View", 
             font=("Poppins", 12), 
-            fg_color="#4B5563", 
-            hover_color="#6B7280", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("accent"),  # Changed to use theme
+            hover_color=theme.get("accent_hover"),  # Changed to use theme
+            text_color=theme.get("text"),  # Changed to use theme
             corner_radius=15, 
             height=30, 
             command=view
@@ -664,13 +702,14 @@ class TransactionWindow(ctk.CTkFrame):
                     os.remove(self.image_path)
                     self.load_photo()
 
+            # Delete button stays red but uses theme for text
             ctk.CTkButton(
                 popup, 
                 text="🗑 Delete", 
                 font=("Poppins", 12), 
-                fg_color="#EF4444", 
-                hover_color="#DC2626", 
-                text_color="#FFFFFF", 
+                fg_color="#EF4444",  # Keep red for delete
+                hover_color="#DC2626",  # Darker red on hover
+                text_color="#FFFFFF",  # Always white text on red
                 corner_radius=15, 
                 height=30, 
                 command=delete
@@ -767,3 +806,63 @@ class TransactionWindow(ctk.CTkFrame):
 
         photo_viewer.bind("<Escape>", lambda e: photo_viewer.destroy())
         photo_viewer.focus_set()
+
+    def destroy(self):
+    # Unsubscribe from theme updates to avoid callbacks after destroy
+        theme.unsubscribe(self.apply_theme)
+        super().destroy()
+
+    def apply_theme(self):
+        """Apply theme changes to transaction window"""
+        try:
+            if not self.winfo_exists():
+                return  # Widget destroyed, skip theme application
+            
+            # Existing code below...
+            self._setup_treeview_style()
+            self.configure(fg_color=theme.get("bg"))
+            
+            for widget in self.winfo_children():
+                if isinstance(widget, ctk.CTkFrame):
+                    if widget.cget("fg_color") == "transparent":
+                        continue
+                    if widget.winfo_y() < 150:
+                        widget.configure(fg_color=theme.get("bg"))
+                    else:
+                        for child in widget.winfo_children():
+                            if isinstance(child, ctk.CTkFrame) and child.cget("fg_color") != "transparent":
+                                child.configure(fg_color=theme.get("card"))
+                                
+            if hasattr(self, 'header_label'):
+                self.header_label.configure(text_color=theme.get("text"))
+            if hasattr(self, 'sub_header_label'):
+                self.sub_header_label.configure(text_color=theme.get("muted"))
+            if hasattr(self, 'srp_display'):
+                self.srp_display.configure(text_color=theme.get("text"))
+            if hasattr(self, 'photo_label'):
+                self.photo_label.configure(text_color=theme.get("muted"))
+            if hasattr(self, 'stock_label'):
+                if hasattr(self, 'details') and self.details:
+                    rows = load_transactions_records(self.details)
+                    self._update_stock_display(rows)
+            for entry_name in ['srp_entry', 'location_entry', 'notes_entry']:
+                if hasattr(self, entry_name):
+                    entry = getattr(self, entry_name)
+                    entry.configure(fg_color=theme.get("input"), text_color=theme.get("text"))
+            if hasattr(self, 'back_btn'):
+                self.back_btn.configure(fg_color=theme.get("primary"),
+                                        hover_color=theme.get("primary_hover"),
+                                        text_color="#FFFFFF")
+            if hasattr(self, 'edit_btn'):
+                pass
+            if hasattr(self, 'upload_button'):
+                self.upload_button.configure(fg_color=theme.get("accent"),
+                                            hover_color=theme.get("accent_hover"),
+                                            text_color=theme.get("text"))
+            if hasattr(self, 'tree'):
+                for child in self.tree.get_children():
+                    tags = self.tree.item(child)['tags']
+                    self.tree.item(child, tags=tags)
+        except Exception as e:
+            print(f"Error applying theme to transaction window: {e}")
+            

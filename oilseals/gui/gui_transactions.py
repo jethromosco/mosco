@@ -10,14 +10,14 @@ from theme import theme
 
 class TransactionTab:
     """GUI class for managing transaction display and user interactions."""
-    
+
     FIELDS = ["Type", "ID", "OD", "TH", "Brand", "Name", "Quantity", "Price"]
 
     def __init__(self, notebook, main_app, controller, on_refresh_callback=None):
         self.main_app = main_app
         self.controller = controller
         self.on_refresh_callback = on_refresh_callback
-        
+
         # Initialize logic handler
         self.logic = TransactionsLogic()
 
@@ -197,7 +197,10 @@ class TransactionTab:
         style.configure("Transactions.Treeview.Heading",
                         background=theme.get("heading_bg"), foreground=theme.get("heading_fg"),
                         font=("Poppins", 12, "bold"))
-        style.map("Transactions.Treeview", background=[("selected", theme.get("table_selected"))])
+        # Set selected background to grey and keep text color unchanged on selection
+        style.map("Transactions.Treeview",
+                  background=[("selected", theme.get("table_selected"))],
+                  foreground=[("selected", theme.get("text"))])
 
         self.tran_tree = ttk.Treeview(
             inner_table,
@@ -274,14 +277,14 @@ class TransactionTab:
         """Refresh the transaction display using logic layer."""
         # Get all transactions from logic
         all_records = self.logic.get_all_transactions()
-        
+
         # Identify fabrication records
         self.fabrication_records = self.logic.identify_fabrication_records(all_records)
-        
+
         # Apply filters
         keyword = self.tran_search_var.get()
         restock_filter = self.restock_filter.get()
-        
+
         # Date filter
         date_filter = None
         if self.date_filter_active and self.date_var.get().strip():
@@ -289,15 +292,15 @@ class TransactionTab:
                 date_filter = parse_date(self.date_var.get().strip()).date()
             except Exception:
                 date_filter = None
-        
+
         # Filter transactions using logic
         self.filtered_records = self.logic.filter_transactions(
             all_records, keyword, restock_filter, date_filter, self.fabrication_records
         )
-        
+
         # Render the filtered transactions
         self.render_transactions(self.filtered_records)
-        
+
         # Trigger refresh callback if provided
         if self.on_refresh_callback:
             self.on_refresh_callback()
@@ -310,25 +313,25 @@ class TransactionTab:
         """Render transactions in the treeview."""
         # Clear existing items
         self.tran_tree.delete(*self.tran_tree.get_children())
-        
+
         if not records:
             return
-        
+
         # Calculate running stock using logic
         records_with_stock = self.logic.calculate_running_stock(records)
-        
+
         # Sort by date (newest first) for display
         records_with_stock.sort(key=lambda x: (x[0].date, x[0].rowid), reverse=True)
-        
+
         # Add items to treeview
         for record, stock in records_with_stock:
             display_data = self.logic.format_transaction_for_display(record, stock)
-            
-            self.tran_tree.insert("", tk.END, 
-                iid=display_data['rowid'],
-                values=display_data['values'],
-                tags=(display_data['tag'],)
-            )
+
+            self.tran_tree.insert("", tk.END,
+                                  iid=display_data['rowid'],
+                                  values=display_data['values'],
+                                  tags=(display_data['tag'],)
+                                  )
 
     def sort_by_column(self, col):
         """Sort transactions by the specified column."""
@@ -338,9 +341,9 @@ class TransactionTab:
         # Toggle sort direction
         self.sort_direction[col] = not self.sort_direction.get(col, False)
         ascending = not self.sort_direction[col]
-        
+
         # Sort using logic layer
         self.filtered_records = self.logic.sort_transactions(self.filtered_records, col, ascending)
-        
+
         # Re-render the sorted transactions
         self.render_transactions(self.filtered_records)

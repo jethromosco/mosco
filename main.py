@@ -66,9 +66,9 @@ if __name__ == "__main__":
 # TRANS AED BIG PROBLEM !!! /
 # gawin din consistent yung cards styles pati table size and margins UI /
 # dapat seamless parang sa admin /
-# LAKIHAN TEXT SA UI
+# LAKIHAN TEXT SA UI /
 
-# back button sa subcategories di maayos kasi bumabalik sa home page
-# LIGHT MODE SA LAHAT kahit sa home na lang yung button for switching modes
+# back button sa subcategories di maayos kasi bumabalik sa home page /
+# LIGHT MODE SA LAHAT kahit sa home na lang yung button for switching modes /
 
 # TODO: Add README.md and requirements.txt for project documentation and setup

@@ -133,7 +133,7 @@ def summarize_running_stock(rows: List[Tuple[Any, ...]]) -> List[Tuple[str, Any,
         display_qty = ""
         if is_restock == 1:
             qty_restock = qty
-            cost = f"₱{float(price):.2f}"
+            cost = f"₱{int(float(price) * 100)}" #decimal price
         elif is_restock == 0:
             display_qty = abs(int(qty))
             price_str = f"₱{float(price):.2f}"
