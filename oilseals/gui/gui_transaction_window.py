@@ -75,7 +75,7 @@ class TransactionWindow(ctk.CTkFrame):
             font=("Poppins", 20, "bold"),
             fg_color=theme.get("primary"),
             hover_color=theme.get("primary_hover"),
-            text_color=theme.get("text"),
+            text_color="#FFFFFF",
             corner_radius=40,
             width=120,
             height=50,
@@ -631,7 +631,7 @@ class TransactionWindow(ctk.CTkFrame):
         popup = ctk.CTkToplevel(self)
         popup.overrideredirect(True)
         popup.attributes("-topmost", True)
-        popup.configure(fg_color="#2b2b2b")
+        popup.configure(fg_color=theme.get("card"))
 
         x = self.photo_label.winfo_rootx() + self.photo_label.winfo_width() // 2 - 60
         y = self.photo_label.winfo_rooty() + self.photo_label.winfo_height() + 5
@@ -649,9 +649,9 @@ class TransactionWindow(ctk.CTkFrame):
             popup, 
             text="🔍 View", 
             font=("Poppins", 12), 
-            fg_color="#4B5563", 
-            hover_color="#6B7280", 
-            text_color="#FFFFFF", 
+            fg_color=theme.get("accent"), 
+            hover_color=theme.get("accent_hover"), 
+            text_color=theme.get("text"), 
             corner_radius=15, 
             height=30, 
             command=view
@@ -670,7 +670,7 @@ class TransactionWindow(ctk.CTkFrame):
                 font=("Poppins", 12), 
                 fg_color="#EF4444", 
                 hover_color="#DC2626", 
-                text_color="#FFFFFF", 
+                text_color=theme.get("text"), 
                 corner_radius=15, 
                 height=30, 
                 command=delete

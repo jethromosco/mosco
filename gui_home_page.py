@@ -180,6 +180,16 @@ class HomePage(ctk.CTkFrame):
                 placeholder_text_color=theme.get("text"),
                 fg_color=theme.get("primary"),
             )
+            # Update all category buttons and toggle to reflect theme text
+            if hasattr(self, 'theme_toggle_btn'):
+                self.theme_toggle_btn.configure(
+                    fg_color=theme.get("card"),
+                    hover_color=theme.get("accent_hover"),
+                    text_color=theme.get("text")
+                )
+            for btn_info in self.category_buttons.values():
+                b = btn_info['button']
+                b.configure(text_color=theme.get("text"), fg_color=theme.get("card"), hover_color=theme.get("accent_hover"))
         except Exception:
             pass
 

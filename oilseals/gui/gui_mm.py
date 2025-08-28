@@ -351,6 +351,14 @@ class InventoryApp(ctk.CTkFrame):
             darkcolor=theme.get("primary"),
             arrowcolor=theme.get("text")
         )
+        # Ensure scrollbar widget itself adapts if used without style name elsewhere
+        style.configure(
+            "TScrollbar",
+            background=theme.get("primary"),
+            troughcolor=theme.get("scroll_trough"),
+            bordercolor=theme.get("scroll_trough"),
+            arrowcolor=theme.get("text")
+        )
 
     def _create_treeview(self, parent):
         """Create and configure treeview widget"""
