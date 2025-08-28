@@ -39,6 +39,8 @@ class InventoryApp(ctk.CTkFrame):
         # UI components
         self.inch_labels = {}
         self.entry_widgets = {}
+        self.search_label_widgets = []
+        self.combo_widgets = []
 
         # Setup UI and bindings
         self.create_widgets()
@@ -148,6 +150,7 @@ class InventoryApp(ctk.CTkFrame):
             text_color=theme.get("text")
         )
         label.grid(row=0, column=0, pady=(0, 8), sticky="ew")
+        self.search_label_widgets.append(label)
 
         # Entry
         var = self.search_vars[key]
@@ -285,8 +288,10 @@ class InventoryApp(ctk.CTkFrame):
             width=120,
             height=40,
             fg_color=theme.get("input"),
-            button_color=theme.get("input"),
-            button_hover_color=theme.get("primary"),
+            button_color=theme.get("accent"),
+            button_hover_color=theme.get("accent_hover"),
+            dropdown_fg_color=theme.get("card"),
+            dropdown_text_color=theme.get("text"),
             dropdown_hover_color=theme.get("combo_hover"),
             text_color=theme.get("text"),
             font=("Poppins", 18),
@@ -297,6 +302,7 @@ class InventoryApp(ctk.CTkFrame):
         
         combo.bind("<Enter>", lambda e: self._on_combo_hover(combo, True))
         combo.bind("<Leave>", lambda e: self._on_combo_hover(combo, False))
+        self.combo_widgets.append(combo)
         
         return combo
 
@@ -701,6 +707,27 @@ class InventoryApp(ctk.CTkFrame):
             self._setup_treeview_style()
             for key, entry in self.entry_widgets.items():
                 entry.configure(fg_color=theme.get("input"), text_color=theme.get("text"), border_color=theme.get("border"))
+            # Ensure search labels reflect current theme text color
+            for lbl in getattr(self, 'search_label_widgets', []):
+                try:
+                    lbl.configure(text_color=theme.get("text"))
+                except Exception:
+                    pass
+            # Ensure combobox foregrounds and dropdowns reflect theme
+            for combo in getattr(self, 'combo_widgets', []):
+                try:
+                    combo.configure(
+                        fg_color=theme.get("input"),
+                        button_color=theme.get("accent"),
+                        button_hover_color=theme.get("accent_hover"),
+                        dropdown_fg_color=theme.get("card"),
+                        dropdown_text_color=theme.get("text"),
+                        dropdown_hover_color=theme.get("combo_hover"),
+                        text_color=theme.get("text"),
+                        border_color=theme.get("border"),
+                    )
+                except Exception:
+                    pass
             if hasattr(self, 'status_label'):
                 self.status_label.configure(text_color=theme.get("muted"))
             # Re-apply row tag colors for normal/alternate and stock highlights
