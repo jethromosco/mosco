@@ -50,8 +50,14 @@ class TransactionTab:
     # ─────────────── controls (search, filters, date) ───────────────
     def setup_controls(self):
         """Create search and filter controls."""
+        try:
+            self.frame.grid_rowconfigure(1, weight=1)
+            self.frame.grid_columnconfigure(0, weight=1)
+        except Exception:
+            pass
+
         controls_section = ctk.CTkFrame(self.frame, fg_color=theme.get("card"), corner_radius=40, height=90)
-        controls_section.pack(fill="x", padx=20, pady=(20, 15))
+        controls_section.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 15))
         controls_section.pack_propagate(False)
 
         controls_inner = ctk.CTkFrame(controls_section, fg_color="transparent")
@@ -183,7 +189,7 @@ class TransactionTab:
     def setup_treeview(self):
         """Create and configure the transactions treeview."""
         table_container = ctk.CTkFrame(self.frame, fg_color=theme.get("card"), corner_radius=40)
-        table_container.pack(fill="both", expand=True, padx=20, pady=(0, 15))
+        table_container.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 15))
 
         inner_table = ctk.CTkFrame(table_container, fg_color="transparent")
         inner_table.pack(fill="both", expand=True, padx=20, pady=20)
@@ -237,7 +243,7 @@ class TransactionTab:
     def setup_buttons(self):
         """Create action buttons."""
         buttons_section = ctk.CTkFrame(self.frame, fg_color="transparent")
-        buttons_section.pack(fill="x", pady=(0, 20))
+        buttons_section.grid(row=2, column=0, sticky="ew", pady=(0, 20))
 
         button_container = ctk.CTkFrame(buttons_section, fg_color="transparent")
         button_container.pack(anchor="center")

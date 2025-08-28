@@ -18,22 +18,24 @@ class AdminPanel:
         # Create CustomTkinter window
         self.win = ctk.CTkToplevel(parent)
         self.win.withdraw()
-
-        # Remove window manager decorations (prevents flash resize)
-        self.win.overrideredirect(True)
-
-        # Set directly to full screen size
-        screen_w = self.win.winfo_screenwidth()
-        screen_h = self.win.winfo_screenheight()
-        self.win.geometry(f"{screen_w}x{screen_h}+0+0")
-
-        # Reapply titlebar AFTER it's full screen (optional)
-        self.win.overrideredirect(False)
         self.win.title("Manage Database")
         self.win.configure(fg_color=theme.get("bg"))  # Set window background to theme
 
-        # Now show without resize flash
+        # Apply desired default window state: windowed fullscreen (maximized properly)
+        self._apply_initial_maximized_state()
+
+        # Show window
         self.win.deiconify()
+
+        # Configure minimum usable size to avoid too-small layouts
+        try:
+            self.win.minsize(1000, 700)
+            self.win.resizable(True, True)
+        except Exception:
+            pass
+
+        # Bind to minimize/unmap to implement custom shrink-and-center behavior
+        self.win.bind("<Unmap>", self._on_unmap_minimize)
 
         # Create main container with dynamic background
         self.main_container = ctk.CTkFrame(self.win, fg_color=theme.get("bg"))
@@ -47,6 +49,76 @@ class AdminPanel:
 
         # Subscribe to theme changes to update colors dynamically
         theme.subscribe(self.update_colors)
+
+
+    def _apply_initial_maximized_state(self):
+        """Maximize using the window manager to avoid geometry/titlebar mismatches.
+
+        Tries native 'zoomed' state first, then falls back to the WM-reported
+        maximum size to emulate a proper windowed-fullscreen without cutting off
+        content when toggling maximize.
+        """
+        try:
+            # Request maximize via WM and trust the workarea sizing
+            self.win.update_idletasks()
+            self.win.state("zoomed")
+
+            # If the window is not realized or remains tiny, fallback once
+            self.win.update_idletasks()
+            cur_w = self.win.winfo_width()
+            cur_h = self.win.winfo_height()
+            if cur_w <= 1 or cur_h <= 1:
+                try:
+                    max_w, max_h = self.win.wm_maxsize()
+                    if max_w and max_h:
+                        self.win.geometry(f"{max_w}x{max_h}+0+0")
+                    else:
+                        screen_w = self.win.winfo_screenwidth()
+                        screen_h = self.win.winfo_screenheight()
+                        self.win.geometry(f"{screen_w}x{screen_h}+0+0")
+                except Exception:
+                    pass
+        except Exception:
+            # As a last resort, attempt a conservative maximize via wm_maxsize
+            try:
+                max_w, max_h = self.win.wm_maxsize()
+                if max_w and max_h:
+                    self.win.geometry(f"{max_w}x{max_h}+0+0")
+            except Exception:
+                pass
+
+
+    def _on_unmap_minimize(self, event):
+        """When the window is minimized/iconified, shrink and center instead of hiding."""
+        try:
+            # Only intercept actual minimize/iconify actions
+            if self.win.state() == "iconic":
+                # Deiconify and switch to normal state
+                self.win.after(1, self._shrink_and_center)
+        except Exception:
+            pass
+
+
+    def _shrink_and_center(self):
+        """Resize to a smaller, centered window that remains visible."""
+        try:
+            self.win.deiconify()
+            self.win.state("normal")
+            self.win.update_idletasks()
+
+            screen_w = self.win.winfo_screenwidth()
+            screen_h = self.win.winfo_screenheight()
+
+            # Reasonable smaller size (not too small)
+            target_w = max(int(screen_w * 0.7), 1000)
+            target_h = max(int(screen_h * 0.7), 700)
+
+            pos_x = max((screen_w - target_w) // 2, 0)
+            pos_y = max((screen_h - target_h) // 2, 0)
+
+            self.win.geometry(f"{target_w}x{target_h}+{pos_x}+{pos_y}")
+        except Exception:
+            pass
 
 
     def create_tab_system(self, parent):
@@ -156,6 +228,13 @@ class AdminPanel:
 
 
     def create_products_tab(self):
+        # Ensure the products frame uses grid so the table area expands properly
+        try:
+            self.products_frame.grid_rowconfigure(1, weight=1)
+            self.products_frame.grid_columnconfigure(0, weight=1)
+        except Exception:
+            pass
+
         self.prod_form_handler = ProductFormHandler(
             self.win,
             None,
@@ -163,7 +242,7 @@ class AdminPanel:
         )
 
         self.search_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card"), corner_radius=40, height=90)
-        self.search_container.pack(fill="x", pady=(20, 15), padx=20)
+        self.search_container.grid(row=0, column=0, sticky="ew", pady=(20, 15), padx=20)
         self.search_container.pack_propagate(False)
 
         search_inner = ctk.CTkFrame(self.search_container, fg_color="transparent")
@@ -217,7 +296,7 @@ class AdminPanel:
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
         self.table_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card_alt"), corner_radius=40)
-        self.table_container.pack(fill="both", expand=True, pady=(0, 15), padx=20)
+        self.table_container.grid(row=1, column=0, sticky="nsew", pady=(0, 15), padx=20)
 
         inner_table = ctk.CTkFrame(self.table_container, fg_color="transparent")
         inner_table.pack(fill="both", expand=True, padx=20, pady=20)
@@ -258,7 +337,7 @@ class AdminPanel:
         self.prod_form_handler.prod_tree = self.prod_tree
 
         button_frame = ctk.CTkFrame(self.products_frame, fg_color="transparent")
-        button_frame.pack(pady=(0, 20))
+        button_frame.grid(row=2, column=0, sticky="ew", pady=(0, 20))
 
         add_btn = ctk.CTkButton(
             button_frame,
