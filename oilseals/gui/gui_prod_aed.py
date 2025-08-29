@@ -34,16 +34,32 @@ class ProductFormHandler:
         if not item:
             return messagebox.showwarning("Select", "Select a product to edit", parent=self.parent_window)
 
-        values = self.prod_tree.item(item)["values"]
+        # Get values from treeview
+        tree_item = self.prod_tree.item(item)
+        values = tree_item["values"]
         
         if not values:
             messagebox.showerror("Error", "Invalid selection data.", parent=self.parent_window)
             return
 
         # Use logic to extract values
-        edit_values = self.logic.extract_values_from_tree_selection(values)
-        self._product_form("Edit Product", edit_values)
-
+        try:
+            edit_values = self.logic.extract_values_from_tree_selection(values)
+            
+            # Basic validation - just check that we got some data
+            if not edit_values:
+                messagebox.showerror("Error", "Could not extract product data for editing.", parent=self.parent_window)
+                return
+            
+            # Check if at least TYPE is present (most basic requirement)
+            if not str(edit_values[0]).strip():
+                messagebox.showwarning("Warning", "Product type is missing. Please verify the selected product.", parent=self.parent_window)
+            
+            self._product_form("Edit Product", edit_values)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not load product for editing: {str(e)}", parent=self.parent_window)
+          
     def delete_product(self):
         """Show delete confirmation dialog."""
         item = self.prod_tree.focus()

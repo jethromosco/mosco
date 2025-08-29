@@ -61,15 +61,6 @@ class ProductFormLogic:
 		except ValueError:
 			return False, 0, "Please enter a valid price"
 	
-	def parse_item_string(self, item_str):
-		"""Parse item string into components."""
-		try:
-			type_, size = item_str.split(" ", 1)
-			id_str, od_str, th_str = size.split("-")
-			return type_, id_str, od_str, th_str
-		except ValueError:
-			return "", "", "", ""
-	
 	def format_text_fields(self, data):
 		"""Apply formatting rules to text fields."""
 		formatted_data = data.copy()
@@ -201,42 +192,102 @@ class ProductFormLogic:
 		except Exception:
 			return False, "We couldn't save this product. Please check your entries and try again."
 	
-	def update_product(self, product_id, product_data):
+	def update_product(self, data, original_values):
 		"""Update an existing product in the database."""
-		# Canonicalize brand and origin
-		try:
-			canonical_brand, mapped_origin = canonicalize_brand(product_data.get('brand', ''))
-			product_data['brand'] = canonical_brand
-			if mapped_origin is not None:
-				product_data['origin'] = mapped_origin
-		except Exception:
-			pass
+		# Validate data first
+		is_valid, error_msg = self.validate_required_fields(data)
+		if not is_valid:
+			return False, error_msg
+		
+		is_valid, error_msg = self.validate_measurements(data)
+		if not is_valid:
+			return False, error_msg
+		
+		price_idx = self.FIELDS.index("PRICE")
+		is_valid, price, error_msg = self.validate_price(data[price_idx])
+		if not is_valid:
+			return False, error_msg
+		
+		# Update price in data
+		validated_data = data.copy()
+		validated_data[price_idx] = price
 
-		# Enforce uniqueness on canonical brand for the same TYPE/ID/OD/TH (excluding this row)
+		# Canonicalize brand and set origin automatically
+		brand_idx = self.FIELDS.index("BRAND")
+		origin_idx = self.FIELDS.index("ORIGIN")
+		canonical_brand, mapped_origin = canonicalize_brand(validated_data[brand_idx])
+		validated_data[brand_idx] = canonical_brand
+		if mapped_origin is not None:
+			validated_data[origin_idx] = mapped_origin
+
+		# Extract original values for record identification
+		original_type = str(original_values[0])
+		original_id = str(original_values[1])
+		original_od = str(original_values[2])
+		original_th = str(original_values[3])
+		original_brand = str(original_values[4])
+
 		try:
 			conn = connect_db()
 			cur = conn.cursor()
+			
+			# First, find the record using the original values
+			# Try exact match first
 			cur.execute(
 				"""
-				SELECT 1 FROM products
-				WHERE type=? AND id=? AND od=? AND th=? AND brand=? AND rowid<>?
-				LIMIT 1
+				SELECT rowid FROM products
+				WHERE type=? AND id=? AND od=? AND th=? AND brand=?
 				""",
-				(
-					product_data['type'], product_data['id'], product_data['od'], product_data['th'],
-					product_data['brand'], product_id
-				),
+				(original_type, original_id, original_od, original_th, original_brand)
 			)
-			dup = cur.fetchone()
-			conn.close()
-			if dup:
-				return False, "Another product with this canonical brand already exists."
-		except Exception:
-			pass
-
-		conn = connect_db()
-		cur = conn.cursor()
-		try:
+			record = cur.fetchone()
+			
+			# If not found, try with canonicalized original brand
+			if not record:
+				try:
+					canonical_original_brand, _ = canonicalize_brand(original_brand)
+					cur.execute(
+						"""
+						SELECT rowid FROM products
+						WHERE type=? AND id=? AND od=? AND th=? AND brand=?
+						""",
+						(original_type, original_id, original_od, original_th, canonical_original_brand)
+					)
+					record = cur.fetchone()
+				except Exception:
+					pass
+			
+			if not record:
+				conn.close()
+				return False, f"Product not found: {original_type} {original_id}-{original_od}-{original_th} {original_brand}"
+			
+			record_id = record[0]
+			
+			# Check for duplicates (excluding current record)
+			# Only check if the key fields have actually changed
+			key_changed = (
+				validated_data[0] != original_type or
+				validated_data[1] != original_id or 
+				validated_data[2] != original_od or
+				validated_data[3] != original_th or
+				validated_data[4] != original_brand
+			)
+			
+			if key_changed:
+				cur.execute(
+					"""
+					SELECT 1 FROM products
+					WHERE type=? AND id=? AND od=? AND th=? AND brand=? AND rowid != ?
+					LIMIT 1
+					""",
+					(validated_data[0], validated_data[1], validated_data[2], validated_data[3], validated_data[4], record_id)
+				)
+				dup = cur.fetchone()
+				if dup:
+					conn.close()
+					return False, "Another product with these details already exists."
+			
+			# Perform the update
 			cur.execute(
 				"""
 				UPDATE products 
@@ -244,19 +295,24 @@ class ProductFormLogic:
 				WHERE rowid=?
 				""",
 				(
-					product_data['type'], product_data['id'], product_data['od'], product_data['th'], product_data['brand'],
-					product_data['part_no'], product_data['origin'], product_data['notes'], product_data['price'], product_id
+					validated_data[0], validated_data[1], validated_data[2], validated_data[3],
+					validated_data[4], validated_data[5], validated_data[6], validated_data[7], 
+					validated_data[8], record_id
 				)
 			)
+			
+			if cur.rowcount == 0:
+				conn.close()
+				return False, "No rows were updated. Product may have been deleted."
+			
 			conn.commit()
 			conn.close()
-			return True, "Product updated."
-		except sqlite3.IntegrityError:
-			conn.close()
-			return False, "Another product with these details already exists. Please adjust the reference (Part No.) or brand."
-		except Exception:
-			conn.close()
-			return False, "We couldn't update this product. Please check your entries and try again."
+			return True, "Product updated successfully."
+			
+		except Exception as e:
+			if 'conn' in locals():
+				conn.close()
+			return False, f"Update failed: {str(e)}"
 	
 	def delete_product(self, type_, id_str, od_str, th_str, brand):
 		"""Delete a product from the database."""
@@ -276,18 +332,58 @@ class ProductFormLogic:
 	def extract_values_from_tree_selection(self, values):
 		"""Extract and format values from treeview selection."""
 		try:
-			item_str = values[0]
-			type_, id_str, od_str, th_str = self.parse_item_string(item_str)
+			# Initialize with safe defaults
+			extracted = ["", "", "", "", "", "", "", "", "0"]
 			
-			brand = values[1] if len(values) > 1 else ""
-			part_no = values[2] if len(values) > 2 else ""
-			origin = safe_str_extract(values[3]) if len(values) > 3 else ""
-			notes = safe_str_extract(values[4]) if len(values) > 4 else ""
-			price = values[5] if len(values) > 5 else "0"
+			if len(values) >= 1:
+				# Parse the combined first field like "TC 1-2-3" into separate components
+				combined_field = str(values[0]).strip()
+				
+				# Split by spaces first to separate TYPE from the measurements
+				parts = combined_field.split()
+				if len(parts) >= 2:
+					# First part is TYPE
+					extracted[0] = parts[0]  # TYPE = "TC"
+					
+					# Second part should be the measurements like "1-2-3"
+					measurements = parts[1]
+					measurement_parts = measurements.split("-")
+					
+					if len(measurement_parts) >= 3:
+						extracted[1] = measurement_parts[0]  # ID = "1"
+						extracted[2] = measurement_parts[1]  # OD = "2"
+						extracted[3] = measurement_parts[2]  # TH = "3"
+					else:
+						# Try to extract what we can
+						for i, part in enumerate(measurement_parts):
+							if i < 3:
+								extracted[1 + i] = part
+				else:
+					# If parsing fails, put the whole thing in TYPE
+					extracted[0] = combined_field
 			
-			# Clean price
-			price = price.replace("₱", "").replace(",", "")
+			# Handle the rest of the fields based on their expected positions
+			if len(values) >= 2:
+				extracted[4] = str(values[1]).strip()  # BRAND
+			if len(values) >= 3:
+				extracted[5] = str(values[2]).strip() if values[2] else ""  # PART_NO
+			if len(values) >= 4:
+				extracted[6] = safe_str_extract(values[3]).strip() if values[3] else ""  # ORIGIN
+			if len(values) >= 5:
+				extracted[7] = safe_str_extract(values[4]).strip() if values[4] else ""  # NOTES
+				
+			# Handle price - should be the last field
+			if len(values) >= 6:
+				try:
+					price_str = str(values[5]).replace("₱", "").replace(",", "").strip()
+					if price_str and (price_str.replace(".", "").isdigit() or price_str == "0"):
+						extracted[8] = price_str  # PRICE
+					else:
+						extracted[8] = "0"
+				except:
+					extracted[8] = "0"
 			
-			return (type_, id_str, od_str, th_str, brand, part_no, origin, notes, price)
-		except (IndexError, ValueError):
+			return tuple(extracted)
+			
+		except Exception as e:
 			return ("", "", "", "", "", "", "", "", "0")

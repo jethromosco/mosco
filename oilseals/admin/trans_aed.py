@@ -24,27 +24,32 @@ def parse_date(text):
 
 
 def _parse_size_component(value):
-	"""Parse a size string that may contain fractions into a float."""
-	if value is None:
-		return None
-	text = str(value).strip()
-	if text == "":
-		return None
-	# e.g., "1 1/2" or "1/2" or "1.5"
-	try:
-		if ' ' in text and '/' in text:
-			parts = text.split()
-			if len(parts) == 2:
-				whole, frac = parts
-				return float(int(whole) + float(Fraction(frac)))
-			else:
-				return float(Fraction(text.replace(' ', '')))
-		if '/' in text:
-			return float(Fraction(text))
-		return float(text)
-	except Exception:
-		# Fall back to original text if parsing fails
-		return None
+    """Parse a size string that may contain fractions into a float."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if text == "":
+        return None
+    
+    # Check if this looks like multiple thickness values (e.g., "3/4")
+    # If it contains "/" but no spaces, treat as text for thickness
+    if '/' in text and ' ' not in text:
+        # Don't parse as fraction - return as string for thickness values like "3/4"
+        return text
+    
+    # Original fraction parsing logic for actual fractions like "1 1/2"
+    try:
+        if ' ' in text and '/' in text:
+            parts = text.split()
+            if len(parts) == 2:
+                whole, frac = parts
+                return float(int(whole) + float(Fraction(frac)))
+            else:
+                return float(Fraction(text.replace(' ', '')))
+        return float(text)
+    except Exception:
+        # Fall back to original text if parsing fails
+        return text
 
 
 def _normalize_number_for_db(value_str):
@@ -52,6 +57,12 @@ def _normalize_number_for_db(value_str):
 	val = _parse_size_component(value_str)
 	if val is None:
 		return None
+	
+	# If parse_size_component returns a string (for values like "3/4"), return it as-is
+	if isinstance(val, str):
+		return val
+	
+	# For numeric values, normalize to int if close to integer
 	if abs(val - round(val)) < 1e-9:
 		return int(round(val))
 	return float(val)

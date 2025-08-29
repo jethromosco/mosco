@@ -347,11 +347,21 @@ class TransactionWindow(ctk.CTkFrame):
         columns = ("date", "qty_restock", "cost", "name", "qty", "price", "stock")
         self.tree = ttk.Treeview(parent, columns=columns, show="headings", style="Transaction.Treeview")
 
-        # Configure tags with priority to preserve colors even when selected
-        self.tree.tag_configure("red", foreground="#EF4444", font=("Poppins", 18))
-        self.tree.tag_configure("blue", foreground="#3B82F6", font=("Poppins", 18))
-        self.tree.tag_configure("green", foreground="#22C55E", font=("Poppins", 18))
+        # Define colors for light and dark modes
+        if theme.mode == "light":
+            red_color = "#B22222"    # dark red
+            blue_color = "#1E40AF"   # dark blue
+            green_color = "#166534"  # dark green
+        else:
+            red_color = "#EF4444"    # bright red
+            blue_color = "#3B82F6"   # bright blue
+            green_color = "#22C55E"  # bright green
 
+        self.tree.tag_configure("red", foreground=red_color, font=("Poppins", 18))
+        self.tree.tag_configure("blue", foreground=blue_color, font=("Poppins", 18))
+        self.tree.tag_configure("green", foreground=green_color, font=("Poppins", 18))
+
+        # Configure columns headers and widths as needed...
         column_config = {
             "date": {"text": "DATE", "anchor": "center", "width": 90},
             "qty_restock": {"text": "QTY RESTOCK", "anchor": "center", "width": 100},
@@ -361,16 +371,18 @@ class TransactionWindow(ctk.CTkFrame):
             "price": {"text": "PRICE", "anchor": "center", "width": 80},
             "stock": {"text": "STOCK", "anchor": "center", "width": 80},
         }
-
         for col in columns:
             config = column_config[col]
             self.tree.heading(col, text=config["text"])
             self.tree.column(col, anchor=config["anchor"], width=config["width"])
 
-        tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Red.Vertical.TScrollbar")
-        self.tree.configure(yscrollcommand=tree_scrollbar.set)
+        # Add scrollbar, pack, etc.
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.pack(side="left", fill="both", expand=True)
-        tree_scrollbar.pack(side="right", fill="y")
+        scrollbar.pack(side="right", fill="y")
+
+        # with item insertion, assign tags "red"/"blue"/"green" for color coding
         
         # Add binding to remove selection when clicking outside
         parent.bind("<Button-1>", lambda e: self.tree.selection_remove(self.tree.selection()))
@@ -430,7 +442,7 @@ class TransactionWindow(ctk.CTkFrame):
 
     def _load_location(self):
         location, notes = get_location_and_notes(self.details)
-        self.location_var.set(location)
+        self.location_var.set("")
         self.notes_var.set(notes)
 
     def toggle_edit_mode(self):
@@ -517,56 +529,65 @@ class TransactionWindow(ctk.CTkFrame):
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         ctk.CTkLabel(
-            main_frame, 
-            text="Stock Threshold Settings", 
-            font=("Poppins", 20, "bold"), 
-            text_color=theme.get("text")
+            main_frame,
+            text="Stock Threshold Settings",
+            font=("Poppins", 20, "bold"),
+            text_color=theme.get("text"),
         ).pack(pady=(30, 20))
 
         form_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         form_frame.pack(fill="x", padx=30, pady=(0, 20))
 
-        low_var = tk.IntVar()
-        warn_var = tk.IntVar()
+        low_var = tk.StringVar()
+        warn_var = tk.StringVar()
         low, warn = get_thresholds(self.details)
-        low_var.set(low)
-        warn_var.set(warn)
+        low_var.set(str(low))
+        warn_var.set(str(warn))
 
         ctk.CTkLabel(
-            form_frame, 
-            text="RESTOCK NEEDED (Red)", 
-            font=("Poppins", 14, "bold"), 
-            text_color=theme.get("text")
+            form_frame,
+            text="RESTOCK NEEDED (Red)",
+            font=("Poppins", 14, "bold"),
+            text_color=theme.get("text"),
         ).pack(anchor="w", pady=(0, 5))
 
         low_entry = ctk.CTkEntry(
-            form_frame, 
-            textvariable=low_var, 
-            font=("Poppins", 12), 
-            fg_color=theme.get("input"), 
-            text_color=theme.get("text"), 
-            corner_radius=20, 
-            height=35
+            form_frame,
+            textvariable=low_var,
+            font=("Poppins", 12),
+            fg_color=theme.get("input"),
+            text_color=theme.get("text"),
+            corner_radius=20,
+            height=35,
+            state="normal",
         )
         low_entry.pack(fill="x", pady=(0, 15))
 
         ctk.CTkLabel(
-            form_frame, 
-            text="LOW ON STOCK (Orange)", 
-            font=("Poppins", 14, "bold"), 
-            text_color=theme.get("text")
+            form_frame,
+            text="LOW ON STOCK (Orange)",
+            font=("Poppins", 14, "bold"),
+            text_color=theme.get("text"),
         ).pack(anchor="w", pady=(0, 5))
 
         warn_entry = ctk.CTkEntry(
-            form_frame, 
-            textvariable=warn_var, 
-            font=("Poppins", 12), 
-            fg_color=theme.get("input"), 
-            text_color=theme.get("text"), 
-            corner_radius=20, 
-            height=35
+            form_frame,
+            textvariable=warn_var,
+            font=("Poppins", 12),
+            fg_color=theme.get("input"),
+            text_color=theme.get("text"),
+            corner_radius=20,
+            height=35,
+            state="normal",
         )
         warn_entry.pack(fill="x", pady=(0, 20))
+
+        # Bind Enter key on both entries to save and close
+        def save_on_enter(event):
+            self._save_thresholds(settings_window, low_var.get(), warn_var.get())
+
+        low_entry.bind("<Return>", save_on_enter)
+        warn_entry.bind("<Return>", save_on_enter)
 
         self._create_settings_buttons(form_frame, settings_window, low_var, warn_var)
 
@@ -600,7 +621,14 @@ class TransactionWindow(ctk.CTkFrame):
             command=lambda: self._save_thresholds(settings_window, low_var.get(), warn_var.get())
         ).pack(side="right")
 
-    def _save_thresholds(self, settings_window, low: int, warn: int):
+    def _save_thresholds(self, settings_window, low_str: str, warn_str: str):
+        try:
+            low = int(low_str)
+            warn = int(warn_str)
+        except ValueError:
+            messagebox.showerror("Invalid Input", "Please enter valid integer values for thresholds.")
+            return
+
         update_thresholds(self.details, low, warn)
         settings_window.destroy()
         self._load_transactions()

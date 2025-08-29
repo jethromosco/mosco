@@ -56,8 +56,8 @@ def get_location_and_notes(details: Dict[str, Any]) -> Tuple[str, str]:
         )
         row = cur.fetchone()
     if not row:
-        return "Drawer 1", ""
-    return (row[0] or "Drawer 1", row[1] or "")
+        return "", ""
+    return (row[0] or "", row[1] or "")
 
 
 def update_location(details: Dict[str, Any], new_location: str) -> None:
