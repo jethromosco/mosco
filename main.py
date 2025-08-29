@@ -71,4 +71,6 @@ if __name__ == "__main__":
 # back button sa subcategories di maayos kasi bumabalik sa home page /
 # LIGHT MODE SA LAHAT kahit sa home na lang yung button for switching modes /
 
+# stock threshold not working
+
 # TODO: Add README.md and requirements.txt for project documentation and setup

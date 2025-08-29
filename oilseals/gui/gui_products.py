@@ -130,7 +130,11 @@ class AdminPanel:
         tab_header.pack_propagate(False)
 
         tab_buttons_frame = ctk.CTkFrame(tab_header, fg_color="transparent")
-        tab_buttons_frame.pack(expand=True, pady=15)
+        tab_buttons_frame.pack(fill="x", expand=True, pady=15)
+
+        # Left spacer for centering
+        left_spacer = ctk.CTkFrame(tab_buttons_frame, fg_color="transparent")
+        left_spacer.pack(side="left", expand=True)
 
         self.current_tab = "products"
 
@@ -161,6 +165,10 @@ class AdminPanel:
             command=lambda: self.switch_tab("transactions")
         )
         self.transactions_tab_btn.pack(side="left")
+
+        # Right spacer for centering
+        right_spacer = ctk.CTkFrame(tab_buttons_frame, fg_color="transparent")
+        right_spacer.pack(side="left", expand=True)
 
         self.tab_content = ctk.CTkFrame(parent, fg_color="transparent", corner_radius=40)
         self.tab_content.pack(fill="both", expand=True, padx=20, pady=(0, 20))
