@@ -186,7 +186,7 @@ def create_header_text(details: Dict[str, Any]) -> str:
 
 def create_subtitle_text(details: Dict[str, Any]) -> str:
     """Create subtitle text for product"""
-    part = details['part_no'].strip()
+    part = str(details['part_no']).strip()
     country = details['country_of_origin'].strip()
     return f"{part} | {country}" if part else country
 
