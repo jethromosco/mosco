@@ -328,14 +328,12 @@ class CategoryPage(ctk.CTkFrame):
         self.return_to = return_to
         theme.subscribe(self.apply_theme)
 
-
         # Header frame outside & above scrollable frame to fix back button movement
         self.header_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=120)
         self.header_frame.pack(fill="x", padx=20, pady=(20, 0))
         self.header_frame.pack_propagate(False)
         self.header_frame.grid_columnconfigure(0, weight=1)
         self.header_frame.grid_columnconfigure(1, weight=0)
-
 
         self.back_btn = ctk.CTkButton(
             self.header_frame,
@@ -345,6 +343,21 @@ class CategoryPage(ctk.CTkFrame):
             command=lambda: controller.go_back(self.return_to)
         )
         self.back_btn.grid(row=0, column=0, sticky="w", padx=(40, 10), pady=35)
+
+        # Add theme toggle button (same as HomePage)
+        self.theme_toggle_btn = ctk.CTkButton(
+            self.header_frame,
+            text="🌙" if theme.mode == "dark" else "🌞",
+            font=("Poppins", 18, "bold"),
+            width=56,
+            height=56,
+            corner_radius=28,
+            fg_color=theme.get("card"),
+            hover_color=theme.get("accent_hover"),
+            text_color=theme.get("text"),
+            command=self._toggle_theme,
+        )
+        self.theme_toggle_btn.grid(row=0, column=1, padx=(10, 20), pady=32)
         
         # Now create the scrollable frame for content below header
         # Scrollbar colors set to background colors => scrollbar hidden visually
@@ -354,23 +367,25 @@ class CategoryPage(ctk.CTkFrame):
                                                   scrollbar_button_hover_color=theme.get("bg"))
         self.main_scroll.pack(fill="both", expand=True)
 
-
         self.title_label = ctk.CTkLabel(self.main_scroll, text=self.category_name,
                                         font=("Hero", 36, "bold"), text_color=theme.get("text"))
         self.title_label.pack(pady=40)
-
 
         self.grid_frame = ctk.CTkFrame(self.main_scroll, fg_color=theme.get("bg"))
         self.grid_frame.pack(pady=20)
         self.subcategory_buttons = []
         self.create_subcategory_buttons(self.grid_frame, sub_data)
 
+    def _toggle_theme(self):
+        """Toggle between light and dark theme"""
+        theme.toggle()
+        self.theme_toggle_btn.configure(text="🌙" if theme.mode == "dark" else "🌞")
+        self.apply_theme()
 
     def create_subcategory_buttons(self, grid_frame, sub_data):
         for btn in self.subcategory_buttons:
             btn.destroy()
         self.subcategory_buttons.clear()
-
 
         cols = 3
         idx = 0
@@ -379,12 +394,10 @@ class CategoryPage(ctk.CTkFrame):
                 img = Image.new('RGB', (150, 150), color='#333333')
                 tk_img = ctk.CTkImage(light_image=img, size=(150, 150))
 
-
                 if sub is None:
                     command = lambda n=f"{self.category_name} {name}": self.controller.show_inventory_for(n)
                 else:
                     command = lambda n=name, s=sub: self.controller.show_subcategory(n, s)
-
 
                 btn = ctk.CTkButton(
                     grid_frame, text=name, image=tk_img, compound="top",
@@ -399,12 +412,10 @@ class CategoryPage(ctk.CTkFrame):
                 btn.bind("<Enter>", lambda e, b=btn: b.configure(border_width=3, border_color=theme.get("primary"), text_color=theme.get("muted")))
                 btn.bind("<Leave>", lambda e, b=btn: b.configure(border_width=0, text_color=theme.get("text")))
 
-
                 self.subcategory_buttons.append(btn)
                 idx += 1
             except Exception as e:
                 print(f"Error creating subcategory button for {name}: {e}")
-
 
     def apply_theme(self):
         try:
@@ -418,16 +429,21 @@ class CategoryPage(ctk.CTkFrame):
             self.header_frame.configure(fg_color=theme.get("bg"))
             self.grid_frame.configure(fg_color=theme.get("bg"))
 
-
             self.back_btn.configure(
                 fg_color=theme.get("primary"),
                 hover_color=theme.get("primary_hover"),
                 text_color="#FFFFFF"
             )
 
+            # Update theme toggle button
+            self.theme_toggle_btn.configure(
+                fg_color=theme.get("card"),
+                hover_color=theme.get("accent_hover"),
+                text_color=theme.get("text"),
+                text="🌙" if theme.mode == "dark" else "🌞"
+            )
 
             self.title_label.configure(text_color=theme.get("text"))
-
 
             for btn in self.subcategory_buttons:
                 btn.configure(
@@ -437,8 +453,6 @@ class CategoryPage(ctk.CTkFrame):
                 )
         except Exception as e:
             print(f"Error applying theme to CategoryPage: {e}")
-
-
 
 class ComingSoonPage(ctk.CTkFrame):
     def __init__(self, parent, controller, category_name, return_to="HomePage"):
