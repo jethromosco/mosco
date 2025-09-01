@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk
+from PIL import Image
 from ..ui.mm import (
     convert_mm_to_inches_display,
     build_products_display_data,
@@ -12,6 +13,7 @@ from ..ui.mm import (
 from .gui_transaction_window import TransactionWindow
 from .gui_products import AdminPanel
 from theme import theme
+from home_page import ICON_PATH  # Import ICON_PATH for logo images
 
 
 class InventoryApp(ctk.CTkFrame):
@@ -52,6 +54,23 @@ class InventoryApp(ctk.CTkFrame):
         """Setup keyboard bindings"""
         self.root.bind("<Escape>", lambda e: self.clear_filters())
         self.root.bind("<Return>", lambda e: self.remove_focus())
+        # Bind window resize to update button positions
+        self.bind("<Configure>", self.on_window_resize)
+
+    def on_window_resize(self, event=None):
+        """Update absolute positioned elements on window resize"""
+        if hasattr(self, 'admin_btn') and self.admin_btn.winfo_exists():
+            window_width = self.winfo_width()
+            if window_width > 1:
+                self.admin_btn.place(x=window_width-140, y=40)  # 100 (button width) + 40 (margin) = 140
+        
+        # Center the logo
+        if hasattr(self, 'logo_frame') and self.logo_frame.winfo_exists():
+            window_width = self.winfo_width()
+            if window_width > 1:
+                logo_width = 540  # 120 + 420 + 5 padding
+                center_x = (window_width - logo_width) // 2
+                self.logo_frame.place(x=center_x, y=20)
 
     def on_key_press(self, event, field_type):
         """Handle key press events for uppercase fields"""
@@ -73,29 +92,86 @@ class InventoryApp(ctk.CTkFrame):
         self._create_header_section()
         self._create_search_section()
         self._create_table_section()
-        self._create_bottom_section()
 
     def _create_header_section(self):
-        """Create header with back button"""
-        self.header_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=120)
-        self.header_frame.pack(fill="x", padx=20, pady=(20, 0))
-        self.header_frame.pack_propagate(False)
-        self.header_frame.grid_columnconfigure(0, weight=1)
-        self.header_frame.grid_columnconfigure(1, weight=0)
-
+        """Create header with back button, logo, and admin button"""
+        # ABSOLUTE POSITIONED ELEMENTS - FIXED POSITIONS
+        # Back Button - Top Left (same positioning as HomePage/CategoryPage)
         self.back_btn = ctk.CTkButton(
-            self.header_frame,
+            self,
             text="← Back",
             font=("Poppins", 20, "bold"),
             fg_color=theme.get("primary"),
             hover_color=theme.get("primary_hover"),
-            text_color="#FFFFFF",  # Always white text on red background
+            text_color="#FFFFFF",
             corner_radius=40,
             width=120,
             height=50,
             command=self._handle_back_button
         )
-        self.back_btn.grid(row=0, column=0, sticky="w", padx=(40, 10), pady=35)
+        self.back_btn.place(x=40, y=40)
+
+        # Admin Button - Top Right with 40px margin
+        self.admin_btn = ctk.CTkButton(
+            self,
+            text="Admin",
+            font=("Poppins", 18, "bold"),
+            width=100,
+            height=50,
+            corner_radius=25,
+            fg_color=theme.get("primary"),
+            hover_color=theme.get("primary_hover"),
+            text_color="#FFFFFF",
+            command=self.open_admin_panel
+        )
+        self.admin_btn.place(x=1200, y=40)  # Will be updated by on_window_resize
+
+        # MOSCO Logo - ABSOLUTE POSITIONED at same level as buttons
+        self.logo_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"))
+        self.logo_frame.place(x=0, y=40)  # Centered horizontally, 40px from top
+        self.logo_frame.bind("<Button-1>", self.remove_focus)
+
+        # Load bigger logo images
+        try:
+            self.logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(120, 120))
+            self.logo_img_text = ctk.CTkImage(
+                light_image=Image.open(f"{ICON_PATH}\\mosco text light.png"),
+                dark_image=Image.open(f"{ICON_PATH}\\mosco text.png"),
+                size=(420, 120)
+            )
+        except Exception as e:
+            print(f"Error loading logo images: {e}")
+            self.logo_img1 = None
+            self.logo_img_text = None
+
+        self.create_logo_section()
+
+        # Create main content frame (no scrollbar)
+        self.main_content = ctk.CTkFrame(self, fg_color=theme.get("bg"))
+        self.main_content.pack(fill="both", expand=True, pady=(170, 20), padx=20)  # Leave space for fixed elements
+
+    def create_logo_section(self):
+        """Create bigger MOSCO logo section"""
+        for widget in self.logo_frame.winfo_children():
+            widget.destroy()
+
+        try:
+            if self.logo_img1 and self.logo_img_text:
+                lbl1 = ctk.CTkLabel(self.logo_frame, image=self.logo_img1, text="", bg_color=theme.get("bg"))
+                lbl1.pack(side="left", padx=(0, 5))
+                lbl1.bind("<Button-1>", self.remove_focus)
+
+                lbl2 = ctk.CTkLabel(self.logo_frame, image=self.logo_img_text, text="", bg_color=theme.get("bg"))
+                lbl2.pack(side="left")
+                lbl2.bind("<Button-1>", self.remove_focus)
+            else:
+                # Fallback text
+                title_label = ctk.CTkLabel(self.logo_frame, text="MOSCO", 
+                                         font=("Hero", 36, "bold"), text_color=theme.get("text"))
+                title_label.pack()
+                title_label.bind("<Button-1>", self.remove_focus)
+        except Exception as e:
+            print(f"Error creating logo section: {e}")
 
     def _handle_back_button(self):
         """Handle back button click"""
@@ -106,8 +182,8 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_search_section(self):
         """Create search filters section"""
-        self.search_section = ctk.CTkFrame(self, fg_color=theme.get("card"), corner_radius=40)
-        self.search_section.pack(fill="x", padx=20, pady=(20, 10))
+        self.search_section = ctk.CTkFrame(self.main_content, fg_color=theme.get("card"), corner_radius=40)
+        self.search_section.pack(fill="x", pady=(0, 10))
 
         search_inner = ctk.CTkFrame(self.search_section, fg_color="transparent")
         search_inner.pack(fill="both", expand=True, padx=20, pady=20)
@@ -314,15 +390,38 @@ class InventoryApp(ctk.CTkFrame):
             combo.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
 
     def _create_table_section(self):
-        """Create data table section"""
-        self.table_section = ctk.CTkFrame(self, fg_color=theme.get("card"), corner_radius=40)
-        self.table_section.pack(fill="both", expand=True, padx=20, pady=(0, 0))
+        """Create data table section that fills remaining space"""
+        # Table section - fills all remaining space
+        self.table_section = ctk.CTkFrame(self.main_content, fg_color=theme.get("card"), corner_radius=40)
+        self.table_section.pack(fill="both", expand=True)
 
+        # Table inner frame
         table_inner = ctk.CTkFrame(self.table_section, fg_color="transparent")
         table_inner.pack(fill="both", expand=True, padx=30, pady=30)
+        table_inner.grid_rowconfigure(1, weight=1)  # Make table row expandable
+        table_inner.grid_columnconfigure(0, weight=1)  # Make table column expandable
+
+        # Status label INSIDE the table card - top right
+        status_frame = ctk.CTkFrame(table_inner, fg_color="transparent")
+        status_frame.grid(row=0, column=0, sticky="ew", pady=(0, 15))
+        status_frame.grid_columnconfigure(0, weight=1)
+
+        self.status_label = ctk.CTkLabel(
+            status_frame, 
+            text="",
+            font=("Poppins", 20),  # Smaller font
+            text_color=theme.get("muted")
+        )
+        self.status_label.pack(side="top")
+
+        # Table frame that expands to fill space
+        table_frame = ctk.CTkFrame(table_inner, fg_color="transparent")
+        table_frame.grid(row=1, column=0, sticky="nsew")
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
 
         self._setup_treeview_style()
-        self._create_treeview(table_inner)
+        self._create_treeview(table_frame)
 
     def _setup_treeview_style(self):
         """Configure treeview styling"""
@@ -405,34 +504,6 @@ class InventoryApp(ctk.CTkFrame):
         # Highlight selection; remove highlight when clicking outside
         self.tree.bind("<Double-1>", self.open_transaction_page)
         self.bind("<Button-1>", lambda e: self.tree.selection_remove(self.tree.selection()))
-
-    def _create_bottom_section(self):
-        """Create bottom section with status and admin button"""
-        self.bottom_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"), height=60)
-        self.bottom_frame.pack(fill="x", padx=20, pady=(10, 20))
-        self.bottom_frame.pack_propagate(False)
-
-        self.status_label = ctk.CTkLabel(
-            self.bottom_frame, 
-            text="",
-            font=("Poppins", 18),
-            text_color=theme.get("muted")
-        )
-        self.status_label.pack(side="left", pady=15)
-
-        self.admin_btn = ctk.CTkButton(
-            self.bottom_frame,
-            text="Admin",
-            font=("Poppins", 20, "bold"),
-            fg_color=theme.get("primary"),
-            hover_color=theme.get("primary_hover"),
-            text_color="#FFFFFF",  # Always white text on red background
-            corner_radius=40,
-            width=120,
-            height=50,
-            command=self.open_admin_panel
-        )
-        self.admin_btn.pack(side="right", pady=15, padx=40)
 
     def remove_focus(self, event=None):
         """Remove focus from current widget"""
@@ -669,7 +740,7 @@ class InventoryApp(ctk.CTkFrame):
                 self.tree.insert("", tk.END, values=item[:8], tags=(base_tag,))
 
         # Update status
-        self.status_label.configure(text=f"Total products: {len(display_data)}")
+        self.status_label.configure(text=f"TOTAL OIL SEAL PRODUCTS: {len(display_data)}")
 
     def _apply_tree_tags_theme(self):
         """Apply tag colors for tree rows based on current theme/mode."""
@@ -722,15 +793,20 @@ class InventoryApp(ctk.CTkFrame):
             self.configure(fg_color=theme.get("bg"))
             self.root.configure(bg=theme.get("bg"))
             
+            # Update main content frame
+            if hasattr(self, 'main_content'):
+                self.main_content.configure(fg_color=theme.get("bg"))
+            
+            # Update logo frame
+            if hasattr(self, 'logo_frame'):
+                self.logo_frame.configure(fg_color=theme.get("bg"))
+                self.create_logo_section()  # Recreate logo for light/dark switching
+            
             # Update frames
-            if hasattr(self, 'header_frame'):
-                self.header_frame.configure(fg_color=theme.get("bg"))
             if hasattr(self, 'search_section'):
                 self.search_section.configure(fg_color=theme.get("card"))
             if hasattr(self, 'table_section'):
                 self.table_section.configure(fg_color=theme.get("card"))
-            if hasattr(self, 'bottom_frame'):
-                self.bottom_frame.configure(fg_color=theme.get("bg"))
             
             # Update buttons with consistent white text on red
             if hasattr(self, 'back_btn'):
@@ -799,6 +875,9 @@ class InventoryApp(ctk.CTkFrame):
             # Re-apply row tag colors for normal/alternate and stock highlights
             if hasattr(self, 'tree'):
                 self._apply_tree_tags_theme()
+            
+            # Update button positions after theme change
+            self.after(10, self.on_window_resize)
                 
         except Exception as e:
             print(f"Error applying theme: {e}")
