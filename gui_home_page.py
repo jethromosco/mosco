@@ -57,9 +57,9 @@ class HomePage(ctk.CTkFrame):
             self,
             text="🌙" if theme.mode == "dark" else "🌞",
             font=("Poppins", 18, "bold"),
-            width=56,
-            height=56,
-            corner_radius=28,
+            width=100,          # match Admin button width
+            height=50,          # match Admin button height
+            corner_radius=25,   # match Admin button corner radius
             fg_color=theme.get("card"),
             hover_color=theme.get("accent_hover"),
             text_color=theme.get("text"),
@@ -118,7 +118,8 @@ class HomePage(ctk.CTkFrame):
         if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn.winfo_exists():
             window_width = self.winfo_width()
             if window_width > 1:
-                self.theme_toggle_btn.place(x=window_width-96, y=40)  # 56+40 padding
+                self.theme_toggle_btn.place(x=window_width-140, y=40)  
+                # 100 (button width) + 40 (margin) = 140
 
     def create_logo_section(self):
         for widget in self.logo_frame.winfo_children():
@@ -300,15 +301,14 @@ class CategoryPage(ctk.CTkFrame):
             self,
             text="🌙" if theme.mode == "dark" else "🌞",
             font=("Poppins", 18, "bold"),
-            width=56,
-            height=56,
-            corner_radius=28,
+            width=100,          # match Admin button width
+            height=50,          # match Admin button height
+            corner_radius=25,   # match Admin button corner radius
             fg_color=theme.get("card"),
             hover_color=theme.get("accent_hover"),
             text_color=theme.get("text"),
             command=self._toggle_theme,
         )
-        # Position from right edge (will be updated in apply_theme for responsiveness)
         self.theme_toggle_btn.place(x=1200, y=40)
 
         # Watermark - Bottom Right
@@ -351,10 +351,10 @@ class CategoryPage(ctk.CTkFrame):
     def on_window_resize(self, event=None):
         """Update absolute positioned elements on window resize"""
         if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn.winfo_exists():
-            # Update theme toggle button to stay at right edge
             window_width = self.winfo_width()
-            if window_width > 1:  # Valid width
-                self.theme_toggle_btn.place(x=window_width-96, y=40)  # 56+40 padding from right
+            if window_width > 1:
+                self.theme_toggle_btn.place(x=window_width-140, y=40)  
+                # 100 (button width) + 40 (margin) = 140
 
     def create_logo_section(self):
         """Create the MOSCO logo section (SAME SIZE AS HOMEPAGE)"""
@@ -501,9 +501,9 @@ class ComingSoonPage(ctk.CTkFrame):
             self,
             text="🌙" if theme.mode == "dark" else "🌞",
             font=("Poppins", 18, "bold"),
-            width=56,
-            height=56,
-            corner_radius=28,
+            width=100,          # match Admin button width
+            height=50,          # match Admin button height
+            corner_radius=25,   # match Admin button corner radius
             fg_color=theme.get("card"),
             hover_color=theme.get("accent_hover"),
             text_color=theme.get("text"),
@@ -559,8 +559,9 @@ class ComingSoonPage(ctk.CTkFrame):
         if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn.winfo_exists():
             window_width = self.winfo_width()
             if window_width > 1:
-                self.theme_toggle_btn.place(x=window_width-96, y=40)
-
+                self.theme_toggle_btn.place(x=window_width-140, y=40)  
+                # 100 (button width) + 40 (margin) = 140
+                
     def create_logo_section(self):
         """Create the MOSCO logo section"""
         for widget in self.logo_frame.winfo_children():
