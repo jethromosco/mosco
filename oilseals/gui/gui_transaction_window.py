@@ -55,6 +55,15 @@ class TransactionWindow(ctk.CTkFrame):
         self._setup_bindings()
         theme.subscribe(self.apply_theme)
 
+        self.watermark_label = ctk.CTkLabel(
+            self,
+            text="developed by jethro · 2025",
+            font=("Poppins", 10, "italic"),
+            text_color=theme.get("muted"),
+            fg_color=None
+        )
+        self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
+        
     def _setup_bindings(self):
         """Setup keyboard bindings and window resize handling"""
         self.bind("<Configure>", self._on_window_resize)
@@ -1116,7 +1125,9 @@ class TransactionWindow(ctk.CTkFrame):
 
             # Update card frames recursively
             self._update_card_frames_recursive(self)
-
+            
+            if hasattr(self, 'watermark_label'):
+                self.watermark_label.configure(text_color=theme.get("muted"))
             # Update treeview styling
             if hasattr(self, "tree"):
                 self._setup_treeview_style()

@@ -67,6 +67,16 @@ class HomePage(ctk.CTkFrame):
         )
         self.theme_toggle_btn.place(x=1200, y=40)
 
+        # Watermark - Bottom Right
+        self.watermark_label = ctk.CTkLabel(
+            self,
+            text="developed by jethro · 2025",
+            font=("Poppins", 10, "italic"),
+            text_color=theme.get("muted"),
+            fg_color=None
+        )
+        self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
+
         # MOSCO Logo - inside scroll
         self.logo_frame = ctk.CTkFrame(self.main_scroll, fg_color=theme.get("bg"))
         self.logo_frame.pack(pady=20)
@@ -243,6 +253,9 @@ class HomePage(ctk.CTkFrame):
                 text_color=theme.get("text"),
                 text="🌙" if theme.mode == "dark" else "🌞",
             )
+            # Update watermark theme
+            self.watermark_label.configure(text_color=theme.get("muted"))
+            
             for btn_info in self.category_buttons.values():
                 btn = btn_info['button']
                 btn.configure(
@@ -297,6 +310,16 @@ class CategoryPage(ctk.CTkFrame):
         )
         # Position from right edge (will be updated in apply_theme for responsiveness)
         self.theme_toggle_btn.place(x=1200, y=40)
+
+        # Watermark - Bottom Right
+        self.watermark_label = ctk.CTkLabel(
+            self,
+            text="developed by jethro · 2025",
+            font=("Poppins", 10, "italic"),
+            text_color=theme.get("muted"),
+            fg_color=None
+        )
+        self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
 
         # MOSCO Logo - SCROLLABLE (inside main_scroll, not fixed)
         self.logo_frame = ctk.CTkFrame(self.main_scroll, fg_color=theme.get("bg"))
@@ -424,6 +447,9 @@ class CategoryPage(ctk.CTkFrame):
                 text="🌙" if theme.mode == "dark" else "🌞"
             )
 
+            # Update watermark theme
+            self.watermark_label.configure(text_color=theme.get("muted"))
+
             # Recreate logo section with new theme (important for light/dark mode switching)
             self.create_logo_section()
 
@@ -484,6 +510,16 @@ class ComingSoonPage(ctk.CTkFrame):
             command=self._toggle_theme,
         )
         self.theme_toggle_btn.place(x=1200, y=40)
+
+        # Watermark - Bottom Right
+        self.watermark_label = ctk.CTkLabel(
+            self,
+            text="developed by jethro · 2025",
+            font=("Poppins", 10, "italic"),
+            text_color=theme.get("muted"),
+            fg_color=None
+        )
+        self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
 
         # MOSCO Logo - SCROLLABLE (inside main_scroll, not fixed)  
         self.logo_frame = ctk.CTkFrame(self.main_scroll, fg_color=theme.get("bg"))
@@ -574,6 +610,9 @@ class ComingSoonPage(ctk.CTkFrame):
                 text_color=theme.get("text"),
                 text="🌙" if theme.mode == "dark" else "🌞"
             )
+
+            # Update watermark theme
+            self.watermark_label.configure(text_color=theme.get("muted"))
 
             # Recreate logo section
             self.create_logo_section()

@@ -126,6 +126,15 @@ class InventoryApp(ctk.CTkFrame):
         )
         self.admin_btn.place(x=1200, y=40)  # Will be updated by on_window_resize
 
+        self.watermark_label = ctk.CTkLabel(
+            self,
+            text="developed by jethro · 2025",
+            font=("Poppins", 10, "italic"),
+            text_color=theme.get("muted"),
+            fg_color=None
+        )
+        self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
+
         # MOSCO Logo - ABSOLUTE POSITIONED at same level as buttons
         self.logo_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"))
         self.logo_frame.place(x=0, y=40)  # Centered horizontally, 40px from top
@@ -149,6 +158,7 @@ class InventoryApp(ctk.CTkFrame):
         # Create main content frame (no scrollbar)
         self.main_content = ctk.CTkFrame(self, fg_color=theme.get("bg"))
         self.main_content.pack(fill="both", expand=True, pady=(170, 20), padx=20)  # Leave space for fixed elements
+        self.watermark_label.lift()
 
     def create_logo_section(self):
         """Create bigger MOSCO logo section"""
@@ -821,7 +831,11 @@ class InventoryApp(ctk.CTkFrame):
                     hover_color=theme.get("primary_hover"),
                     text_color="#FFFFFF"
                 )
-            
+
+            if hasattr(self, 'watermark_label'):
+                self.watermark_label.configure(text_color=theme.get("muted"))
+                self.watermark_label.lift()
+
             # Reapply treeview styles (including selection colors)
             self._setup_treeview_style()
             
