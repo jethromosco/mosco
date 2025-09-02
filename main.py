@@ -71,6 +71,11 @@ if __name__ == "__main__":
 # back button sa subcategories di maayos kasi bumabalik sa home page /
 # LIGHT MODE SA LAHAT kahit sa home na lang yung button for switching modes /
 
-# stock threshold not working
+# stock threshold not working /
+
+
+# Problems: UI admin modal consistency, centering srp stockleft, nightmode light mode placement, watermark, minimized admin panel, 
+# think of better keyboard shortcuts.
+# mos logo black white pls
 
 # TODO: Add README.md and requirements.txt for project documentation and setup
