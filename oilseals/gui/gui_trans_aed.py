@@ -581,11 +581,13 @@ class TransactionFormHandler:
             type_str = "Actual"
             vars["Stock"].set(str(record.quantity))
         elif record.is_restock == 3:
-            type_str = "Fabrication"
-            vars["Price"].set(f"{record.price:.2f}")
-            vars["Quantity"].set("")
-            qty_restock_var.set("")
-            qty_customer_var.set(str(abs(record.quantity)))
+                # This shouldn't happen in normal editing since fabrication creates two separate records
+                # But if it does, handle it gracefully
+                type_str = "Fabrication"
+                vars["Price"].set("")  # Always start empty for fabrication editing
+                vars["Quantity"].set("")
+                qty_restock_var.set("")
+                qty_customer_var.set("")
         else:
             type_str = "Sale"
         

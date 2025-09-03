@@ -190,7 +190,11 @@ class TransactionsLogic:
         tag = "gray"
         if record.is_restock == 1:  # Restock
             tag = "blue"
-            cost = format_currency(record.price)
+            # Hide cost for fabrication restock (restock with 0 or null price and positive quantity)
+            if record.price and record.price > 0:
+                cost = format_currency(record.price)
+            else:
+                cost = ""  # Empty for fabrication restock
             qty_restock = record.quantity
         elif record.is_restock == 0:  # Sale
             tag = "red"

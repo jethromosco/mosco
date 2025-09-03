@@ -14,8 +14,48 @@ def center_window(win, width, height):
 
 
 def format_currency(val):
-	"""Format a value as currency with peso symbol"""
-	return f"\u20B1{val:.2f}"
+    """Format a value as currency with peso symbol"""
+    if val is None:
+        return ""  # Return empty string for NULL values
+    return f"\u20B1{val:.2f}"
+
+
+@staticmethod
+def save_fabrication_transaction(data):
+    """Save a fabrication transaction (creates two records)"""
+    try:
+        conn = connect_db()
+        cur = conn.cursor()
+        
+        # Insert restock record with NULL price (no cost for fabrication restock)
+        cur.execute(
+            """
+            INSERT INTO transactions (date, type, id_size, od_size, th_size, part_no, name, quantity, price, is_restock)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data['date'], data['item_type'], data['id_size'], data['od_size'],
+                data['th_size'], data['part_no'], data['name'], data['qty_restock'], None, 1  # Changed 0 to None
+            ),
+        )
+        
+        # Insert sale record
+        cur.execute(
+            """
+            INSERT INTO transactions (date, type, id_size, od_size, th_size, part_no, name, quantity, price, is_restock)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data['date'], data['item_type'], data['id_size'], data['od_size'],
+                data['th_size'], data['part_no'], data['name'], -data['qty_customer'], data['price'], 0
+            ),
+        )
+        
+        conn.commit()
+        conn.close()
+        return True
+    except Exception:
+        return False
 
 
 def parse_date(text):
