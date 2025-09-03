@@ -39,6 +39,7 @@ categories = {
     "COUPLING INSERTS": "COMING_SOON",
     "IMPELLERS": "COMING_SOON",
     "BUSHINGS (FLAT RINGS)": "COMING_SOON",
+    "VALVE SEALS": {"MM": None, "INCH": None},
     "BALL BEARINGS": "COMING_SOON",
     "GREASE & SEALANTS": "COMING_SOON",
     "ETC. (SPECIAL)": "COMING_SOON"
@@ -61,6 +62,7 @@ icon_mapping = {
     "COUPLING INSERTS": f"{ICON_PATH}\\coupling inserts.png",
     "IMPELLERS": f"{ICON_PATH}\\impellers.png",
     "BUSHINGS (FLAT RINGS)": f"{ICON_PATH}\\bushings.png",
+    "VALVE SEALS": f"{ICON_PATH}\\valve seals.png",
     "BALL BEARINGS": f"{ICON_PATH}\\ball bearings.png",
     "GREASE & SEALANTS": f"{ICON_PATH}\\grease and sealants.png",
     "ETC. (SPECIAL)": f"{ICON_PATH}\\special.png"

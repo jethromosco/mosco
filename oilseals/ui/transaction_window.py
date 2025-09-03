@@ -121,25 +121,26 @@ def summarize_running_stock(rows: List[Tuple[Any, ...]]) -> List[Tuple[str, Any,
     running_stock = 0
     result = []
     for row in rows:
-        date, name, qty, price, is_restock, brand = row
+        date, name, qty, cost, is_restock, brand = row
         if is_restock == 2:
             running_stock = int(qty)
         else:
             running_stock += int(qty)
         date_str = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%y")
         qty_restock = ""
-        cost = ""
+        cost_str = ""
         price_str = ""
         display_qty = ""
+
         if is_restock == 1:
-            # Only show cost if price > 0
-            cost_value = float(price)
-            cost = f"₱{cost_value:.2f}" if cost_value > 0 else ""
             qty_restock = qty
+            cost_value = float(cost)
+            cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
         elif is_restock == 0:
             display_qty = abs(int(qty))
-            price_str = f"₱{float(price):.2f}"
-        result.append((date_str, qty_restock, cost, name, display_qty, price_str, running_stock))
+            price_str = f"₱{float(cost):.2f}"
+
+        result.append((date_str, qty_restock, cost_str, name, display_qty, price_str, running_stock))
     return list(reversed(result))
 
 
