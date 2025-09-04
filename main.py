@@ -74,8 +74,12 @@ if __name__ == "__main__":
 # stock threshold not working /
 
 
-# Problems: UI admin modal consistency, centering srp stockleft, nightmode light mode placement, watermark, minimized admin panel, 
+# Problems: UI admin modal consistency, centering srp stockleft(di masyado halata)
+# nightmode light mode placement, watermark, minimized admin panel
 # think of better keyboard shortcuts.
-# mos logo black white pls
+# mos logo black white pls /
 
 # TODO: Add README.md and requirements.txt for project documentation and setup
+
+# nat sog sa nat card ilagay
+# lakihan loc /

@@ -250,7 +250,7 @@ def create_product_details(item_values: List[Any]) -> Dict[str, Any]:
 
 def get_stock_tag(qty: int) -> str:
     """Get stock status tag based on quantity"""
-    if qty == OUT_OF_STOCK:
+    if qty < 0 or qty == OUT_OF_STOCK:  # Explicitly handle negative OR zero
         return "out"
     elif qty <= LOW_STOCK_THRESHOLD:
         return "low"

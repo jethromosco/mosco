@@ -2,7 +2,8 @@ import customtkinter as ctk
 from PIL import Image
 import tkinter as tk
 
-from home_page import categories, icon_mapping, ICON_PATH
+# Import both icon mappings
+from home_page import categories, icon_mapping, subcategory_icon_mapping, ICON_PATH
 from theme import theme
 
 
@@ -82,7 +83,11 @@ class HomePage(ctk.CTkFrame):
         self.logo_frame.pack(pady=20)
         self.logo_frame.bind("<Button-1>", self.remove_search_focus)
 
-        self.logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(240, 240))
+        self.logo_img1 = ctk.CTkImage(
+            light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
+            dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"),
+            size=(240, 240)
+        )
         self.logo_img_text = ctk.CTkImage(
             light_image=Image.open(f"{ICON_PATH}\\mosco text light.png"),
             dark_image=Image.open(f"{ICON_PATH}\\mosco text.png"),
@@ -326,7 +331,11 @@ class CategoryPage(ctk.CTkFrame):
         self.logo_frame.pack(pady=20)
 
         # Load images with light and dark versions for mosco text image
-        self.logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(240, 240))
+        self.logo_img1 = ctk.CTkImage(
+            light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
+            dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"),
+            size=(240, 240)
+        )
         self.logo_img_text = ctk.CTkImage(
             light_image=Image.open(f"{ICON_PATH}\\mosco text light.png"),
             dark_image=Image.open(f"{ICON_PATH}\\mosco text.png"),
@@ -395,8 +404,20 @@ class CategoryPage(ctk.CTkFrame):
         idx = 0
         for name, sub in sub_data.items():
             try:
-                img = Image.new('RGB', (150, 150), color='#333333')
-                tk_img = ctk.CTkImage(light_image=img, size=(150, 150))
+                # Try to get icon from subcategory_icon_mapping first, then fallback to generic
+                img_path = subcategory_icon_mapping.get(name, None)
+                if img_path:
+                    try:
+                        img = Image.open(img_path).resize((150, 150))
+                        tk_img = ctk.CTkImage(light_image=img, size=(150, 150))
+                    except Exception as e:
+                        print(f"Error loading subcategory icon for {name}: {e}")
+                        img = Image.new('RGB', (150, 150), color='#333333')
+                        tk_img = ctk.CTkImage(light_image=img, size=(150, 150))
+                else:
+                    # Fallback to generic placeholder
+                    img = Image.new('RGB', (150, 150), color='#333333')
+                    tk_img = ctk.CTkImage(light_image=img, size=(150, 150))
 
                 if sub is None:
                     command = lambda n=f"{self.category_name} {name}": self.controller.show_inventory_for(n)
@@ -526,7 +547,11 @@ class ComingSoonPage(ctk.CTkFrame):
         self.logo_frame.pack(pady=20)
 
         # Load images with light and dark versions for mosco text image
-        self.logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(240, 240))
+        self.logo_img1 = ctk.CTkImage(
+            light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
+            dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"),
+            size=(240, 240)
+        )
         self.logo_img_text = ctk.CTkImage(
             light_image=Image.open(f"{ICON_PATH}\\mosco text light.png"),
             dark_image=Image.open(f"{ICON_PATH}\\mosco text.png"),

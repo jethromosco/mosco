@@ -45,7 +45,7 @@ categories = {
     "ETC. (SPECIAL)": "COMING_SOON"
 }
 
-# Icon mapping
+# Icon mapping for main categories
 icon_mapping = {
     "OIL SEALS": f"{ICON_PATH}\\oilseals.png",
     "O-RINGS": f"{ICON_PATH}\\orings.png",
@@ -66,6 +66,17 @@ icon_mapping = {
     "BALL BEARINGS": f"{ICON_PATH}\\ball bearings.png",
     "GREASE & SEALANTS": f"{ICON_PATH}\\grease and sealants.png",
     "ETC. (SPECIAL)": f"{ICON_PATH}\\special.png"
+}
+
+# Icon mapping for subcategories (measurement units, materials, etc.)
+subcategory_icon_mapping = {
+    "MM": f"{ICON_PATH}\\mm.png",
+    "INCH": f"{ICON_PATH}\\inch.png",
+    "NITRILE (NBR)": f"{ICON_PATH}\\nitrile.png",
+    "SILICONE": f"{ICON_PATH}\\silicone.png",
+    "VITON (FKM)": f"{ICON_PATH}\\viton.png",
+    "POLYCORD": f"{ICON_PATH}\\polycord.png",
+    # Add more subcategory icons as needed
 }
 
 # Re-export GUI classes so old imports still work

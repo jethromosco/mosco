@@ -43,7 +43,6 @@ class TransactionWindow(ctk.CTkFrame):
         self.main_app = None
         self.details = details
 
-        # Initialize UI variables
         self.srp_var = tk.StringVar()
         self.location_var = tk.StringVar()
         self.notes_var = tk.StringVar()
@@ -65,11 +64,9 @@ class TransactionWindow(ctk.CTkFrame):
         self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
         
     def _setup_bindings(self):
-        """Setup keyboard bindings and window resize handling"""
         self.bind("<Configure>", self._on_window_resize)
 
     def _on_window_resize(self, event=None):
-        """Update absolute positioned elements on window resize"""
         if hasattr(self, 'admin_btn') and self.admin_btn.winfo_exists():
             window_width = self.winfo_width()
             if window_width > 1:
@@ -83,14 +80,10 @@ class TransactionWindow(ctk.CTkFrame):
                 self.logo_frame.place(x=center_x, y=20)
 
     def _build_ui(self):
-        """Build the complete UI"""
         self._create_header_section()
         self._create_main_content()
 
-    # ==================== HEADER SECTION ====================
     def _create_header_section(self):
-        """Create fixed header with back button, logo, and admin button"""
-        # Back Button
         self.back_btn = ctk.CTkButton(
             self,
             text="← Back",
@@ -105,7 +98,6 @@ class TransactionWindow(ctk.CTkFrame):
         )
         self.back_btn.place(x=40, y=40)
 
-        # Admin Button
         self.admin_btn = ctk.CTkButton(
             self,
             text="Admin",
@@ -120,43 +112,17 @@ class TransactionWindow(ctk.CTkFrame):
         )
         self.admin_btn.place(x=1200, y=40)
 
-        # Logo Frame
         self.logo_frame = ctk.CTkFrame(self, fg_color=theme.get("bg"))
         self.logo_frame.place(x=0, y=20)
         self._create_logo_section()
 
-    def _create_logo_section(self):
-        """Create MOSCO logo section"""
-        for widget in self.logo_frame.winfo_children():
-            widget.destroy()
+    def _open_admin_panel(self):
+        # Minimal implementation to avoid AttributeError
+        # Extend as per your existing admin panel code
+        from .gui_products import AdminPanel
+        if self.controller:
+            AdminPanel(self.controller.root, self, self.controller, on_close_callback=lambda: None)
 
-        try:
-            self.logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(120, 120))
-            self.logo_img_text = ctk.CTkImage(
-                light_image=Image.open(f"{ICON_PATH}\\mosco text light.png"),
-                dark_image=Image.open(f"{ICON_PATH}\\mosco text.png"),
-                size=(420, 120)
-            )
-
-            lbl1 = ctk.CTkLabel(self.logo_frame, image=self.logo_img1, text="", bg_color=theme.get("bg"))
-            lbl1.pack(side="left", padx=(0, 5))
-
-            lbl2 = ctk.CTkLabel(self.logo_frame, image=self.logo_img_text, text="", bg_color=theme.get("bg"))
-            lbl2.pack(side="left")
-        except Exception as e:
-            print(f"Error loading logo images: {e}")
-            title_label = ctk.CTkLabel(self.logo_frame, text="MOSCO",
-                                        font=("Hero", 36, "bold"), text_color=theme.get("text"))
-            title_label.pack()
-
-    def _handle_back_button(self):
-        """Handle back button click"""
-        if self.controller and self.return_to:
-            self.controller.show_frame(self.return_to)
-        else:
-            self.master.destroy()
-
-    # ==================== ADMIN FUNCTIONALITY ====================
     def _create_password_window(self, callback=None):
         """Create admin access password modal consistent with InventoryApp style"""
         password_window = ctk.CTkToplevel(self.master)
@@ -178,19 +144,15 @@ class TransactionWindow(ctk.CTkFrame):
         y = py + (sh - h) // 2
         password_window.geometry(f"{w}x{h}+{x}+{y}")
         
-        # Main card frame with padding and round corners
         main_frame = ctk.CTkFrame(password_window, fg_color=theme.get("card"), corner_radius=40)
         main_frame.pack(fill="both", expand=True, padx=30, pady=30)
         
-        # Title label
         title_lbl = ctk.CTkLabel(main_frame, text="Admin Access", font=("Poppins", 28, "bold"), text_color=theme.get("heading_fg"))
         title_lbl.pack(pady=(40, 10))
         
-        # Subtitle label
         subtitle_lbl = ctk.CTkLabel(main_frame, text="Enter admin password to continue", font=("Poppins", 16), text_color=theme.get("text"))
         subtitle_lbl.pack(pady=(0, 30))
         
-        # Password entry container
         entry_container = ctk.CTkFrame(main_frame, fg_color="transparent")
         entry_container.pack(pady=(0, 20))
         
@@ -206,12 +168,10 @@ class TransactionWindow(ctk.CTkFrame):
         err_lbl = ctk.CTkLabel(entry_container, text="", font=("Poppins", 12), text_color="#FF4444")
         err_lbl.pack()
         
-        # Bind Enter key to password check
         pwd_entry.bind("<Return>", lambda e: self._check_password(pwd_entry, err_lbl, password_window, callback))
-        
-        # Bind Escape key to close modal cancel
         password_window.bind("<Escape>", lambda e: self._close_password_window(password_window, callback, False))
-        
+
+
     def _check_password(self, entry, err_lbl, window, callback):
         """Validate admin password, show error or close modal on success"""
         from ..ui.mm import validate_admin_password
@@ -223,6 +183,37 @@ class TransactionWindow(ctk.CTkFrame):
             entry.delete(0, tk.END)
             entry.focus()
             window.after(3000, lambda: err_lbl.configure(text=""))
+
+
+    def _close_password_window(self, window, callback, success):
+        """Close password modal and notify caller with success boolean"""
+        window.destroy()
+        if callback:
+            callback(success)
+
+
+    def _open_admin_panel(self):
+        """Open admin panel after password validation"""
+        def on_password_result(success):
+            if success:
+                from .gui_products import AdminPanel
+                AdminPanel(self.controller.root, self, self.controller, on_close_callback=lambda: None)
+        self._create_password_window(callback=on_password_result)
+
+
+
+    def _check_password(self, entry, err_lbl, window, callback):
+        """Validate admin password, show error or close modal on success"""
+        from ..ui.mm import validate_admin_password
+        pw = entry.get().strip()
+        if validate_admin_password(pw):
+            self._close_password_window(window, callback, True)
+        else:
+            err_lbl.configure(text="❌ Incorrect password. Please try again.")
+            entry.delete(0, tk.END)
+            entry.focus()
+            window.after(3000, lambda: err_lbl.configure(text=""))
+
 
     def _close_password_window(self, window, callback, success):
         """Close password modal and notify caller with success boolean"""
@@ -238,9 +229,38 @@ class TransactionWindow(ctk.CTkFrame):
                 AdminPanel(self.controller.root, self, self.controller, on_close_callback=lambda: None)
         self._create_password_window(callback=on_password_result)
 
-    # ==================== MAIN CONTENT ====================
+    def _create_logo_section(self):
+        for widget in self.logo_frame.winfo_children():
+            widget.destroy()
+
+        try:
+            self.logo_img1 = ctk.CTkImage(
+                light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
+                dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"), 
+                size=(120, 120)
+            )
+            self.logo_img_text = ctk.CTkImage(
+                light_image=Image.open(f"{ICON_PATH}\\mosco text light.png"),
+                dark_image=Image.open(f"{ICON_PATH}\\mosco text.png"),
+                size=(420, 120)
+            )
+            lbl1 = ctk.CTkLabel(self.logo_frame, image=self.logo_img1, text="", bg_color=theme.get("bg"))
+            lbl1.pack(side="left", padx=(0, 5))
+            lbl2 = ctk.CTkLabel(self.logo_frame, image=self.logo_img_text, text="", bg_color=theme.get("bg"))
+            lbl2.pack(side="left")
+        except Exception as e:
+            print(f"Error loading logo images: {e}")
+            title_label = ctk.CTkLabel(self.logo_frame, text="MOSCO",
+                                        font=("Hero", 36, "bold"), text_color=theme.get("text"))
+            title_label.pack()
+
+    def _handle_back_button(self):
+        if self.controller and self.return_to:
+            self.controller.show_frame(self.return_to)
+        else:
+            self.master.destroy()
+
     def _create_main_content(self):
-        """Create main content area below fixed header"""
         self.main_content = ctk.CTkFrame(self, fg_color=theme.get("bg"))
         self.main_content.pack(fill="both", expand=True, pady=(170, 20), padx=20)
 
@@ -248,7 +268,6 @@ class TransactionWindow(ctk.CTkFrame):
         self._create_history_section()
 
     def _create_product_details_section(self):
-        """Create product details section"""
         details_section = ctk.CTkFrame(self.main_content, fg_color=theme.get("card"), corner_radius=40)
         details_section.pack(fill="x", pady=(0, 10))
 
@@ -258,26 +277,18 @@ class TransactionWindow(ctk.CTkFrame):
         self._create_bottom_details_section(details_inner)
 
     def _create_top_details_section(self, parent):
-        """Create top section with title, stock/price, and photo"""
         top_section = ctk.CTkFrame(parent, fg_color="transparent")
         top_section.pack(fill="x", pady=(0, 20))
 
-        # Configure grid columns with equal weight for centering
-        top_section.grid_columnconfigure(0, weight=1)  # Title
-        top_section.grid_columnconfigure(1, weight=1)  # Stock/price changed from 0 to 1
-        top_section.grid_columnconfigure(2, weight=1)  # Photo
+        top_section.grid_columnconfigure(0, weight=1)
+        top_section.grid_columnconfigure(1, weight=1)
+        top_section.grid_columnconfigure(2, weight=1)
 
-        # Title section
         self._create_title_section(top_section)
-
-        # Stock and price section  
         self._create_stock_price_section(top_section)
-
-        # Photo section
         self._create_photo_section(top_section)
 
     def _create_title_section(self, parent):
-        """Create title section"""
         title_frame = ctk.CTkFrame(parent, fg_color="transparent")
         title_frame.grid(row=0, column=0, sticky="w", padx=(0, 20))
 
@@ -298,11 +309,9 @@ class TransactionWindow(ctk.CTkFrame):
         self.sub_header_label.pack(anchor="w", pady=(5, 0))
 
     def _create_stock_price_section(self, parent):
-        """Create stock and price display section"""
         stock_price_frame = ctk.CTkFrame(parent, fg_color="transparent")
         stock_price_frame.grid(row=0, column=1, sticky="nsew", padx=20)
 
-        # Stock label centered in frame
         self.stock_label = ctk.CTkLabel(
             stock_price_frame, 
             text="", 
@@ -314,7 +323,6 @@ class TransactionWindow(ctk.CTkFrame):
         self.stock_label.pack(anchor="center")
         self.stock_label.bind("<Button-1>", self._open_stock_settings)
 
-        # Price display centered
         self.srp_display = ctk.CTkLabel(
             stock_price_frame, 
             textvariable=self.srp_var, 
@@ -324,7 +332,6 @@ class TransactionWindow(ctk.CTkFrame):
         )
         self.srp_display.pack(pady=(10, 0), anchor="center")
 
-        # Price entry (hidden by default)
         self.srp_entry = ctk.CTkEntry(
             stock_price_frame, 
             textvariable=self.srp_var, 
@@ -338,12 +345,10 @@ class TransactionWindow(ctk.CTkFrame):
         )
 
     def _create_photo_section(self, parent):
-        """Create photo display section"""
         photo_container = ctk.CTkFrame(parent, fg_color="transparent", width=100, height=100)
         photo_container.grid(row=0, column=2, sticky="e", padx=(20, 0))
         photo_container.pack_propagate(False)
 
-        # Photo frame
         photo_frame = ctk.CTkFrame(
             photo_container, 
             width=100, 
@@ -357,9 +362,10 @@ class TransactionWindow(ctk.CTkFrame):
         self.photo_label = ctk.CTkLabel(
             photo_frame,
             text="📷",
-            font=("Poppins", 48),  # Larger emoji for easier clicking
+            font=("Poppins", 48),
             text_color=theme.get("muted"),
-            cursor="hand2"
+            cursor="hand2",
+            anchor="center"
         )
         self.photo_label.pack(fill="both", expand=True)
         self.photo_label.bind("<Button-1>", self._photo_label_clicked)
@@ -390,7 +396,6 @@ class TransactionWindow(ctk.CTkFrame):
             img = Image.open(self.image_path)
             img.thumbnail((80, 80), Image.Resampling.LANCZOS)
             ctk_img = CTkImage(light_image=img, size=img.size)
-
             self.image_thumbnail = ctk_img
             self.photo_label.configure(image=ctk_img, text="")
         except Exception as e:
@@ -411,21 +416,14 @@ class TransactionWindow(ctk.CTkFrame):
             self._display_photo_placeholder()
 
     def _create_bottom_details_section(self, parent):
-        """Create bottom section with location, notes, and edit button"""
         bottom_section = ctk.CTkFrame(parent, fg_color="transparent")
         bottom_section.pack(fill="x")
 
-        # Location
         self._create_location_section(bottom_section)
-
-        # Notes  
         self._create_notes_section(bottom_section)
-
-        # Edit button
         self._create_edit_button_section(bottom_section)
 
     def _create_location_section(self, parent):
-        """Create location input section"""
         location_frame = ctk.CTkFrame(parent, fg_color="transparent")
         location_frame.pack(side="left", padx=(0, 20))
 
@@ -444,13 +442,12 @@ class TransactionWindow(ctk.CTkFrame):
             text_color=theme.get("text"),
             corner_radius=20,
             height=44,
-            width=120,
+            width=200,#LOCATION WIDTH
             state="readonly"
         )
         self.location_entry.pack()
 
     def _create_notes_section(self, parent):
-        """Create notes input section"""
         notes_frame = ctk.CTkFrame(parent, fg_color="transparent")
         notes_frame.pack(side="left", fill="x", expand=True, padx=(0, 20))
 
@@ -474,7 +471,6 @@ class TransactionWindow(ctk.CTkFrame):
         self.notes_entry.pack(fill="x")
 
     def _create_edit_button_section(self, parent):
-        """Create edit button section"""
         edit_frame = ctk.CTkFrame(parent, fg_color="transparent")
         edit_frame.pack(side="right")
 
@@ -487,20 +483,18 @@ class TransactionWindow(ctk.CTkFrame):
             text_color="#FFFFFF",
             corner_radius=25,
             width=120,
-            height=46,
+            height=44,
             command=self._toggle_edit_mode
         )
-        self.edit_btn.pack(pady=(20, 0))
+        self.edit_btn.pack(pady=(33, 0))
 
     def _create_history_section(self):
-        """Create transaction history section"""
         history_section = ctk.CTkFrame(self.main_content, fg_color=theme.get("card"), corner_radius=40)
         history_section.pack(fill="both", expand=True)
 
         history_inner = ctk.CTkFrame(history_section, fg_color="transparent")
         history_inner.pack(fill="both", expand=True, padx=30, pady=30)
 
-        # Title
         self.history_status_label = ctk.CTkLabel(
             history_inner,
             text="Transaction History",
@@ -509,17 +503,13 @@ class TransactionWindow(ctk.CTkFrame):
         )
         self.history_status_label.pack(pady=(0, 15))
 
-        # Table
         self._create_history_table(history_inner)
 
     def _create_history_table(self, parent):
-        """Create transaction history table"""
         self._setup_treeview_style()
-
         columns = ("date", "qty_restock", "cost", "name", "qty", "price", "stock")
         self.tree = ttk.Treeview(parent, columns=columns, show="headings", style="Transaction.Treeview")
 
-        # Configure tags for transaction types
         colors = {
             "red": "#B22222" if theme.mode == "light" else "#EF4444",
             "blue": "#1E40AF" if theme.mode == "light" else "#3B82F6",
@@ -529,7 +519,6 @@ class TransactionWindow(ctk.CTkFrame):
         for color, value in colors.items():
             self.tree.tag_configure(color, foreground=value, font=("Poppins", 18))
 
-        # Configure columns
         column_config = {
             "date": {"text": "DATE", "anchor": "center", "width": 90},
             "qty_restock": {"text": "QTY RESTOCK", "anchor": "center", "width": 100},
@@ -545,23 +534,19 @@ class TransactionWindow(ctk.CTkFrame):
             self.tree.heading(col, text=config["text"])
             self.tree.column(col, anchor=config["anchor"], width=config["width"])
 
-        # Add scrollbar
         scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Red.Vertical.TScrollbar")
         self.tree.configure(yscrollcommand=scrollbar.set)
 
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # Event bindings
         parent.bind("<Button-1>", lambda e: self.tree.selection_remove(self.tree.selection()))
         self.tree.bind("<Button-1>", self._on_tree_click)
 
     def _setup_treeview_style(self):
-        """Configure treeview styling"""
         style = ttk.Style()
         style.theme_use("clam")
 
-        # Main treeview style
         style.configure(
             "Transaction.Treeview",
             background=theme.get("card_alt"),
@@ -571,7 +556,6 @@ class TransactionWindow(ctk.CTkFrame):
             rowheight=40
         )
 
-        # Header style
         style.configure(
             "Transaction.Treeview.Heading",
             background=theme.get("heading_bg"),
@@ -579,7 +563,6 @@ class TransactionWindow(ctk.CTkFrame):
             font=("Poppins", 20, "bold")
         )
 
-        # Selection colors based on theme
         if theme.mode == "dark":
             style.map("Transaction.Treeview",
                     background=[("selected", "#4A4A4A")],
@@ -589,11 +572,9 @@ class TransactionWindow(ctk.CTkFrame):
                     background=[("selected", "#D0D0D0")],
                     foreground=[("selected", "#000000")])
 
-        # Header hover
         style.map("Transaction.Treeview.Heading", 
                 background=[("active", theme.get("accent_hover"))])
 
-        # Scrollbar style
         style.configure(
             "Red.Vertical.TScrollbar",
             background=theme.get("primary"),
@@ -613,7 +594,6 @@ class TransactionWindow(ctk.CTkFrame):
         )
 
     def _on_tree_click(self, event):
-        """Handle tree click events"""
         item = self.tree.identify_row(event.y)
         if item:
             self.tree.selection_set(item)
@@ -621,9 +601,7 @@ class TransactionWindow(ctk.CTkFrame):
             self.tree.selection_remove(self.tree.selection())
         return "break"
 
-    # ==================== DATA MANAGEMENT ====================
     def set_details(self, details: Dict[str, Any], main_app):
-        """Set product details and load data"""
         self.details = details
         self.main_app = main_app
         self.srp_var.set(format_price_display(details['price']))
@@ -634,33 +612,40 @@ class TransactionWindow(ctk.CTkFrame):
         self._load_photo()
 
     def _load_transactions(self):
-        """Load and display transaction history"""
         rows = load_transactions_records(self.details)
 
-        # Update headers
         self.header_label.configure(text=create_header_text(self.details))
         self.sub_header_label.configure(text=create_subtitle_text(self.details))
 
-        # Clear and populate tree
         self.tree.delete(*self.tree.get_children())
         summarized = summarize_running_stock(rows)
-        summarized.sort(key=lambda x: datetime.strptime(x[0], "%m/%d/%y"), reverse=True)
+
+        def custom_sort_key(item):
+            dt = datetime.strptime(item[0], "%m/%d/%y")
+            tag = get_transaction_tag(item[1], item[5])
+            tag_priority = {'blue': 0, 'red': 1, 'green': 2}
+            return (dt, tag_priority.get(tag, 99))
+
+        summarized.sort(key=custom_sort_key)
 
         for vals in summarized:
             tag = get_transaction_tag(vals[1], vals[5])
             self.tree.insert("", "end", values=vals, tags=(tag,))
 
+        # Add auto-scroll to bottom to show latest date
+        if self.tree.get_children():
+            last_item = self.tree.get_children()[-1]
+            self.tree.see(last_item)
+
         self._update_stock_display(rows)
 
     def _update_stock_display(self, rows):
-        """Update stock display with current stock level and appropriate color"""
         low, warn = get_thresholds(self.details)
         stock = calculate_current_stock(rows)
         color = get_stock_color(stock, low, warn)
         self.stock_label.configure(text=f"STOCK: {stock}", text_color=color)
 
     def _load_location(self):
-        """Load location and notes data"""
         location, notes = get_location_and_notes(self.details)
         self.location_var.set(location)
         self.notes_var.set(notes)
@@ -939,7 +924,24 @@ class TransactionWindow(ctk.CTkFrame):
             if messagebox.askyesno("Delete Photo", "Are you sure you want to delete this photo?"):
                 try:
                     os.remove(self.image_path)
-                    self._load_photo()
+                    self.image_path = ""  # reset internally
+                    # Directly show placeholder forcing update
+                    self.photo_label.configure(image=None, text="📷")
+                    self.photo_label.image = None
+                    # Optionally destroy and recreate the label
+                    self.photo_label.destroy()
+                    # Recreate photo label widget
+                    photo_frame = self.photo_label.master
+                    self.photo_label = ctk.CTkLabel(
+                        photo_frame,
+                        text="📷",
+                        font=("Poppins", 48),
+                        text_color=theme.get("muted"),
+                        cursor="hand2",
+                        anchor="center"
+                    )
+                    self.photo_label.pack(fill="both", expand=True)
+                    self.photo_label.bind("<Button-1>", self._photo_label_clicked)
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to delete photo: {str(e)}")
 

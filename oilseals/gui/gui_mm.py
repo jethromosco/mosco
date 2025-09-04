@@ -142,7 +142,11 @@ class InventoryApp(ctk.CTkFrame):
 
         # Load bigger logo images
         try:
-            self.logo_img1 = ctk.CTkImage(Image.open(f"{ICON_PATH}\\mosco logo.png"), size=(120, 120))
+            self.logo_img1 = ctk.CTkImage(
+                light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
+                dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"), 
+                size=(120, 120)
+            )
             self.logo_img_text = ctk.CTkImage(
                 light_image=Image.open(f"{ICON_PATH}\\mosco text light.png"),
                 dark_image=Image.open(f"{ICON_PATH}\\mosco text.png"),
@@ -420,7 +424,7 @@ class InventoryApp(ctk.CTkFrame):
             status_frame, 
             text="",
             font=("Poppins", 20),  # Smaller font
-            text_color=theme.get("muted")
+            text_color=theme.get("text")
         )
         self.status_label.pack(side="top")
 
@@ -750,7 +754,7 @@ class InventoryApp(ctk.CTkFrame):
                 self.tree.insert("", tk.END, values=item[:8], tags=(base_tag,))
 
         # Update status
-        self.status_label.configure(text=f"TOTAL OIL SEAL PRODUCTS: {len(display_data)}")
+        self.status_label.configure(text=f"Total Oil Seal Products: {len(display_data)}")
 
     def _apply_tree_tags_theme(self):
         """Apply tag colors for tree rows based on current theme/mode."""
@@ -884,7 +888,7 @@ class InventoryApp(ctk.CTkFrame):
             
             # Update status label
             if hasattr(self, 'status_label'):
-                self.status_label.configure(text_color=theme.get("muted"))
+                self.status_label.configure(text_color=theme.get("text"))
             
             # Re-apply row tag colors for normal/alternate and stock highlights
             if hasattr(self, 'tree'):
