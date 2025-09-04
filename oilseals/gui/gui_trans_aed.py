@@ -16,6 +16,7 @@ class TransactionFormHandler:
         self.tran_tree = treeview
         self.on_refresh_callback = on_refresh_callback
         self.logic = TransactionLogic()
+        self.last_transaction_keys = None  # Store keys for prefill
 
     def add_transaction(self):
         """Open form to add a new transaction"""
@@ -146,7 +147,6 @@ class TransactionFormHandler:
         form.configure(fg_color=theme.get("bg"))
         form.transient(self.parent_frame.winfo_toplevel())
         form.grab_set()
-        form.bind("<Escape>", lambda e: form.destroy())
 
         # Reset per-form widget references for conditional show/hide
         self.field_frames = {}
@@ -176,6 +176,27 @@ class TransactionFormHandler:
         qty_customer_var = tk.StringVar()
         stock_left_var = tk.StringVar()
         price_label_var = tk.StringVar(value="Price:")
+
+        # Prefill unique product keys if adding and we have saved keys
+        if mode == "Add" and self.last_transaction_keys:
+            for key in ["Type", "ID", "OD", "TH", "Brand"]:
+                if key in self.last_transaction_keys:
+                    vars[key].set(self.last_transaction_keys[key])
+
+        # Set up Escape key to clear all fields
+        def on_escape_press(event=None):
+            # Clear all field variables
+            for key in vars:
+                vars[key].set('')
+            date_var.set('')
+            transaction_type_var.set('Sale')
+            qty_restock_var.set('')
+            qty_customer_var.set('')
+            stock_left_var.set('')
+            # Reset transaction type selection visually
+            self.select_transaction_type('Sale')
+            
+        form.bind("<Escape>", on_escape_press)
 
         # Create form sections
         self._create_transaction_type_section(inner_container, transaction_type_var, price_label_var)
@@ -269,8 +290,8 @@ class TransactionFormHandler:
             btn_container,
             text="Sale",
             font=("Poppins", 14, "bold"),
-            fg_color=theme.get("accent"),
-            hover_color=theme.get("accent_hover"),
+            fg_color="#EF4444",  # Start with Sale selected
+            hover_color="#DC2626",
             text_color=theme.get("text"),
             corner_radius=25,
             width=120,
@@ -343,7 +364,6 @@ class TransactionFormHandler:
 
         return entry_widgets
 
-
     def _create_date_field(self, parent, date_var):
         """Create date picker field"""
         date_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -375,7 +395,6 @@ class TransactionFormHandler:
             relief='flat'
         )
         date_entry.pack(expand=True, padx=5, pady=2)
-
 
     def _create_text_field(self, parent, label_text, text_var, form):
         """Create text input field"""
@@ -416,7 +435,6 @@ class TransactionFormHandler:
             entry.bind("<FocusOut>", on_focus_out)
         
         return entry
-
 
     def _create_number_field(self, parent, label_text, text_var, form, field_type, label_var=None):
         """Create number input field"""
@@ -461,7 +479,6 @@ class TransactionFormHandler:
         except Exception:
             pass
         return entry
-
 
     def _setup_transaction_type_behavior(self, transaction_type_var, entry_widgets, 
                                          qty_restock_var, qty_customer_var, stock_left_var, form):
@@ -553,7 +570,6 @@ class TransactionFormHandler:
         transaction_type_var.trace_add("write", on_type_change)
         on_type_change()  # Initial setup
 
-
     def _populate_edit_form(self, vars, date_var, transaction_type_var, 
                             qty_restock_var, qty_customer_var, record):
         """Populate form fields when editing - using the same logic as old working code"""
@@ -592,7 +608,6 @@ class TransactionFormHandler:
             type_str = "Sale"
         
         transaction_type_var.set(type_str)
-
 
     def _create_form_buttons(self, parent, form, mode, vars, date_var, 
                              transaction_type_var, qty_restock_var, qty_customer_var, rowid):
@@ -633,7 +648,6 @@ class TransactionFormHandler:
         save_btn.pack(side="right")
         
         form.bind("<Return>", save_transaction)
-
 
     def _save_transaction(self, form, mode, vars, date_var, transaction_type_var, 
                           qty_restock_var, qty_customer_var, rowid):
@@ -689,6 +703,16 @@ class TransactionFormHandler:
                 success = self.logic.save_transaction(mode, data, rowid)
             
             if success:
+                # Save last keys for prefill (only on successful save)
+                self.last_transaction_keys = {
+                    'Type': form_data['item_type'].strip().upper(),
+                    'ID': form_data['id_size'].strip(),
+                    'OD': form_data['od_size'].strip(),
+                    'TH': form_data['th_size'].strip(),
+                    'Brand': form_data['brand'].strip().upper(),
+                    'Name': form_data['name'].strip().upper(),
+                }
+                
                 if self.on_refresh_callback:
                     self.on_refresh_callback()
                 form.destroy()
@@ -697,7 +721,6 @@ class TransactionFormHandler:
                 
         except Exception as e:
             messagebox.showerror("Invalid", f"Check all fields\n{e}", parent=form)
-
 
     def _add_entry_effects(self, entry):
         """Add hover and focus effects to entry widget"""
@@ -720,7 +743,6 @@ class TransactionFormHandler:
         entry.bind("<FocusIn>", on_entry_focus_in)
         entry.bind("<FocusOut>", on_entry_focus_out)
 
-
     def _force_uppercase(self, var):
         """Force text variable to uppercase"""
         text = var.get()
@@ -728,13 +750,11 @@ class TransactionFormHandler:
         if text != upper_text:
             var.set(upper_text)
 
-
     def _validate_integer(self, new_val):
         """Validate integer input"""
         if new_val == "":
             return True
         return new_val.isdigit()
-
 
     def _validate_float_price(self, new_val):
         """Validate float input for price"""
@@ -747,7 +767,6 @@ class TransactionFormHandler:
             return True
         except ValueError:
             return False
-
 
     def _create_fabrication_section(self, parent, qty_restock_var, qty_customer_var, stock_left_var, form):
         """Create fabrication details section"""

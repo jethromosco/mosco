@@ -6,6 +6,7 @@ from .gui_prod_aed import ProductFormHandler
 from ..admin.products import ProductsLogic
 from theme import theme
 
+
 class AdminPanel:
     def __init__(self, parent, main_app, controller, on_close_callback=None):
         self.main_app = main_app
@@ -49,6 +50,14 @@ class AdminPanel:
         # Subscribe to theme changes to update colors dynamically
         theme.subscribe(self.update_colors)
 
+        # --- Add keyboard shortcut bindings here ---
+        self._bind_shortcuts()
+
+    def _bind_shortcuts(self):
+        root = self.win
+        root.bind("<Control-Key-2>", lambda event: self.prod_form_handler.add_product())
+
+    # --- Rest of your existing methods below ---
 
     def _apply_initial_maximized_state(self):
         """Maximize using the window manager to avoid geometry/titlebar mismatches.
@@ -89,7 +98,6 @@ class AdminPanel:
                     self.win.geometry(f"{screen_w}x{screen_h}+0+0")
             except Exception:
                 pass
-
 
     def _on_unmap_minimize(self, event):
         """When the window is minimized/iconified, shrink and center instead of hiding."""

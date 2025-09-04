@@ -47,6 +47,18 @@ class HomePage(ctk.CTkFrame):
         )
         self.search_entry.place(x=40, y=40)
 
+        root = self.winfo_toplevel()
+        root.bind("<KeyPress-s>", lambda e: self.search_entry.focus_set())
+        root.bind("<KeyPress-S>", lambda e: self.search_entry.focus_set())
+
+        def clear_search(event=None):
+            self.search_entry.delete(0, 'end')
+            self.on_search_change()
+            self.focus_set()
+
+        root.bind("<Escape>", clear_search)
+        root.focus_set()
+
         # Always-uppercase on key release (preserves placeholder)
         self.search_entry.bind("<KeyRelease>", self._caps_and_search)
 

@@ -283,8 +283,7 @@ class TransactionTab:
 
         # Keyboard shortcuts
         root = self.frame.winfo_toplevel()
-        root.bind("<Control-a>", lambda e: self.form_handler.add_transaction())
-        root.bind("<Control-e>", lambda e: self.form_handler.edit_transaction())
+        root.bind("<Control-Key-1>", lambda e: self.form_handler.add_transaction())
         root.bind("<Delete>", lambda e: self.form_handler.delete_transaction())
 
     # ─────────────── transaction logic / refresh / rendering ───────────────
