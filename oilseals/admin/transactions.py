@@ -17,7 +17,11 @@ def parse_date(text):
 
 def parse_date_db(text):
     """Parse date from database YYYY-MM-DD format."""
-    return datetime.strptime(text, "%Y-%m-%d")
+    try:
+        return datetime.strptime(text, "%Y-%m-%d")
+    except ValueError:
+        # Try 'mm/dd/yy' format as fallback
+        return datetime.strptime(text, "%m/%d/%y")
 
 
 def parse_size_component(s: str) -> float:
@@ -82,9 +86,8 @@ class TransactionsLogic:
         cur = conn.cursor()
         cur.execute("""
             SELECT t.rowid, t.date, t.type, t.id_size, t.od_size, t.th_size, t.name, t.quantity, t.price, t.is_restock,
-                p.brand
+                t.brand
             FROM transactions t
-            LEFT JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th AND t.part_no = p.part_no
         """)
         rows = cur.fetchall()
         conn.close()
@@ -95,21 +98,21 @@ class TransactionsLogic:
         """Identify fabrication records (matching restock/sale pairs on same date)."""
         fabrication_records = set()
         
-        # Group records by date and item
+        # Group records by date, item, and brand
         date_item_groups = defaultdict(list)
         for record in records:
-            key = (record.date, record.type, record.id_size, record.od_size, record.th_size, record.name)
+            key = (record.date, record.type, record.id_size, record.od_size, record.th_size, record.brand)
             date_item_groups[key].append(record)
-        
-        # Identify fabrication records (same date, same item, one restock + one sale)
+
+        # Identify fabrication records (same date, same item, same brand, one restock + one sale)
         for key, group_records in date_item_groups.items():
-            if len(group_records) == 2:
-                has_restock = any(r.is_restock == 1 for r in group_records)
-                has_sale = any(r.is_restock == 0 for r in group_records)
-                if has_restock and has_sale:
-                    for record in group_records:
-                        fabrication_records.add(record.rowid)
-        
+            restocks = [r for r in group_records if r.is_restock == 1]
+            sales = [r for r in group_records if r.is_restock == 0]
+            # Only pair if exactly one restock and one sale for same brand
+            if len(restocks) == 1 and len(sales) == 1:
+                fabrication_records.add(restocks[0].rowid)
+                fabrication_records.add(sales[0].rowid)
+
         return fabrication_records
     
     def filter_transactions(self, records, keyword="", restock_filter="All", date_filter=None, fabrication_records=None):

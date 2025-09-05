@@ -65,6 +65,7 @@ BRAND_GROUPS = {
     },
 }
 
+
 def canonicalize_brand(raw_brand):
     """Return (canonical_label, origin) for a given brand string.
     If brand is not recognized, returns (normalized_brand, None).
@@ -165,17 +166,18 @@ def _fetch_all_transactions() -> List[Tuple[Any, ...]]:
     with connect_db() as conn:
         cur = conn.cursor()
         cur.execute(
-            """SELECT type, id_size, od_size, th_size, quantity, is_restock FROM transactions ORDER BY date ASC"""
+            """SELECT type, id_size, od_size, th_size, brand, quantity, is_restock FROM transactions ORDER BY date ASC"""
         )
         rows = cur.fetchall()
     return rows
 
 
 def _compute_stock_map(all_transactions: List[Tuple[Any, ...]]) -> Dict[Tuple[str, str, str, str], int]:
-    stock_map: Dict[Tuple[str, str, str, str], int] = {}
+    stock_map: Dict[Tuple[str, str, str, str, str], int] = {}
     for row in all_transactions:
-        type_, id_raw, od_raw, th_raw, quantity, is_restock = row
-        key = (type_, id_raw, od_raw, th_raw)
+        # Expect: type, id, od, th, brand, quantity, is_restock
+        type_, id_raw, od_raw, th_raw, brand, quantity, is_restock = row
+        key = (type_, id_raw, od_raw, th_raw, str(brand).strip().upper())
         if is_restock == 2:
             stock_map[key] = int(quantity)
         else:
@@ -226,7 +228,8 @@ def build_products_display_data(
     display_data: List[Tuple[Any, ...]] = []
     for row in products:
         type_, id_raw, od_raw, th_raw, brand, part_no, origin, notes, price = row
-        qty = stock_map.get((type_, id_raw, od_raw, th_raw), 0)
+        key = (type_, id_raw, od_raw, th_raw, str(brand).strip().upper())
+        qty = stock_map.get(key, 0)
         if not stock_filter_matches(qty, stock_filter):
             continue
         size_str = f"{format_display_value(id_raw)}×{format_display_value(od_raw)}×{format_display_value(th_raw)}"
@@ -282,7 +285,7 @@ def create_product_details(item_values: List[Any]) -> Dict[str, Any]:
         "id": id_,
         "od": od,
         "th": th,
-        "brand": item_values[2],
+        "brand": str(item_values[2]).strip().upper(),
         "part_no": item_values[3],
         "country_of_origin": item_values[4],
         "notes": item_values[5],

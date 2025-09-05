@@ -16,13 +16,12 @@ def load_transactions_records(details: Dict[str, Any]) -> List[Tuple[Any, ...]]:
         cur = conn.cursor()
         cur.execute(
             """
-                SELECT t.date, t.name, t.quantity, t.price, t.is_restock, p.brand
+                SELECT t.date, t.name, t.quantity, t.price, t.is_restock, t.brand
                 FROM transactions t
-                JOIN products p ON t.type = p.type AND t.id_size = p.id AND t.od_size = p.od AND t.th_size = p.th
-                WHERE t.type=? AND t.id_size=? AND t.od_size=? AND t.th_size=?
+                WHERE t.type=? AND t.id_size=? AND t.od_size=? AND t.th_size=? AND t.brand=?
                 ORDER BY t.date ASC
             """,
-            (details["type"], details["id"], details["od"], details["th"]),
+            (details["type"], details["id"], details["od"], details["th"], details["brand"]),
         )
         rows = cur.fetchall()
     return rows
@@ -50,9 +49,9 @@ def get_location_and_notes(details: Dict[str, Any]) -> Tuple[str, str]:
         cur.execute(
             """
                 SELECT location, notes FROM products
-                WHERE type=? AND id=? AND od=? AND th=? AND part_no=?
+                WHERE type=? AND id=? AND od=? AND th=? AND brand=?
             """,
-            (details["type"], details["id"], details["od"], details["th"], details["part_no"]),
+            (details["type"], details["id"], details["od"], details["th"], details["brand"]),
         )
         row = cur.fetchone()
     if not row:
@@ -67,9 +66,9 @@ def update_location(details: Dict[str, Any], new_location: str) -> None:
         cur.execute(
             """
                 UPDATE products SET location=?
-                WHERE type=? AND id=? AND od=? AND th=? AND part_no=?
+                WHERE type=? AND id=? AND od=? AND th=? AND brand=?
             """,
-            (new_location.strip(), details["type"], details["id"], details["od"], details["th"], details["part_no"]),
+            (new_location.strip(), details["type"], details["id"], details["od"], details["th"], details["brand"]),
         )
         conn.commit()
 
@@ -81,9 +80,9 @@ def update_price(details: Dict[str, Any], new_price: float) -> None:
         cur.execute(
             """
                 UPDATE products SET price=?
-                WHERE type=? AND id=? AND od=? AND th=? AND part_no=?
+                WHERE type=? AND id=? AND od=? AND th=? AND brand=?
             """,
-            (new_price, details["type"], details["id"], details["od"], details["th"], details["part_no"]),
+            (new_price, details["type"], details["id"], details["od"], details["th"], details["brand"]),
         )
         conn.commit()
 
@@ -95,9 +94,9 @@ def update_notes(details: Dict[str, Any], new_notes: str) -> None:
         cur.execute(
             """
                 UPDATE products SET notes=?
-                WHERE type=? AND id=? AND od=? AND th=? AND part_no=?
+                WHERE type=? AND id=? AND od=? AND th=? AND brand=?
             """,
-            (new_notes.strip(), details["type"], details["id"], details["od"], details["th"], details["part_no"]),
+            (new_notes.strip(), details["type"], details["id"], details["od"], details["th"], details["brand"]),
         )
         conn.commit()
 
@@ -109,9 +108,9 @@ def update_thresholds(details: Dict[str, Any], low: int, warn: int) -> None:
         cur.execute(
             """
                 UPDATE products SET low_threshold=?, warn_threshold=?
-                WHERE type=? AND id=? AND od=? AND th=? AND part_no=?
+                WHERE type=? AND id=? AND od=? AND th=? AND brand=?
             """,
-            (low, warn, details["type"], details["id"], details["od"], details["th"], details["part_no"]),
+            (low, warn, details["type"], details["id"], details["od"], details["th"], details["brand"]),
         )
         conn.commit()
 
@@ -126,7 +125,12 @@ def summarize_running_stock(rows: List[Tuple[Any, ...]]) -> List[Tuple[str, Any,
             running_stock = int(qty)
         else:
             running_stock += int(qty)
-        date_str = datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%y")
+        # Always display date in mm/dd/yy format, regardless of input
+        try:
+            date_obj = datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            date_obj = datetime.strptime(date, "%m/%d/%y")
+        date_str = date_obj.strftime("%m/%d/%y")
         qty_restock = ""
         cost_str = ""
         price_str = ""
@@ -134,11 +138,18 @@ def summarize_running_stock(rows: List[Tuple[Any, ...]]) -> List[Tuple[str, Any,
 
         if is_restock == 1:
             qty_restock = qty
-            cost_value = float(cost)
+            try:
+                cost_value = float(cost) if cost is not None else 0.0
+            except (ValueError, TypeError):
+                cost_value = 0.0
             cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
         elif is_restock == 0:
             display_qty = abs(int(qty))
-            price_str = f"₱{float(cost):.2f}"
+            try:
+                price_val = float(cost) if cost is not None else 0.0
+            except (ValueError, TypeError):
+                price_val = 0.0
+            price_str = f"₱{price_val:.2f}"
 
         result.append((date_str, qty_restock, cost_str, name, display_qty, price_str, running_stock))
     return list(reversed(result))
