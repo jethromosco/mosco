@@ -520,13 +520,13 @@ class TransactionWindow(ctk.CTkFrame):
             self.tree.tag_configure(color, foreground=value, font=("Poppins", 18))
 
         column_config = {
-            "date": {"text": "DATE", "anchor": "center", "width": 90},
+            "date": {"text": "DATE", "anchor": "center", "width": 60},
             "qty_restock": {"text": "QTY RESTOCK", "anchor": "center", "width": 100},
-            "cost": {"text": "COST", "anchor": "center", "width": 80},
-            "name": {"text": "NAME", "anchor": "w", "width": 200},
-            "qty": {"text": "QTY SOLD", "anchor": "center", "width": 80},
-            "price": {"text": "PRICE", "anchor": "center", "width": 80},
-            "stock": {"text": "STOCK", "anchor": "center", "width": 80},
+            "cost": {"text": "COST", "anchor": "center", "width": 70},
+            "name": {"text": "NAME", "anchor": "w", "width": 600},
+            "qty": {"text": "QTY SOLD", "anchor": "center", "width": 60},
+            "price": {"text": "PRICE", "anchor": "center", "width": 70},
+            "stock": {"text": "STOCK", "anchor": "center", "width": 50},
         }
 
         for col in columns:

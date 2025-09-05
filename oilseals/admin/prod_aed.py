@@ -68,7 +68,7 @@ class ProductFormLogic:
 		# TYPE and BRAND: uppercase letters only
 		type_idx = self.FIELDS.index("TYPE")
 		brand_idx = self.FIELDS.index("BRAND")
-		formatted_data[type_idx] = ''.join(filter(str.isalpha, data[type_idx])).upper()
+		formatted_data[type_idx] = data[type_idx].upper()
 		formatted_data[brand_idx] = ''.join(filter(str.isalpha, data[brand_idx])).upper()
 		
 		# ORIGIN: capitalize

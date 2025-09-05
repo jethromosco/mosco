@@ -6,13 +6,23 @@ BRAND_GROUPS = {
 	},
 	"TAIWAN": {
 		"LABEL": "T.Y.",
-		"BRANDS": {"NQK", "SOG", "CHO", "NAK", "TTO", "PHLE", "SKF", "N/B", "ERIKS"},
+		"BRANDS": {"NQK", "SOG", "CHO", "NAK", "TTO", "PHLE", "SKF", "N/B", "ERIKS", "FOS", "TAIWAN", "SFK", "KOK"},
 		"ORIGIN": "Taiwan",
 	},
 	"PHILIPPINES": {
 		"LABEL": "MOS",
-		"BRANDS": {"MOS"},
+		"BRANDS": {"MOS", "MS"},
 		"ORIGIN": "Philippines",
+	},
+	"USA": {
+		"LABEL": "NAT",
+		"BRANDS": {"NAT"},
+		"ORIGIN": "U.S.",
+	},
+	"SWEDEN": {
+		"LABEL": "STEFA",
+		"BRANDS": {"STEFA"},
+		"ORIGIN": "Sweden",
 	},
 }
 

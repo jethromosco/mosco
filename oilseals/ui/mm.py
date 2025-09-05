@@ -5,21 +5,31 @@ LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
 
 BRAND_GROUPS = {
-    "JAPAN": {
-        "LABEL": "NOK",
-        "BRANDS": {"NOK", "NTC"},
-        "ORIGIN": "Japan",
-    },
-    "TAIWAN": {
-        "LABEL": "T.Y.",
-        "BRANDS": {"NQK", "SOG", "CHO", "NAK", "TTO", "PHLE", "SKF", "N/B", "ERIKS"},
-        "ORIGIN": "Taiwan",
-    },
-    "PHILIPPINES": {
-        "LABEL": "MOS",
-        "BRANDS": {"MOS"},
-        "ORIGIN": "Philippines",
-    },
+	"JAPAN": {
+		"LABEL": "NOK",
+		"BRANDS": {"NOK", "NTC"},
+		"ORIGIN": "Japan",
+	},
+	"TAIWAN": {
+		"LABEL": "T.Y.",
+		"BRANDS": {"NQK", "SOG", "CHO", "NAK", "TTO", "PHLE", "SKF", "N/B", "ERIKS", "FOS", "TAIWAN", "SFK", "KOK"},
+		"ORIGIN": "Taiwan",
+	},
+	"PHILIPPINES": {
+		"LABEL": "MOS",
+		"BRANDS": {"MOS", "MS"},
+		"ORIGIN": "Philippines",
+	},
+	"USA": {
+		"LABEL": "NAT",
+		"BRANDS": {"NAT"},
+		"ORIGIN": "U.S.",
+	},
+	"SWEDEN": {
+		"LABEL": "STEFA",
+		"BRANDS": {"STEFA"},
+		"ORIGIN": "Sweden",
+	},
 }
 
 def canonicalize_brand(raw_brand):
