@@ -424,3 +424,26 @@ class TransactionLogic:
             return True
         except Exception:
             return False
+def _normalize_number_for_db(val):
+    """
+    Normalize a number or fraction string for DB comparison.
+    Converts '8', '8.0', '8 1/2', '1/2' to a consistent string.
+    """
+    if val is None:
+        return None
+    val = str(val).strip()
+    try:
+        # Handle mixed fractions like '8 1/2'
+        if ' ' in val and '/' in val:
+            whole, frac = val.split(' ')
+            val = float(whole) + float(Fraction(frac))
+        elif '/' in val:
+            val = float(Fraction(val))
+        else:
+            val = float(val)
+        # Remove trailing .0 for whole numbers
+        if val == int(val):
+            return str(int(val))
+        return str(val)
+    except Exception:
+        return val  # fallback: return as-is if can't parse
