@@ -52,16 +52,16 @@ BRAND_GROUPS = {
             "BRANDS": {"STEFA"},
             "ORIGIN": "Sweden",
         },
-        "ELRING": {
-            "LABEL": "ELRING",
-            "BRANDS": {"ELRING"},
-            "ORIGIN": "Sweden",
-        },
     },
     "GERMANY": {
         "KACO": {
             "LABEL": "KACO",
             "BRANDS": {"KACO"},
+            "ORIGIN": "Germany",
+        },
+        "ELRING": {
+            "LABEL": "ELRING",
+            "BRANDS": {"ELRING"},
             "ORIGIN": "Germany",
         },
     },
