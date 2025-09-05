@@ -76,3 +76,6 @@ if __name__ == "__main__":
 
 # PRIORITY: KB SHORTCUTS SA ADMIN /
 # ALSO: TULOY TULOY NA PAGADD SA IISANG ITEM PARA DI NA TYPE NG TYPE NG UNIQE ID /
+
+# 8 22 7 burahin lahat nasira database
+# gawing brand imbes na part no. sa lahat

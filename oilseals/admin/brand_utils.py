@@ -1,10 +1,10 @@
 BRAND_GROUPS = {
-    "JAPAN": {
+    "NOK_JAPAN": {
         "LABEL": "NOK",
         "BRANDS": {"NOK", "NTC"},
         "ORIGIN": "Japan",
     },
-    "TAIWAN": {
+    "TY_TAIWAN": {
         "LABEL": "T.Y.",
         "BRANDS": {
             "NQK", "SOG", "CHO", "NAK", "TTO", "PHLE", "SKF",
@@ -12,58 +12,50 @@ BRAND_GROUPS = {
         },
         "ORIGIN": "Taiwan",
     },
-    "PHILIPPINES": {
-        "MOS": {
-            "LABEL": "MOS",
-            "BRANDS": {"MOS"},
-            "ORIGIN": "Philippines",
-        },
-        "MX": {
-            "LABEL": "MX",
-            "BRANDS": {"MX"},
-            "ORIGIN": "Philippines",
-        },
-        "JW": {
-            "LABEL": "JW",
-            "BRANDS": {"JW"},
-            "ORIGIN": "Philippines",
-        },
-        "MS": {
-            "LABEL": "MS",
-            "BRANDS": {"MS"},
-            "ORIGIN": "Philippines",
-        },
+    "MOS_PHILIPPINES": {
+        "LABEL": "MOS",
+        "BRANDS": {"MOS"},
+        "ORIGIN": "Philippines",
     },
-    "USA": {
-        "NAT": {
-            "LABEL": "NAT",
-            "BRANDS": {"NAT"},
-            "ORIGIN": "U.S.",
-        },
-        "CR": {
-            "LABEL": "CR",
-            "BRANDS": {"CR"},
-            "ORIGIN": "U.S.",
-        },
+    "MX_PHILIPPINES": {
+        "LABEL": "MX",
+        "BRANDS": {"MX"},
+        "ORIGIN": "Philippines",
     },
-    "SWEDEN": {
-        "STEFA": {
-            "LABEL": "STEFA",
-            "BRANDS": {"STEFA"},
-            "ORIGIN": "Sweden",
-        },
+    "JW_PHILIPPINES": {
+        "LABEL": "JW",
+        "BRANDS": {"JW"},
+        "ORIGIN": "Philippines",
     },
-    "GERMANY": {
-        "KACO": {
-            "LABEL": "KACO",
-            "BRANDS": {"KACO"},
-            "ORIGIN": "Germany",
-        },
-        "ELRING": {
-            "LABEL": "ELRING",
-            "BRANDS": {"ELRING"},
-            "ORIGIN": "Germany",
-        },
+    "MS_PHILIPPINES": {
+        "LABEL": "MS",
+        "BRANDS": {"MS"},
+        "ORIGIN": "Philippines",
+    },
+    "NAT_USA": {
+        "LABEL": "NAT",
+        "BRANDS": {"NAT"},
+        "ORIGIN": "U.S.",
+    },
+    "CR_USA": {
+        "LABEL": "CR",
+        "BRANDS": {"CR"},
+        "ORIGIN": "U.S.",
+    },
+    "STEFA_SWEDEN": {
+        "LABEL": "STEFA",
+        "BRANDS": {"STEFA"},
+        "ORIGIN": "Sweden",
+    },
+    "KACO_GERMANY": {
+        "LABEL": "KACO",
+        "BRANDS": {"KACO"},
+        "ORIGIN": "Germany",
+    },
+    "ELRING_GERMANY": {
+        "LABEL": "ELRING",
+        "BRANDS": {"ELRING"},
+        "ORIGIN": "Germany",
     },
 }
 
