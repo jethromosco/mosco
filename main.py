@@ -64,6 +64,10 @@ if __name__ == "__main__":
 # TODO: Implement exact search for ID, OD, TH, and PART NO. fields ///
 # TODO: Improve mm-to-inch converter for thickness fields (e.g., 9/10 → 0.354/0.394) ///
 # TODO: Add clear filters button in the UI /
+# PRIORITY: KB SHORTCUTS SA ADMIN /
+# ALSO: TULOY TULOY NA PAGADD SA IISANG ITEM PARA DI NA TYPE NG TYPE NG UNIQE ID /
+# 8 22 7 burahin lahat nasira database /
+# gawing brand imbes na part no. sa lahat /
 
 # TODO: Add user-friendly error messages and input validation di na masyado important --
 # Problems: UI admin modal consistency, centering srp stockleft(di masyado halata)
@@ -74,8 +78,10 @@ if __name__ == "__main__":
 # also di rin makaadd photo kapag di ok sa / id od
 # C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
 
-# PRIORITY: KB SHORTCUTS SA ADMIN /
-# ALSO: TULOY TULOY NA PAGADD SA IISANG ITEM PARA DI NA TYPE NG TYPE NG UNIQE ID /
-
-# 8 22 7 burahin lahat nasira database
-# gawing brand imbes na part no. sa lahat
+#PRIORITY:
+# JO FAB - nagbbug yung edit, even sa actual minsan di sure pano nattrigger
+# pag nagkamali ng format ng date nagbbug? check sa lahat
+# still admin sa transactions GUI
+# check edit minsan hindi gumagana di rin sure pano nattrigger
+# admin btn - kb shortcut
+# alt tab function
