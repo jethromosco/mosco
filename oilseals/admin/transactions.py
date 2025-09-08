@@ -20,8 +20,12 @@ def parse_date_db(text):
     try:
         return datetime.strptime(text, "%Y-%m-%d")
     except ValueError:
-        # Try 'mm/dd/yy' format as fallback
-        return datetime.strptime(text, "%m/%d/%y")
+        try:
+            return datetime.strptime(text, "%m/%d/%y")
+        except ValueError:
+            # Log the error or handle it gracefully
+            print(f"Invalid date format: {text}")
+            return None
 
 
 def parse_size_component(s: str) -> float:
@@ -182,7 +186,11 @@ class TransactionsLogic:
         if record.brand:
             item_str += f" {record.brand}"
         
-        formatted_date = parse_date_db(record.date).strftime("%m/%d/%y")
+        formatted_date = parse_date_db(record.date)
+        if formatted_date:
+            formatted_date = formatted_date.strftime("%m/%d/%y")
+        else:
+            formatted_date = "Invalid Date"
         
         cost = ""
         price_str = ""
