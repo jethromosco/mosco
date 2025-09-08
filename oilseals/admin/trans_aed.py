@@ -397,6 +397,11 @@ class TransactionLogic:
         try:
             conn = connect_db()
             cur = conn.cursor()
+
+            # Normalize the brand using canonicalize_brand
+            canonical_brand, _ = canonicalize_brand(data['brand'])
+            data['brand'] = canonical_brand
+
             if mode == "Add":
                 cur.execute(
                     """
