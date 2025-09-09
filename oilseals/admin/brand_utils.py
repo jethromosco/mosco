@@ -20,7 +20,7 @@ BRAND_GROUPS = {
     "MX_PHILIPPINES": {
         "LABEL": "MX",
         "BRANDS": {"MX"},
-        "ORIGIN": "Philippines",
+        "ORIGIN": "Local",
     },
     "JW_PHILIPPINES": {
         "LABEL": "JW",
