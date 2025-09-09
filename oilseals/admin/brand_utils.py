@@ -15,7 +15,7 @@ BRAND_GROUPS = {
     "MOS_PHILIPPINES": {
         "LABEL": "MOS",
         "BRANDS": {"MOS"},
-        "ORIGIN": "Philippines",
+        "ORIGIN": "(fab.)",
     },
     "MX_PHILIPPINES": {
         "LABEL": "MX",
@@ -25,12 +25,12 @@ BRAND_GROUPS = {
     "JW_PHILIPPINES": {
         "LABEL": "JW",
         "BRANDS": {"JW"},
-        "ORIGIN": "Philippines",
+        "ORIGIN": "Local",
     },
     "MS_PHILIPPINES": {
         "LABEL": "MS",
         "BRANDS": {"MS"},
-        "ORIGIN": "Philippines",
+        "ORIGIN": "Local",
     },
     "NAT_USA": {
         "LABEL": "NAT",
