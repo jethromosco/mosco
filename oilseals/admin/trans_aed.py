@@ -3,6 +3,7 @@ from ..database import connect_db
 from .brand_utils import canonicalize_brand
 import re
 from fractions import Fraction
+import os
 
 
 def center_window(win, width, height):
@@ -429,26 +430,57 @@ class TransactionLogic:
             return True
         except Exception:
             return False
+def sanitize_dimension_for_filename(value):
+    """
+    Replace slashes in dimension values (e.g., ID, OD, TH) with 'x' for safe filenames.
+    Handles complex cases like '1/2 - 2 - 3/4'.
+    """
+    if value is None:
+        return ""
+    # Replace all slashes with 'x'
+    return str(value).replace("/", "x")
+
+
 def _normalize_number_for_db(val):
     """
     Normalize a number or fraction string for DB comparison.
-    Converts '8', '8.0', '8 1/2', '1/2' to a consistent string.
+    Handles complex cases like '1/2 - 2 - 3/4'.
     """
     if val is None:
         return None
     val = str(val).strip()
     try:
-        # Handle mixed fractions like '8 1/2'
-        if ' ' in val and '/' in val:
-            whole, frac = val.split(' ')
-            val = float(whole) + float(Fraction(frac))
-        elif '/' in val:
-            val = float(Fraction(val))
-        else:
-            val = float(val)
-        # Remove trailing .0 for whole numbers
-        if val == int(val):
-            return str(int(val))
-        return str(val)
+        # Split the value by delimiters like '-' and normalize each part
+        parts = [part.strip() for part in re.split(r'[-]', val)]
+        normalized_parts = []
+        for part in parts:
+            if ' ' in part and '/' in part:  # Handle mixed fractions like '8 1/2'
+                whole, frac = part.split(' ')
+                normalized_parts.append(str(float(whole) + float(Fraction(frac))))
+            elif '/' in part:  # Handle simple fractions like '1/2'
+                normalized_parts.append(str(float(Fraction(part))))
+            else:  # Handle whole numbers or decimals
+                normalized_parts.append(str(float(part)))
+        return " - ".join(normalized_parts)  # Rejoin the normalized parts
     except Exception:
         return val  # fallback: return as-is if can't parse
+
+
+def save_photo_with_dimensions(id_size, od_size, th_size, photo_path):
+    """
+    Save a photo with sanitized dimensions in the filename.
+    """
+    try:
+        sanitized_id = sanitize_dimension_for_filename(id_size)
+        sanitized_od = sanitize_dimension_for_filename(od_size)
+        sanitized_th = sanitize_dimension_for_filename(th_size)
+
+        # Construct the filename using sanitized dimensions
+        filename = f"photo_{sanitized_id}_{sanitized_od}_{sanitized_th}.jpg"
+        # Save the photo (pseudo-code, replace with actual saving logic)
+        save_path = os.path.join(photo_path, filename)
+        # ... logic to save the photo to save_path ...
+        return save_path
+    except Exception as e:
+        print(f"Error saving photo: {e}")
+        return None

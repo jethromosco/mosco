@@ -3,6 +3,7 @@ from datetime import datetime
 import os
 from PIL import Image
 from ..database import connect_db
+from ..admin.trans_aed import sanitize_dimension_for_filename
 
 
 def get_existing_image_base(details: Dict[str, Any]) -> str:
@@ -226,16 +227,20 @@ def get_photos_directory() -> str:
 
 
 def get_photo_path_by_type(details: Dict[str, Any]) -> str:
-    """Get photo path based on product type and brand"""
+    """
+    Get photo path based on product type and brand, ensuring dimensions are sanitized.
+    """
     photos_dir = get_photos_directory()
-    
+
+    # Sanitize dimensions
+    safe_id = sanitize_dimension_for_filename(details['id'])
+    safe_od = sanitize_dimension_for_filename(details['od'])
+    safe_th = sanitize_dimension_for_filename(details['th'])
+    safe_brand = details['brand'].replace('/', 'x').replace(' ', '_')
+
     if details["brand"].upper() == "MOS":
-        if 'brand' not in details:
-            return ""
-        safe_th = details['th'].replace('/', 'x')
-        safe_brand = details['brand'].replace('/', 'x').replace(' ', '_')
         for ext in [".jpg", ".jpeg", ".png"]:
-            path = os.path.join(photos_dir, f"{details['type']}-{details['id']}-{details['od']}-{safe_th}-{safe_brand}{ext}")
+            path = os.path.join(photos_dir, f"{details['type']}-{safe_id}-{safe_od}-{safe_th}-{safe_brand}{ext}")
             if os.path.exists(path):
                 return path
         return ""
@@ -257,10 +262,14 @@ def validate_image_file(file_path: str) -> bool:
 
 
 def create_safe_filename(details: Dict[str, Any], extension: str) -> str:
-    """Create safe filename for photo storage"""
-    safe_th = details['th'].replace('/', 'x')
+    """
+    Create safe filename for photo storage, ensuring dimensions are sanitized.
+    """
+    safe_id = sanitize_dimension_for_filename(details['id'])
+    safe_od = sanitize_dimension_for_filename(details['od'])
+    safe_th = sanitize_dimension_for_filename(details['th'])
     safe_brand = details['brand'].replace('/', 'x').replace(' ', '_')
-    return f"{details['type']}-{details['id']}-{details['od']}-{safe_th}-{safe_brand}{extension}"
+    return f"{details['type']}-{safe_id}-{safe_od}-{safe_th}-{safe_brand}{extension}"
 
 
 def compress_and_save_image(source_path: str, target_path: str, max_size_mb: int = 5) -> bool:

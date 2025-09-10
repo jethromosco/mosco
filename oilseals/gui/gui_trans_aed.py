@@ -151,6 +151,7 @@ class TransactionFormHandler:
         # Reset per-form widget references for conditional show/hide
         self.field_frames = {}
         self.fab_section = None
+        self.first_entry = None  # Initialize first entry reference
 
         # Main containers
         container = ctk.CTkFrame(form, fg_color=theme.get("card"), corner_radius=40)
@@ -183,40 +184,70 @@ class TransactionFormHandler:
                 if key in self.last_transaction_keys:
                     vars[key].set(self.last_transaction_keys[key])
 
-        # Set up Escape key to clear all fields
+        # Set up Escape key to close the form
         def on_escape_press(event=None):
-            # Clear all field variables
-            for key in vars:
-                vars[key].set('')
-            date_var.set('')
-            transaction_type_var.set('Sale')
-            qty_restock_var.set('')
-            qty_customer_var.set('')
-            stock_left_var.set('')
-            # Reset transaction type selection visually
-            self.select_transaction_type('Sale')
+            form.destroy()
             
         form.bind("<Escape>", on_escape_press)
+
+        # Set up Ctrl+Tab for cycling through transaction types
+        def cycle_transaction_type(event=None):
+            current_type = transaction_type_var.get()
+            type_order = ["Sale", "Actual", "Fabrication", "Restock"]
+            
+            try:
+                current_index = type_order.index(current_type)
+                next_index = (current_index + 1) % len(type_order)
+                next_type = type_order[next_index]
+                self.select_transaction_type(next_type)
+            except ValueError:
+                # If current type is not found, default to first type
+                self.select_transaction_type("Sale")
+            
+            # Prevent default Tab behavior
+            return "break"
+        
+        # Bind Ctrl+Tab to cycle transaction types
+        form.bind("<Control-Tab>", cycle_transaction_type)
+        
+        # Also bind Ctrl+Shift+Tab for reverse cycling (optional)
+        def reverse_cycle_transaction_type(event=None):
+            current_type = transaction_type_var.get()
+            type_order = ["Sale", "Actual", "Fabrication", "Restock"]
+            
+            try:
+                current_index = type_order.index(current_type)
+                prev_index = (current_index - 1) % len(type_order)
+                prev_type = type_order[prev_index]
+                self.select_transaction_type(prev_type)
+            except ValueError:
+                # If current type is not found, default to last type
+                self.select_transaction_type("Restock")
+            
+            # Prevent default Tab behavior
+            return "break"
+        
+        form.bind("<Control-Shift-Tab>", reverse_cycle_transaction_type)
 
         # Create form sections
         self._create_transaction_type_section(inner_container, transaction_type_var, price_label_var)
         entry_widgets = self._create_fields_section(inner_container, vars, date_var, form, price_label_var)
         self._create_fabrication_section(inner_container, qty_restock_var, qty_customer_var,
-                                         stock_left_var, form)
+                                        stock_left_var, form)
 
         # Set up transaction type behavior
         self._setup_transaction_type_behavior(transaction_type_var, entry_widgets,
-                                              qty_restock_var, qty_customer_var,
-                                              stock_left_var, form)
+                                            qty_restock_var, qty_customer_var,
+                                            stock_left_var, form)
 
         # Populate form for editing
         if mode == "Edit" and record:
             self._populate_edit_form(vars, date_var, transaction_type_var,
-                                     qty_restock_var, qty_customer_var, record)
+                                    qty_restock_var, qty_customer_var, record)
 
         # Create buttons
         self._create_form_buttons(inner_container, form, mode, vars, date_var,
-                                  transaction_type_var, qty_restock_var, qty_customer_var, rowid)
+                                transaction_type_var, qty_restock_var, qty_customer_var, rowid)
 
         # Show form
         form.update_idletasks()
@@ -224,6 +255,10 @@ class TransactionFormHandler:
         h = form.winfo_reqheight()
         center_window(form, w, h)
         form.deiconify()
+        
+        # Auto-focus on the first entry field (date field) after everything is set up
+        form.after(50, lambda: self.first_entry.focus_set() if self.first_entry else None)
+        
         form.focus_force()
         form.lift()
 
@@ -336,7 +371,7 @@ class TransactionFormHandler:
         fields_section.pack(fill="x", pady=(0, 20))
 
         # Date field
-        self._create_date_field(fields_section, date_var)
+        self.first_entry = self._create_date_field(fields_section, date_var)
 
         # Text fields
         fields = [
@@ -365,7 +400,7 @@ class TransactionFormHandler:
         return entry_widgets
 
     def _create_date_field(self, parent, date_var):
-        """Create date picker field"""
+        """Create date picker field with manual entry capability and no default date"""
         date_frame = ctk.CTkFrame(parent, fg_color="transparent")
         date_frame.pack(fill="x", pady=8)
         date_frame.grid_columnconfigure(1, weight=1)
@@ -380,21 +415,37 @@ class TransactionFormHandler:
         )
         date_label.grid(row=0, column=0, sticky="w", padx=(0, 15))
         
-        date_picker_frame = ctk.CTkFrame(date_frame, fg_color=theme.get("input"), corner_radius=20, height=35)
-        date_picker_frame.grid(row=0, column=1, sticky="ew")
-        date_picker_frame.pack_propagate(False)
-        
-        date_entry = DateEntry(
-            date_picker_frame,
+        # Use a regular CTkEntry instead of DateEntry for better typing experience
+        date_entry = ctk.CTkEntry(
+            date_frame,
             textvariable=date_var,
-            date_pattern="mm/dd/yy",
-            width=12,
-            background=theme.get("input"),
-            foreground=theme.get("text"),
-            borderwidth=0,
-            relief='flat'
+            font=("Poppins", 13),
+            fg_color=theme.get("input"),
+            text_color=theme.get("text"),
+            corner_radius=20,
+            height=35,
+            border_width=1,
+            border_color=theme.get("border"),
+            placeholder_text="mm/dd/yy"
         )
-        date_entry.pack(expand=True, padx=5, pady=2)
+        date_entry.grid(row=0, column=1, sticky="ew")
+        
+        # Add hover and focus effects
+        self._add_entry_effects(date_entry)
+        
+        # Validate date format as user types
+        def validate_date_format(new_val):
+            if new_val == "":
+                return True
+            # Allow partial typing: 1, 12, 12/, 12/3, 12/31, 12/31/, 12/31/2, 12/31/23
+            if re.match(r'^\d{0,2}(/\d{0,2}(/\d{0,2})?)?$', new_val):
+                return True
+            return False
+        
+        vcmd = (parent.register(validate_date_format), '%P')
+        date_entry.configure(validate='key', validatecommand=vcmd)
+        
+        return date_entry
 
     def _create_text_field(self, parent, label_text, text_var, form):
         """Create text input field"""

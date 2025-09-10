@@ -54,8 +54,35 @@ class AdminPanel:
         self._bind_shortcuts()
 
     def _bind_shortcuts(self):
+        """Bind keyboard shortcuts for the admin panel"""
         root = self.win
+        
+        # Existing shortcut
         root.bind("<Control-Key-2>", lambda event: self.prod_form_handler.add_product())
+        
+        # Add Ctrl+Tab for switching between tabs
+        root.bind("<Control-Tab>", self._cycle_tabs)
+        root.bind("<Control-Shift-Tab>", self._reverse_cycle_tabs)
+
+    def _cycle_tabs(self, event=None):
+        """Cycle forward through tabs (Products → Transactions → Products...)"""
+        if self.current_tab == "products":
+            self.switch_tab("transactions")
+        else:
+            self.switch_tab("products")
+        
+        # Prevent default Tab behavior
+        return "break"
+
+    def _reverse_cycle_tabs(self, event=None):
+        """Cycle backward through tabs (same as forward since only 2 tabs)"""
+        if self.current_tab == "products":
+            self.switch_tab("transactions")
+        else:
+            self.switch_tab("products")
+        
+        # Prevent default Tab behavior
+        return "break"
 
     # --- Rest of your existing methods below ---
 

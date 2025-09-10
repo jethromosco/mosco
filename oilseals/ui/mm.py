@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple, Any
 from ..database import connect_db
+import tkinter as tk
 
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0

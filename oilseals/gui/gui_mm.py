@@ -54,6 +54,8 @@ class InventoryApp(ctk.CTkFrame):
         """Setup keyboard bindings"""
         self.root.bind("<Escape>", lambda e: self.clear_filters())
         self.root.bind("<Return>", lambda e: self.remove_focus())
+        # Add Ctrl+2 shortcut for admin access
+        self.root.bind("<Control-Key-2>", lambda e: self.open_admin_panel())
         # Bind window resize to update button positions
         self.bind("<Configure>", self.on_window_resize)
 

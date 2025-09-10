@@ -72,16 +72,16 @@ if __name__ == "__main__":
 # TODO: Add user-friendly error messages and input validation di na masyado important --
 # Problems: UI admin modal consistency, centering srp stockleft(di masyado halata)
 # Add README.md and requirements.txt for project documentation and setup
-# nat sog sa nat card ilagay
+# nat sog sa nat card ilagay /
 # di sure if nagaapply ang fonts
-# pag merong / sa id od mali sa table
-# also di rin makaadd photo kapag di ok sa / id od
+# pag merong / sa id od mali sa table /
+# also di rin makaadd photo kapag di ok sa / id od /
 # C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
 
 #PRIORITY:
 # JO FAB - nagbbug yung edit, even sa actual minsan di sure pano nattrigger
-# pag nagkamali ng format ng date nagbbug? check sa lahat
+# pag nagkamali ng format ng date nagbbug? check sa lahat /
 # still admin sa transactions GUI
 # check edit minsan hindi gumagana di rin sure pano nattrigger
-# admin btn - kb shortcut
-# alt tab function
+# admin btn - kb shortcut /
+# alt tab function /

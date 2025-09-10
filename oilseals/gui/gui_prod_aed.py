@@ -219,6 +219,8 @@ class ProductFormHandler:
         form_fields_frame.pack(fill="x", pady=(0, 25))
 
         entries = {}
+        first_entry = None  # Keep track of the first entry for auto-focus
+        
         for idx, field in enumerate(self.logic.FIELDS):
             field_frame = ctk.CTkFrame(form_fields_frame, fg_color="transparent")
             field_frame.pack(fill="x", pady=8)
@@ -247,6 +249,10 @@ class ProductFormHandler:
             )
             entry.grid(row=0, column=1, sticky="ew")
             entries[field] = entry
+            
+            # Store the first entry for auto-focus
+            if first_entry is None:
+                first_entry = entry
             
             # Add hover and focus effects
             self._add_entry_effects(entry)
@@ -313,6 +319,9 @@ class ProductFormHandler:
         form_width = max(500, container.winfo_reqwidth() + 40)
         form_height = max(400, container.winfo_reqheight() + 40)
         center_window(form, form_width, form_height)
+        
+        # Auto-focus on the first entry field after everything is set up
+        form.after(50, lambda: first_entry.focus_set() if first_entry else None)
         
         form.focus_force()
         form.lift()
