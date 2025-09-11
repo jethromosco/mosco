@@ -183,6 +183,7 @@ class ProductFormHandler:
         )
         title_label.pack(pady=(0, 20))
 
+        
         # Create form variables
         vars = {field: tk.StringVar(value=(str(values[idx]) if values else "")) for idx, field in enumerate(self.logic.FIELDS)}
 
@@ -201,7 +202,7 @@ class ProductFormHandler:
         def force_uppercase(*args):
             current_data = [vars[field].get() for field in self.logic.FIELDS]
             formatted_data = self.logic.format_text_fields(current_data)
-            
+
             vars["TYPE"].set(formatted_data[0])
             vars["BRAND"].set(formatted_data[4])
             vars["ORIGIN"].set(formatted_data[6])
@@ -209,23 +210,27 @@ class ProductFormHandler:
         def validate_numbers(*args):
             current_data = [vars[field].get() for field in self.logic.FIELDS]
             formatted_data = self.logic.format_number_fields(current_data)
-            
+
             for idx, field in enumerate(self.logic.FIELDS):
                 if field in ["ID", "OD", "TH", "PRICE"]:
                     vars[field].set(formatted_data[idx])
 
-        # Create form fields
+        # Create form fields (display order differs from internal FIELDS so
+        # price can appear right after brand for faster input)
         form_fields_frame = ctk.CTkFrame(inner_container, fg_color="transparent")
         form_fields_frame.pack(fill="x", pady=(0, 25))
 
         entries = {}
         first_entry = None  # Keep track of the first entry for auto-focus
-        
-        for idx, field in enumerate(self.logic.FIELDS):
+
+        # Desired visual order: TYPE, ID, OD, TH, BRAND, PRICE, PART_NO, ORIGIN, NOTES
+        display_order = ["TYPE", "ID", "OD", "TH", "BRAND", "PRICE", "PART_NO", "ORIGIN", "NOTES"]
+
+        for field in display_order:
             field_frame = ctk.CTkFrame(form_fields_frame, fg_color="transparent")
             field_frame.pack(fill="x", pady=8)
             field_frame.grid_columnconfigure(1, weight=1)
-            
+
             label = ctk.CTkLabel(
                 field_frame,
                 text=f"{field.replace('_', ' ')}:",
@@ -235,7 +240,7 @@ class ProductFormHandler:
                 anchor="w"
             )
             label.grid(row=0, column=0, sticky="w", padx=(0, 15))
-            
+
             entry = ctk.CTkEntry(
                 field_frame,
                 textvariable=vars[field],
@@ -249,11 +254,11 @@ class ProductFormHandler:
             )
             entry.grid(row=0, column=1, sticky="ew")
             entries[field] = entry
-            
+
             # Store the first entry for auto-focus
             if first_entry is None:
                 first_entry = entry
-            
+
             # Add hover and focus effects
             self._add_entry_effects(entry)
 
@@ -267,23 +272,53 @@ class ProductFormHandler:
         # Save function
         def save(event=None):
             data = [vars[field].get().strip() for field in self.logic.FIELDS]
-            
+
             if title.startswith("Add"):
                 success, message = self.logic.add_product(data)
             else:
                 success, message = self.logic.update_product(data, values)
-            
+
             if success:
                 if self.on_refresh_callback:
                     self.on_refresh_callback()
-                form.destroy()
+
+                # Prepare details for optional post-add hook
+                details = {
+                    'Type': vars['TYPE'].get().strip(),
+                    'ID': vars['ID'].get().strip(),
+                    'OD': vars['OD'].get().strip(),
+                    'TH': vars['TH'].get().strip(),
+                    'Brand': vars['BRAND'].get().strip(),
+                    'part_no': vars['PART_NO'].get().strip(),
+                    'country_of_origin': vars['ORIGIN'].get().strip(),
+                }
+
+                # Destroy the product form first to avoid focus/after() races.
+                try:
+                    form.destroy()
+                except Exception:
+                    pass
+
+                # If this was an Add operation, schedule the optional post-add hook
+                try:
+                    if title.startswith("Add") and hasattr(self, 'on_product_added') and callable(self.on_product_added):
+                        parent = getattr(self, 'parent_window', None) or form.master or form
+                        try:
+                            # Schedule the hook to run after a short delay so the UI stabilizes
+                            parent.after(50, lambda d=details: self.on_product_added(d))
+                        except Exception:
+                            # Fallback: call directly (still protected by try/except)
+                            self.on_product_added(details)
+                except Exception:
+                    # swallow hook errors so saving still succeeds
+                    pass
             else:
                 messagebox.showerror("Error", message, parent=form)
 
         # Create buttons
         button_container = ctk.CTkFrame(inner_container, fg_color="transparent")
         button_container.pack(pady=10)
-        
+
         cancel_btn = ctk.CTkButton(
             button_container,
             text="Cancel",
@@ -297,7 +332,7 @@ class ProductFormHandler:
             command=form.destroy
         )
         cancel_btn.pack(side="left", padx=(0, 15))
-        
+
         save_btn = ctk.CTkButton(
             button_container,
             text="Save",
@@ -311,7 +346,7 @@ class ProductFormHandler:
             command=save
         )
         save_btn.pack(side="right")
-        
+
         form.bind("<Return>", save)
 
         # Size and center the form
@@ -319,10 +354,17 @@ class ProductFormHandler:
         form_width = max(500, container.winfo_reqwidth() + 40)
         form_height = max(400, container.winfo_reqheight() + 40)
         center_window(form, form_width, form_height)
-        
+
         # Auto-focus on the first entry field after everything is set up
-        form.after(50, lambda: first_entry.focus_set() if first_entry else None)
-        
+        def _safe_focus(w):
+            try:
+                if w and getattr(w, 'winfo_exists', lambda: False)() and w.winfo_exists():
+                    w.focus_set()
+            except Exception:
+                pass
+
+        form.after(50, lambda: _safe_focus(first_entry) if first_entry else None)
+
         form.focus_force()
         form.lift()
 

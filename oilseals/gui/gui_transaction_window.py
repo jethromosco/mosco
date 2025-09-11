@@ -973,7 +973,14 @@ class TransactionWindow(ctk.CTkFrame):
 
         # Close menu when losing focus
         popup.bind("<FocusOut>", lambda e: close_menu())
-        popup.focus_set()
+        def _safe_focus(w):
+            try:
+                if w and getattr(w, 'winfo_exists', lambda: False)() and w.winfo_exists():
+                    w.focus_set()
+            except Exception:
+                pass
+
+        _safe_focus(popup)
 
     def _show_fullscreen_photo(self):
         """Show photo in fullscreen viewer"""
@@ -1063,7 +1070,13 @@ class TransactionWindow(ctk.CTkFrame):
 
         # Keyboard shortcut
         viewer.bind("<Escape>", lambda e: viewer.destroy())
-        viewer.focus_set()
+        def _safe_focus_viewer():
+            try:
+                if viewer and getattr(viewer, 'winfo_exists', lambda: False)() and viewer.winfo_exists():
+                    viewer.focus_set()
+            except Exception:
+                pass
+        _safe_focus_viewer()
 
     # ==================== THEME MANAGEMENT ====================
     def destroy(self):

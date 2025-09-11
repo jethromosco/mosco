@@ -257,7 +257,14 @@ class TransactionFormHandler:
         form.deiconify()
         
         # Auto-focus on the first entry field (date field) after everything is set up
-        form.after(50, lambda: self.first_entry.focus_set() if self.first_entry else None)
+        def _safe_focus(w):
+            try:
+                if w and getattr(w, 'winfo_exists', lambda: False)() and w.winfo_exists():
+                    w.focus_set()
+            except Exception:
+                pass
+
+        form.after(50, lambda: _safe_focus(self.first_entry) if self.first_entry else None)
         
         form.focus_force()
         form.lift()
@@ -370,23 +377,30 @@ class TransactionFormHandler:
         fields_section = ctk.CTkFrame(parent, fg_color="transparent")
         fields_section.pack(fill="x", pady=(0, 20))
 
-        # Date field
-        self.first_entry = self._create_date_field(fields_section, date_var)
-
-        # Text fields
+        # Text fields (create Type/ID/OD/TH/Brand first)
+        entry_widgets = {}
         fields = [
             ("Type", "Type"), ("ID", "ID"), ("OD", "OD"), ("TH", "TH"),
-            ("Brand", "Brand"), ("Name", "Name")
+            ("Brand", "Brand")
         ]
 
-        entry_widgets = {}
         for label_text, var_key in fields:
             entry = self._create_text_field(fields_section, label_text, vars[var_key], form)
             entry_widgets[var_key] = entry
 
-            # Auto uppercase for Type, Brand, Name during typing
-            if label_text in ["Type", "Brand", "Name"]:
+            # Auto uppercase for Type and Brand during typing
+            if label_text in ["Type", "Brand"]:
                 self.setup_auto_uppercase(vars[var_key])
+
+        # Place Date field after Brand so it's the next field users type into
+        # and set it as the first_entry so the form will focus it immediately.
+        self.first_entry = self._create_date_field(fields_section, date_var)
+
+        # Now create the Name field (after Date)
+        entry = self._create_text_field(fields_section, "Name", vars["Name"], form)
+        entry_widgets["Name"] = entry
+        # Auto uppercase for Name
+        self.setup_auto_uppercase(vars["Name"])
 
         # Quantity, Price, Stock fields
         entry_widgets["Quantity"] = self._create_number_field(fields_section, "Quantity",

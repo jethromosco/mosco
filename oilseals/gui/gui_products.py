@@ -279,6 +279,32 @@ class AdminPanel:
             None,
             self.refresh_products
         )
+        # Attach a post-add hook so that after adding a product we can
+        # switch to the Transactions tab and open the Add Transaction form
+        def _on_product_added(details):
+            try:
+                # Ensure transactions tab exists
+                self.switch_tab("transactions")
+                # Give the transactions tab a moment to initialize
+                self.transactions_frame.update_idletasks()
+                if hasattr(self, 'transaction_tab') and hasattr(self.transaction_tab, 'form_handler'):
+                    # Prepare keys mapping expected by TransactionFormHandler
+                    keys = {
+                        'Type': details.get('Type', ''),
+                        'ID': details.get('ID', ''),
+                        'OD': details.get('OD', ''),
+                        'TH': details.get('TH', ''),
+                        'Brand': details.get('Brand', ''),
+                    }
+                    # Set last_transaction_keys so transaction form will prefill
+                    self.transaction_tab.form_handler.last_transaction_keys = keys
+                    # Open Add Transaction form
+                    self.transaction_tab.form_handler.add_transaction()
+            except Exception:
+                pass
+
+        # assign hook
+        self.prod_form_handler.on_product_added = _on_product_added
 
         self.search_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card"), corner_radius=40, height=90)
         self.search_container.pack(fill="x", pady=(20, 15), padx=20)

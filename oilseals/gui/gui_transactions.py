@@ -165,7 +165,14 @@ class TransactionTab:
     def on_date_selected(self, event=None):
         """Handle date selection."""
         self.frame.after(50, self.apply_date_filter)
-        self.frame.after(100, lambda: self.frame.focus_set())
+        def _safe_focus_frame():
+            try:
+                if self.frame and getattr(self.frame, 'winfo_exists', lambda: False)() and self.frame.winfo_exists():
+                    self.frame.focus_set()
+            except Exception:
+                pass
+
+        self.frame.after(100, _safe_focus_frame)
 
     def apply_date_filter(self):
         """Apply the selected date filter."""
@@ -176,7 +183,11 @@ class TransactionTab:
         """Clear the date filter."""
         self.date_var.set("")
         self.date_filter_active = False
-        self.frame.focus_set()
+        try:
+            if self.frame and getattr(self.frame, 'winfo_exists', lambda: False)() and self.frame.winfo_exists():
+                self.frame.focus_set()
+        except Exception:
+            pass
         self.refresh_transactions()
 
         # ─────────────── treeview ───────────────
