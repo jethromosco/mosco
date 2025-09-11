@@ -706,6 +706,14 @@ class TransactionFormHandler:
         try:
             trans_type = transaction_type_var.get()
             
+            # Validate date format first
+            try:
+                date_str = date_var.get()
+                datetime.strptime(date_str, "%m/%d/%y")
+            except ValueError:
+                messagebox.showerror("Invalid Date", "Please enter a valid date in MM/DD/YY format", parent=form)
+                return
+
             form_data = {
                 'date': date_var.get(),
                 'item_type': vars["Type"].get(),
