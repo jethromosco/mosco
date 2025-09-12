@@ -28,6 +28,12 @@ class TransactionTab:
         else:
             self.frame = notebook
 
+        # Expose a back-reference so form handlers can obtain tab-level state
+        try:
+            self.frame._transaction_tab_ref = self
+        except Exception:
+            pass
+
         self.sort_direction = {}
         self.filtered_records = []
         self.fabrication_records = set()
@@ -276,11 +282,99 @@ class TransactionTab:
         )
         add_btn.pack(side="left", padx=(0, 10))
 
+        def _on_edit_requested(event=None):
+            # If multiple selection, use the first selected
+            sel = self.tran_tree.selection()
+            if not sel:
+                return
+            # Take the first item id (rowid)
+            try:
+                rowid = int(sel[0])
+            except Exception:
+                return self.form_handler.edit_transaction()
+
+            # If this rowid is part of a fabrication pair, block editing
+            if rowid in getattr(self, 'fabrication_records', set()):
+                parent_win = self.frame.winfo_toplevel()
+                dlg = ctk.CTkToplevel(parent_win)
+                dlg.title("Cannot Edit Fabrication")
+                dlg.resizable(False, False)
+                dlg.configure(fg_color=theme.get("bg"))
+                dlg.transient(parent_win)
+                dlg.grab_set()
+
+                frm = ctk.CTkFrame(dlg, fg_color=theme.get("card"), corner_radius=12)
+                frm.pack(padx=24, pady=18, fill="both", expand=True)
+
+                # Simple centered message
+                lbl = ctk.CTkLabel(frm, text="Fabrication transactions are stored as paired Restock+Sale and cannot be edited.",
+                                    font=("Poppins", 13), text_color=theme.get("text"), wraplength=420)
+                lbl.pack(pady=(0, 8))
+
+                sublbl = ctk.CTkLabel(frm, text="Delete the fabrication pair and add a new one instead.",
+                                       font=("Poppins", 11), text_color=theme.get("muted"))
+                sublbl.pack(pady=(0, 12))
+
+                btn_frame = ctk.CTkFrame(frm, fg_color="transparent")
+                btn_frame.pack(pady=(6, 0))
+
+                def on_delete():
+                    try:
+                        # Always try DB lookup to find partner, not just filtered view
+                        partner_rowid = self.logic.find_fabrication_partner(rowid)
+
+                        deleted_any = False
+                        ok1, _ = self.logic.delete_transaction(rowid)
+                        if ok1:
+                            deleted_any = True
+                        if partner_rowid:
+                            ok2, _ = self.logic.delete_transaction(partner_rowid)
+                            if ok2:
+                                deleted_any = True
+
+                        if deleted_any:
+                            if self.on_refresh_callback:
+                                self.on_refresh_callback()
+                            dlg.destroy()
+                        else:
+                            messagebox.showerror("Delete Failed", "Failed to delete fabrication pair.", parent=dlg)
+                    except Exception:
+                        messagebox.showerror("Error", "Failed to delete fabrication. See console for details.", parent=dlg)
+                        dlg.destroy()
+
+                def on_cancel():
+                    dlg.destroy()
+
+                del_btn = ctk.CTkButton(btn_frame, text="Delete", fg_color="#EF4444", hover_color="#DC2626",
+                                         text_color="#FFFFFF", width=140, height=36, command=on_delete)
+                del_btn.pack(side="left", padx=(0, 12))
+
+                cancel_btn = ctk.CTkButton(btn_frame, text="Cancel", fg_color=theme.get("accent_hover"),
+                                           hover_color=theme.get("accent"), text_color=theme.get("text"), width=100, height=36,
+                                           command=on_cancel)
+                cancel_btn.pack(side="right")
+
+                # Center the dialog on screen
+                dlg.update_idletasks()
+                w = dlg.winfo_reqwidth()
+                h = dlg.winfo_reqheight()
+                sx = dlg.winfo_screenwidth()
+                sy = dlg.winfo_screenheight()
+                x = (sx - w) // 2
+                y = (sy - h) // 2
+                dlg.geometry(f"{w}x{h}+{x}+{y}")
+
+                dlg.focus()
+                return
+
+            # Not a fabrication: proceed to normal edit
+            return self.form_handler.edit_transaction()
+
         edit_btn = ctk.CTkButton(
             button_container, text="Edit", font=("Poppins", 16, "bold"),
             fg_color="#4B5563", hover_color="#6B7280", text_color="#FFFFFF",
             corner_radius=25, width=100, height=45,
-            command=self.form_handler.edit_transaction
+            command=_on_edit_requested
         )
         edit_btn.pack(side="left", padx=(0, 10))
 

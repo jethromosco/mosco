@@ -304,8 +304,9 @@ class ProductFormHandler:
                     if title.startswith("Add") and hasattr(self, 'on_product_added') and callable(self.on_product_added):
                         parent = getattr(self, 'parent_window', None) or form.master or form
                         try:
-                            # Schedule the hook to run after a short delay so the UI stabilizes
-                            parent.after(50, lambda d=details: self.on_product_added(d))
+                            # Schedule the hook to run when the event loop is idle so the UI fully
+                            # processes the destroy() and the tab switch before opening the next form.
+                            parent.after_idle(lambda d=details: self.on_product_added(d))
                         except Exception:
                             # Fallback: call directly (still protected by try/except)
                             self.on_product_added(details)

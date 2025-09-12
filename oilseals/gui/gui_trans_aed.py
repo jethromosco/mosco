@@ -28,9 +28,51 @@ class TransactionFormHandler:
         if not item:
             return messagebox.showwarning("Select", "Select a transaction to edit",
                                           parent=self.parent_frame.winfo_toplevel())
-
         try:
             rowid = int(item)
+            # If this rowid is in fabrication_records (provided by parent tab), block edit.
+            parent_tab = getattr(self.parent_frame, '_transaction_tab_ref', None)
+            fabrication_set = set()
+            if parent_tab is not None:
+                fabrication_set = getattr(parent_tab, 'fabrication_records', set())
+
+            if rowid in fabrication_set:
+                parent_win = self.parent_frame.winfo_toplevel()
+                dlg = ctk.CTkToplevel(parent_win)
+                dlg.title("Cannot Edit Fabrication")
+                dlg.resizable(False, False)
+                dlg.configure(fg_color=theme.get("bg"))
+                dlg.transient(parent_win)
+                dlg.grab_set()
+
+                frm = ctk.CTkFrame(dlg, fg_color=theme.get("card"), corner_radius=12)
+                frm.pack(padx=24, pady=18, fill="both", expand=True)
+
+                lbl = ctk.CTkLabel(frm, text="Fabrication transactions are stored as paired Restock+Sale and cannot be edited.",
+                                    font=("Poppins", 13), text_color=theme.get("text"), wraplength=420)
+                lbl.pack(pady=(0, 8))
+
+                sublbl = ctk.CTkLabel(frm, text="Delete the fabrication pair and add a new one instead.",
+                                       font=("Poppins", 11), text_color=theme.get("muted"))
+                sublbl.pack(pady=(0, 12))
+
+                ok_btn = ctk.CTkButton(frm, text="OK", fg_color=theme.get("accent_hover"), hover_color=theme.get("accent"),
+                                       text_color=theme.get("text"), width=100, height=36, command=dlg.destroy)
+                ok_btn.pack()
+
+                # Center dialog
+                dlg.update_idletasks()
+                w = dlg.winfo_reqwidth()
+                h = dlg.winfo_reqheight()
+                sx = dlg.winfo_screenwidth()
+                sy = dlg.winfo_screenheight()
+                x = (sx - w) // 2
+                y = (sy - h) // 2
+                dlg.geometry(f"{w}x{h}+{x}+{y}")
+
+                dlg.focus()
+                return
+
             record = self.logic.get_record_by_id(rowid)
             if record is None:
                 messagebox.showerror("Error", "Selected record not found.",
@@ -264,8 +306,13 @@ class TransactionFormHandler:
             except Exception:
                 pass
 
+        # Primary attempt shortly after showing the form
         form.after(50, lambda: _safe_focus(self.first_entry) if self.first_entry else None)
-        
+        # Secondary attempt after idle in case the window activation from other dialogs
+        # prevented immediate focus; this covers cases where we open this form from
+        # another dialog that was just destroyed.
+        form.after_idle(lambda: _safe_focus(self.first_entry) if self.first_entry else None)
+
         form.focus_force()
         form.lift()
 

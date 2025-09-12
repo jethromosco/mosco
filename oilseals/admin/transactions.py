@@ -288,3 +288,38 @@ class TransactionsLogic:
             return True, "Transaction deleted successfully"
         except Exception as e:
             return False, f"Database error: {str(e)}"
+
+    def find_fabrication_partner(self, rowid):
+        """Given one rowid part of a fabrication pair, find the partner rowid in the DB.
+
+        Returns partner_rowid or None if not found.
+        """
+        try:
+            conn = connect_db()
+            cur = conn.cursor()
+            # First fetch the row to get its identifying fields
+            cur.execute("SELECT date, type, id_size, od_size, th_size, brand, is_restock FROM transactions WHERE rowid=?", (rowid,))
+            row = cur.fetchone()
+            if not row:
+                conn.close()
+                return None
+
+            date_val, type_, id_size, od_size, th_size, brand, is_restock = row
+
+            # Partner should have same date/type/id/od/th/brand and opposite is_restock (0 <-> 1)
+            opposite = 1 if is_restock == 0 else 0
+            cur.execute(
+                "SELECT rowid FROM transactions WHERE date=? AND type=? AND id_size=? AND od_size=? AND th_size=? AND brand=? AND is_restock=? LIMIT 1",
+                (date_val, type_, id_size, od_size, th_size, brand, opposite)
+            )
+            partner = cur.fetchone()
+            conn.close()
+            if partner:
+                return partner[0]
+            return None
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            return None
