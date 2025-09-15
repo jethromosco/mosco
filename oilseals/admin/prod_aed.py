@@ -306,6 +306,26 @@ class ProductFormLogic:
 				return False, "No rows were updated. Product may have been deleted."
 			
 			conn.commit()
+			# If key fields changed, update transactions referencing this product
+			if key_changed:
+				try:
+					from .transactions import TransactionsLogic
+					trans_logic = TransactionsLogic()
+					orig_keys = (original_type, original_id, original_od, original_th, original_brand)
+					new_keys = (validated_data[0], validated_data[1], validated_data[2], validated_data[3], validated_data[4])
+					# Also pass canonicalized original brand as alt if available
+					alt_brand = None
+					try:
+						canon_orig, _ = canonicalize_brand(original_brand)
+						if canon_orig != original_brand:
+							alt_brand = canon_orig
+					except Exception:
+						pass
+					trans_logic.update_transactions_for_product(orig_keys, new_keys, alt_original_brand=alt_brand)
+				except Exception:
+					# non-fatal: continue
+					pass
+			
 			conn.close()
 			return True, "Product updated successfully."
 			

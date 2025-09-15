@@ -323,3 +323,53 @@ class TransactionsLogic:
             except Exception:
                 pass
             return None
+
+    def update_transactions_for_product(self, original_keys, new_keys, alt_original_brand=None):
+        """Update all transactions that reference a product identified by original_keys
+
+        original_keys: (type, id_size, od_size, th_size, brand)
+        new_keys: (type, id_size, od_size, th_size, brand)
+        alt_original_brand: optional alternate brand to match (e.g., canonicalized original)
+
+        Returns (True, updated_count) on success or (False, 0) on failure.
+        """
+        try:
+            conn = connect_db()
+            cur = conn.cursor()
+
+            # Unpack tuples
+            o_type, o_id, o_od, o_th, o_brand = original_keys
+            n_type, n_id, n_od, n_th, n_brand = new_keys
+
+            # First try exact-match update
+            cur.execute(
+                """
+                UPDATE transactions
+                SET type=?, id_size=?, od_size=?, th_size=?, brand=?
+                WHERE type=? AND id_size=? AND od_size=? AND th_size=? AND brand=?
+                """,
+                (n_type, n_id, n_od, n_th, n_brand, o_type, o_id, o_od, o_th, o_brand)
+            )
+            updated = cur.rowcount
+
+            # If nothing updated and an alternate brand was provided, try that too
+            if updated == 0 and alt_original_brand:
+                cur.execute(
+                    """
+                    UPDATE transactions
+                    SET type=?, id_size=?, od_size=?, th_size=?, brand=?
+                    WHERE type=? AND id_size=? AND od_size=? AND th_size=? AND brand=?
+                    """,
+                    (n_type, n_id, n_od, n_th, n_brand, o_type, o_id, o_od, o_th, alt_original_brand)
+                )
+                updated += cur.rowcount
+
+            conn.commit()
+            conn.close()
+            return True, updated
+        except Exception as e:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            return False, 0
