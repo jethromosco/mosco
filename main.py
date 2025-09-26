@@ -68,20 +68,26 @@ if __name__ == "__main__":
 # ALSO: TULOY TULOY NA PAGADD SA IISANG ITEM PARA DI NA TYPE NG TYPE NG UNIQE ID /
 # 8 22 7 burahin lahat nasira database /
 # gawing brand imbes na part no. sa lahat /
-
-# TODO: Add user-friendly error messages and input validation di na masyado important --
-# Problems: UI admin modal consistency, centering srp stockleft(di masyado halata)
-# Add README.md and requirements.txt for project documentation and setup
 # nat sog sa nat card ilagay /
 # di sure if nagaapply ang fonts
 # pag merong / sa id od mali sa table /
 # also di rin makaadd photo kapag di ok sa / id od /
-# C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
-
-#PRIORITY:
-# JO FAB - nagbbug yung edit, even sa actual minsan di sure pano nattrigger
+# JO FAB - nagbbug yung edit, even sa actual minsan di sure pano nattrigger / 
 # pag nagkamali ng format ng date nagbbug? check sa lahat /
-# still admin sa transactions GUI
-# check edit minsan hindi gumagana di rin sure pano nattrigger
+# check edit minsan hindi gumagana di rin sure pano nattrigger / 
 # admin btn - kb shortcut /
 # alt tab function /
+
+#PRIORITY:
+# TODO: Add user-friendly error messages and input validation di na masyado important --
+# Problems: UI admin modal consistency, centering srp stockleft(di masyado halata)
+# Add README.md and requirements.txt for project documentation and setup
+# still admin sa transactions GUI
+# C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
+# nagnenegative, not a problem pero di dapat mangyari
+# yung speed ng animation bagalan para di malutong
+# pag kalahati na sa oilseals, isipin ano inenext na malapit lang sa oilseals
+# threshold di maayos sa lahat naka deafilt 5 lang
+# photos sa common types mag lagay
+# yung sa inches mm ayusin lagay black white mode
+# di nakacenter stock count and srp sa screen pero sa container ayos
