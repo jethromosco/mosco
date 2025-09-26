@@ -5,9 +5,10 @@ from fractions import Fraction
 def parse_measurement(value):
     """Convert a string (fraction or decimal) to float for sorting."""
     try:
-        if "/" in value:
-            return float(Fraction(value))
-        return float(value)
+        s = str(value)
+        if "/" in s:
+            return float(Fraction(s))
+        return float(s)
     except ValueError:
         raise ValueError(f"Invalid measurement: {value}")
 
@@ -46,11 +47,12 @@ class ProductsLogic:
             od_str = self.format_value(od)
             th_str = self.format_value(th)
             
-            # Create search string
-            combined = f"{type_} {id_str} {od_str} {th_str}".lower()
-            
+            # Create search string (include brand so brand searches match)
+            combined = f"{type_} {id_str} {od_str} {th_str} {brand}".lower()
+
             if keyword_lower in combined:
-                item_str = f"{type_.upper()} {id_str}-{od_str}-{th_str}"
+                # Items display should include brand at the end: TYPE id-od-th BRAND
+                item_str = f"{type_.upper()} {id_str}-{od_str}-{th_str} {brand}".strip()
                 filtered_products.append({
                     'item': item_str,
                     'brand': brand,
@@ -104,8 +106,9 @@ class ProductsLogic:
             id_str = self.format_value(id_)
             od_str = self.format_value(od)
             th_str = self.format_value(th)
-            item_str = f"{type_.upper()} {id_str}-{od_str}-{th_str}"
-            
+            # Match the same Items display format used in search_products
+            item_str = f"{type_.upper()} {id_str}-{od_str}-{th_str} {brand}".strip()
+
             if item_str == selected_item_text:
                 return {
                     'type': type_,

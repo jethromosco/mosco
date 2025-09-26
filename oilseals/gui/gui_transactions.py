@@ -114,14 +114,35 @@ class TransactionTab:
         date_frame.pack(side="left")
         date_frame.pack_propagate(False)
 
+        # Allow typing into the DateEntry (state normal) so users can type mm/dd/yy
         self.date_filter = DateEntry(
             date_frame, date_pattern="mm/dd/yy", width=12,
-            showweeknumbers=False, textvariable=self.date_var, state="readonly",
+            showweeknumbers=False, textvariable=self.date_var, state="normal",
             background='#2b2b2b', foreground='#FFFFFF', borderwidth=0, relief='flat'
         )
         self.date_filter.pack(expand=True, padx=5, pady=2)
         self.date_var.set("")
         self.date_filter.bind('<<DateEntrySelected>>', self.on_date_selected)
+
+        # When typing, only apply filter if the current string is a valid MM/DD/YY date.
+        def _on_date_keyrelease(event=None):
+            s = self.date_var.get().strip()
+            if s == "":
+                # treat empty as cleared
+                self.on_date_selected()
+                return
+            try:
+                datetime.strptime(s, "%m/%d/%y")
+                # valid date string -> apply filter
+                self.on_date_selected()
+            except Exception:
+                # partial/invalid input: do not trigger the filter yet
+                pass
+
+        try:
+            self.date_filter.bind('<KeyRelease>', _on_date_keyrelease)
+        except Exception:
+            pass
 
         # Bind hover/focus to date container after creation (visual only)
         def on_frame_hover(frame, is_enter):

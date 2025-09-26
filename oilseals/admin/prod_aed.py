@@ -381,16 +381,21 @@ class ProductFormLogic:
 				else:
 					# If parsing fails, put the whole thing in TYPE
 					extracted[0] = combined_field
+
+				# If the combined field included a brand (e.g. "TYPE size BRAND"), capture it
+				if len(parts) >= 3:
+					# brand is the last token
+					extracted[4] = parts[-1]
 			
 			# Handle the rest of the fields based on their expected positions
+			# Now that brand is embedded in the combined field, values map as:
+			# values[1] -> PART_NO, values[2] -> ORIGIN, values[3] -> NOTES, values[4] -> PRICE
 			if len(values) >= 2:
-				extracted[4] = str(values[1]).strip()  # BRAND
+				extracted[5] = str(values[1]).strip()  # PART_NO
 			if len(values) >= 3:
-				extracted[5] = str(values[2]).strip() if values[2] else ""  # PART_NO
+				extracted[6] = safe_str_extract(values[2]).strip() if values[2] else ""  # ORIGIN
 			if len(values) >= 4:
-				extracted[6] = safe_str_extract(values[3]).strip() if values[3] else ""  # ORIGIN
-			if len(values) >= 5:
-				extracted[7] = safe_str_extract(values[4]).strip() if values[4] else ""  # NOTES
+				extracted[7] = safe_str_extract(values[3]).strip() if values[3] else ""  # NOTES
 				
 			# Handle price - should be the last field
 			if len(values) >= 6:

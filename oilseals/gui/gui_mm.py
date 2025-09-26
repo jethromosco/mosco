@@ -488,7 +488,8 @@ class InventoryApp(ctk.CTkFrame):
 
     def _create_treeview(self, parent):
         """Create and configure treeview widget"""
-        columns = ("type", "size", "brand", "part_no", "origin", "notes", "qty", "price")
+        # Columns: Items (TYPE SIZE BRAND), Part No., Origin, Notes, Qty, Price
+        columns = ("items", "part_no", "origin", "notes", "qty", "price")
         self.tree = ttk.Treeview(parent, columns=columns, show="headings", style="Custom.Treeview")
         
         # Configure tags (colors applied dynamically based on theme)
@@ -496,9 +497,7 @@ class InventoryApp(ctk.CTkFrame):
 
         # Configure columns
         display_names = {
-            "type": "Type",
-            "size": "Size",
-            "brand": "Brand",
+            "items": "Items",
             "part_no": "Part No.",
             "origin": "Origin",
             "notes": "Notes",
@@ -508,7 +507,9 @@ class InventoryApp(ctk.CTkFrame):
 
         for col in columns:
             self.tree.heading(col, text=display_names[col])
-            self.tree.column(col, anchor="center", width=120)
+            # Make Items column wider for readability
+            width = 260 if col == "items" else 120
+            self.tree.column(col, anchor="center", width=width)
 
         # Add scrollbar
         tree_scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Red.Vertical.TScrollbar")
@@ -747,13 +748,13 @@ class InventoryApp(ctk.CTkFrame):
 
         # Populate tree with alternating rows for normal tag
         for index, item in enumerate(display_data):
-            qty = item[6]
+            qty = item[4]
             base_tag = get_stock_tag(qty)
             if base_tag == "normal":
                 alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
-                self.tree.insert("", tk.END, values=item[:8], tags=(base_tag, alt_tag))
+                self.tree.insert("", tk.END, values=item[:6], tags=(base_tag, alt_tag))
             else:
-                self.tree.insert("", tk.END, values=item[:8], tags=(base_tag,))
+                self.tree.insert("", tk.END, values=item[:6], tags=(base_tag,))
 
         # Update status
         self.status_label.configure(text=f"Total Oil Seal Products: {len(display_data)}")

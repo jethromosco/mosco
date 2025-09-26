@@ -384,8 +384,8 @@ class AdminPanel:
                   foreground=[("selected", selected_fg)])
         style.map("Products.Treeview.Heading", background=[("active", theme.get("heading_bg"))])
 
-        columns = ("item", "brand", "part_no", "origin", "notes", "price")
-        self.headers = ["ITEM", "BRAND", "PART_NO", "ORIGIN", "NOTES", "PRICE"]
+        columns = ("item", "part_no", "origin", "notes", "price")
+        self.headers = ["ITEM", "PART_NO", "ORIGIN", "NOTES", "PRICE"]
         self.sort_direction = {col: None for col in columns}
         self.prod_tree = ttk.Treeview(inner_table, columns=columns, show="headings", style="Products.Treeview")
 
@@ -458,7 +458,6 @@ class AdminPanel:
         for product in self.current_products_data:
             self.prod_tree.insert("", tk.END, values=(
                 product['item'],
-                product['brand'],
                 product['part_no'],
                 product['origin'],
                 product['notes'],
@@ -483,7 +482,6 @@ class AdminPanel:
         for product in sorted_data:
             self.prod_tree.insert("", tk.END, values=(
                 product['item'],
-                product['brand'],
                 product['part_no'],
                 product['origin'],
                 product['notes'],

@@ -136,9 +136,15 @@ def _build_query_and_params(search_filters: Dict[str, str]) -> Tuple[str, List[A
             continue
 
         if key == "brand":
-            # Replace brand with canonical label for searching
+            # Replace brand with canonical label for searching but also
+            # allow matching the raw input. Some DB rows store raw brands
+            # (e.g., NTK) while users may search using canonical labels
+            # (e.g., T.Y.). Match either.
             canonical_label, _ = canonicalize_brand(val)
-            val = canonical_label
+            # Match canonical label OR the raw/partial value (case-insensitive)
+            query += " AND ( UPPER(brand) = UPPER(?) OR UPPER(brand) LIKE UPPER(?) )"
+            params.extend([canonical_label, f"{val}%"])
+            continue
 
         if key in ("id", "od", "th"):
             if val.isdigit():
@@ -204,6 +210,30 @@ def _parse_thickness_sort(th_raw: Any) -> Tuple[float, float]:
             return (0.0, 0.0)
 
 
+def _parse_multi_component_sort(val: Any) -> Tuple[float, float]:
+    """Parse ID/OD values for sorting.
+    If value contains a slash, treat it as two separate components (like TH).
+    Returns a tuple (primary, secondary) where secondary is 0.0 if missing or invalid.
+    """
+    s = str(val).strip()
+    if "/" in s:
+        try:
+            a, b = s.split("/", 1)
+            a_f = float(a) if a.strip() else 0.0
+            b_f = float(b) if b.strip() else 0.0
+            return (a_f, b_f)
+        except Exception:
+            try:
+                return (float(s.split("/")[0]), 0.0)
+            except Exception:
+                return (0.0, 0.0)
+    else:
+        try:
+            return (float(s), 0.0)
+        except Exception:
+            return (0.0, 0.0)
+
+
 def stock_filter_matches(qty: int, stock_filter: str) -> bool:
     if stock_filter == "Low Stock":
         return 0 < qty <= LOW_STOCK_THRESHOLD
@@ -219,8 +249,9 @@ def build_products_display_data(
     sort_by: str,
     stock_filter: str
 ) -> List[Tuple[Any, ...]]:
-    """Return list of tuples: (type, size_str, brand, part_no, origin, notes, qty, price_str, id_raw, od_raw, th_raw)
-    where the last three are for sorting only and should not be displayed.
+    """Return list of tuples for display and sorting.
+    Visible tuple layout: (items_display, part_no, origin, notes, qty, price_str)
+    Hidden/raw sizes appended for sorting: id_raw, od_raw, th_raw
     """
     products = _fetch_products(search_filters)
     all_transactions = _fetch_all_transactions()
@@ -233,25 +264,42 @@ def build_products_display_data(
         qty = stock_map.get(key, 0)
         if not stock_filter_matches(qty, stock_filter):
             continue
-        size_str = f"{format_display_value(id_raw)}×{format_display_value(od_raw)}×{format_display_value(th_raw)}"
-        display_data.append((
-            type_,
-            size_str,
-            brand,
-            part_no,
-            origin,
-            notes,
-            qty,
-            f"₱{float(price):.2f}",
-            id_raw,
-            od_raw,
-            th_raw
-        ))
+        # Build size with hyphens for the compact Items view (e.g. 4-19-10)
+        size_hyphen = f"{format_display_value(id_raw)}-{format_display_value(od_raw)}-{format_display_value(th_raw)}"
+        # Items column should show: TYPE SIZE BRAND  (e.g. SC 4-19-10 MOS)
+        items_display = f"{type_} {size_hyphen} {brand}".strip()
+        display_data.append(
+            (
+                items_display,
+                part_no,
+                origin,
+                notes,
+                qty,
+                f"₱{float(price):.2f}",
+                id_raw,
+                od_raw,
+                th_raw,
+            )
+        )
 
     if sort_by == "Size":
-        display_data.sort(key=lambda x: (parse_number(x[8]), parse_number(x[9]), _parse_thickness_sort(x[10])))
+        # Sort by ID then OD then TH. For ID/OD that contain '/', treat them as
+        # multi-component values (primary/secondary) instead of attempting numeric
+        # conversion that would fail or be interpreted incorrectly.
+        def _size_key(item):
+            # display_data tuple layout: (items, part_no, origin, notes, qty, price_str, id_raw, od_raw, th_raw)
+            id_raw = item[6]
+            od_raw = item[7]
+            th_raw = item[8]
+            id_primary, id_secondary = _parse_multi_component_sort(id_raw)
+            od_primary, od_secondary = _parse_multi_component_sort(od_raw)
+            th_primary, th_secondary = _parse_thickness_sort(th_raw)
+            return (id_primary, id_secondary, od_primary, od_secondary, th_primary, th_secondary)
+
+        display_data.sort(key=_size_key)
     elif sort_by == "Quantity":
-        display_data.sort(key=lambda x: x[6], reverse=True)
+        # qty is at index 4 in the new tuple
+        display_data.sort(key=lambda x: x[4], reverse=True)
 
     return display_data
 
@@ -275,23 +323,38 @@ def parse_size_string(size_str: str) -> Tuple[str, str, str]:
 
 
 def create_product_details(item_values: List[Any]) -> Dict[str, Any]:
-    """Create product details dictionary from tree item values"""
-    if len(item_values) < 8:
+    """Create product details dictionary from tree item values.
+    Expects visible values: items_display, part_no, origin, notes, qty, price_str
+    """
+    if len(item_values) < 6:
         return {}
-    
-    id_, od, th = parse_size_string(item_values[1])
-    
+    # item_values[0] is now the combined Items display: "TYPE SIZE BRAND"
+    items_str = str(item_values[0])
+    parts = items_str.split()
+    if len(parts) >= 3:
+        type_val = parts[0]
+        brand_val = parts[-1]
+        size_part = " ".join(parts[1:-1])
+    elif len(parts) == 2:
+        type_val = parts[0]
+        size_part = parts[1]
+        brand_val = ""
+    else:
+        return {}
+
+    id_, od, th = parse_size_string(size_part)
+
     return {
-        "type": item_values[0],
+        "type": type_val,
         "id": id_,
         "od": od,
         "th": th,
-        "brand": str(item_values[2]).strip().upper(),
-        "part_no": item_values[3],
-        "country_of_origin": item_values[4],
-        "notes": item_values[5],
-        "quantity": item_values[6],
-        "price": float(str(item_values[7]).replace("₱", ""))
+        "brand": str(brand_val).strip().upper(),
+        "part_no": item_values[1],
+        "country_of_origin": item_values[2],
+        "notes": item_values[3],
+        "quantity": item_values[4],
+        "price": float(str(item_values[5]).replace("₱", ""))
     }
 
 
