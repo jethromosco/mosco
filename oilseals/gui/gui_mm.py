@@ -23,7 +23,9 @@ class InventoryApp(ctk.CTkFrame):
         self.root = controller.root if controller else self.winfo_toplevel()
 
         self.root.title("Oil Seal Inventory Manager")
-        self.root.attributes("-fullscreen", True)
+        # Do not force window state here — preserve whatever the user set
+        # (main/app_controller should handle initial startup state).
+        self._is_fullscreen = False
 
         # Initialize variables
         self.search_vars = {
@@ -52,12 +54,32 @@ class InventoryApp(ctk.CTkFrame):
 
     def _setup_bindings(self):
         """Setup keyboard bindings"""
+        # Keep Escape dedicated to clearing filters (user requested).
         self.root.bind("<Escape>", lambda e: self.clear_filters())
         self.root.bind("<Return>", lambda e: self.remove_focus())
         # Add Ctrl+2 shortcut for admin access
         self.root.bind("<Control-Key-2>", lambda e: self.open_admin_panel())
         # Bind window resize to update button positions
         self.bind("<Configure>", self.on_window_resize)
+        # F11 toggles exclusive fullscreen — delegate to controller if available
+        if self.controller and hasattr(self.controller, '_toggle_fullscreen'):
+            self.root.bind("<F11>", lambda e: self.controller._toggle_fullscreen())
+        else:
+            self.root.bind("<F11>", lambda e: self._toggle_fullscreen())
+
+    def _toggle_fullscreen(self, event=None):
+        # Fallback local handler that delegates to controller if present.
+        if self.controller and hasattr(self.controller, '_toggle_fullscreen'):
+            return self.controller._toggle_fullscreen(event)
+        try:
+            self._is_fullscreen = not getattr(self, "_is_fullscreen", False)
+            self.root.attributes("-fullscreen", self._is_fullscreen)
+        except Exception:
+            pass
+
+    def _exit_fullscreen_or_clear_filters(self, event=None):
+        """Deprecated helper (previously handled Escape)."""
+        return None
 
     def on_window_resize(self, event=None):
         """Update absolute positioned elements on window resize"""
@@ -520,6 +542,8 @@ class InventoryApp(ctk.CTkFrame):
         # Setup tree bindings
         # Highlight selection; remove highlight when clicking outside
         self.tree.bind("<Double-1>", self.open_transaction_page)
+        # Right-click to copy formatted product info to clipboard
+        self.tree.bind("<Button-3>", self._on_tree_right_click)
         self.bind("<Button-1>", lambda e: self.tree.selection_remove(self.tree.selection()))
 
     def remove_focus(self, event=None):
@@ -803,6 +827,60 @@ class InventoryApp(ctk.CTkFrame):
         else:
             win = tk.Toplevel(self)
             TransactionWindow(win, details, self)
+
+    def _on_tree_right_click(self, event):
+        """Copy formatted product info to clipboard on right-click."""
+        try:
+            item_id = self.tree.identify_row(event.y)
+            if not item_id:
+                return
+            self.tree.selection_set(item_id)
+            item_values = self.tree.item(item_id).get("values")
+            if not item_values:
+                return
+
+            details = create_product_details(list(item_values))
+            if not details:
+                return
+
+            # Build first line: TYPE ID-OD-TH BRAND Oil Seal (Origin)
+            id_ = details.get('id', '')
+            od = details.get('od', '')
+            th = details.get('th', '')
+            type_ = details.get('type', '')
+            brand = details.get('brand', '')
+            origin = details.get('country_of_origin', '')
+
+            origin_part = f" {origin}" if origin else ""
+            first_line = f"{type_} {id_}-{od}-{th} {brand} Oil Seal{origin_part}"
+
+            # Price line: format as integer with trailing hyphen if no cents, else two decimals
+            price = details.get('price', 0.0)
+            try:
+                p = float(price)
+            except Exception:
+                p = 0.0
+            if abs(p - int(p)) < 1e-9:
+                price_line = f"₱{int(p)}- / pc."
+            else:
+                price_line = f"₱{p:.2f} / pc."
+
+            out_text = f"{first_line}\n{price_line}"
+
+            # Copy to clipboard
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(out_text)
+                # Temporary status update
+                try:
+                    self.status_label.configure(text="Copied to clipboard!")
+                    self.after(1500, lambda: self.status_label.configure(text=f"Total Oil Seal Products: {len(self.tree.get_children())}"))
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        except Exception:
+            return
 
     def apply_theme(self):
         try:

@@ -236,7 +236,13 @@ class TransactionLogic:
             }
             if trans_type in ["Restock", "Sale"]:
                 qty = abs(int(form_data['quantity']))
-                price = float(form_data['price'])
+                # sanitize price input (allow values like '₱99', '99.00', '₱9900')
+                price_raw = str(form_data.get('price') or '').replace('₱', '').replace(',', '').strip()
+                try:
+                    price = float(price_raw)
+                except Exception:
+                    # Let validation handle missing/invalid price by raising later
+                    price = 0.0
                 is_restock = 1 if trans_type == "Restock" else 0
                 if is_restock == 0:
                     qty = -qty
@@ -247,9 +253,16 @@ class TransactionLogic:
                 })
             elif trans_type == "Actual":
                 qty = int(form_data['stock'])
+                # Allow optional cost for Actual transactions; sanitize if present
+                price_raw = form_data.get('price')
+                try:
+                    price_str = str(price_raw).replace('₱', '').replace(',', '').strip()
+                    price = float(price_str) if price_str not in (None, '') and price_str != '' else 0.0
+                except Exception:
+                    price = 0.0
                 data.update({
                     'quantity': qty,
-                    'price': 0,
+                    'price': price,
                     'is_restock': 2
                 })
             elif trans_type == "Fabrication":
@@ -297,6 +310,14 @@ class TransactionLogic:
                     int(form_data['stock'])
                 except (ValueError, TypeError):
                     errors.append("Stock must be a valid integer.")
+            # Price for Actual is optional, but if provided it must be a non-negative number
+            if not missing(form_data.get('price')):
+                try:
+                    p = float(form_data.get('price'))
+                    if p < 0:
+                        errors.append("Price must not be negative.")
+                except (ValueError, TypeError):
+                    errors.append("Price must be a valid number.")
         elif trans_type == "Fabrication":
             if missing(form_data.get('qty_restock')) or missing(form_data.get('qty_customer')) or missing(form_data.get('price')):
                 errors.append("All Fabrication fields must be filled.")

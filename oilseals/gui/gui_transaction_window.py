@@ -78,7 +78,11 @@ class TransactionWindow(ctk.CTkFrame):
                 logo_width = 540
                 center_x = (window_width - logo_width) // 2
                 self.logo_frame.place(x=center_x, y=20)
-
+        # Update tree columns responsiveness
+        try:
+            self._adjust_tree_columns()
+        except Exception:
+            pass
     def _build_ui(self):
         self._create_header_section()
         self._create_main_content()
@@ -331,6 +335,8 @@ class TransactionWindow(ctk.CTkFrame):
             anchor="center"
         )
         self.srp_display.pack(pady=(10, 0), anchor="center")
+        # Right-click price on product card copies formatted product info
+        self.srp_display.bind("<Button-3>", lambda e: self._copy_product_info_to_clipboard())
 
         self.srp_entry = ctk.CTkEntry(
             stock_price_frame, 
@@ -343,6 +349,8 @@ class TransactionWindow(ctk.CTkFrame):
             width=150, 
             justify="center"
         )
+        # When in edit mode, allow right-click on entry to copy formatted product info
+        self.srp_entry.bind("<Button-3>", lambda e: self._copy_product_info_to_clipboard())
 
     def _create_photo_section(self, parent):
         photo_container = ctk.CTkFrame(parent, fg_color="transparent", width=100, height=100)
@@ -513,26 +521,37 @@ class TransactionWindow(ctk.CTkFrame):
         colors = {
             "red": "#B22222" if theme.mode == "light" else "#EF4444",
             "blue": "#1E40AF" if theme.mode == "light" else "#3B82F6",
-            "green": "#166534" if theme.mode == "light" else "#22C55E"
+            "green": "#166534" if theme.mode == "light" else "#22C55E",
+            "gray": "#9CA3AF"
         }
 
         for color, value in colors.items():
             self.tree.tag_configure(color, foreground=value, font=("Poppins", 18))
 
         column_config = {
-            "date": {"text": "DATE", "anchor": "center", "width": 60},
-            "qty_restock": {"text": "QTY RESTOCK", "anchor": "center", "width": 100},
-            "cost": {"text": "COST", "anchor": "center", "width": 70},
-            "name": {"text": "NAME", "anchor": "w", "width": 600},
-            "qty": {"text": "QTY SOLD", "anchor": "center", "width": 60},
-            "price": {"text": "PRICE", "anchor": "center", "width": 70},
-            "stock": {"text": "STOCK", "anchor": "center", "width": 50},
+            "date": {"text": "DATE", "anchor": "center", "width": 90, "minwidth": 50},
+            "qty_restock": {"text": "QTY", "anchor": "center", "width": 60, "minwidth": 30},
+            "cost": {"text": "COST", "anchor": "center", "width": 70, "minwidth": 40},
+            "name": {"text": "NAME", "anchor": "w", "width": 200, "minwidth": 60},
+            "qty": {"text": "QTY", "anchor": "center", "width": 40, "minwidth": 24},
+            "price": {"text": "PRICE", "anchor": "center", "width": 70, "minwidth": 40},
+            "stock": {"text": "STOCK", "anchor": "center", "width": 50, "minwidth": 30},
         }
 
         for col in columns:
             config = column_config[col]
             self.tree.heading(col, text=config["text"])
-            self.tree.column(col, anchor=config["anchor"], width=config["width"])
+            # Non-name columns should be allowed to stretch first; name has
+            # lower stretch priority and a small minwidth so it will shrink
+            # before others when space is constrained.
+            stretch = False if col == "name" else True
+            self.tree.column(
+                col,
+                anchor=config["anchor"],
+                width=config["width"],
+                minwidth=config.get("minwidth", 40),
+                stretch=stretch,
+            )
 
         scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview, style="Red.Vertical.TScrollbar")
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -540,8 +559,32 @@ class TransactionWindow(ctk.CTkFrame):
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        parent.bind("<Button-1>", lambda e: self.tree.selection_remove(self.tree.selection()))
+        def _parent_click_clear(event):
+            # Do not clear selection when clicking on the tree headings or separators
+            try:
+                tx = event.x_root - self.tree.winfo_rootx()
+                ty = event.y_root - self.tree.winfo_rooty()
+                region = self.tree.identify_region(tx, ty)
+                if region and (region.startswith("heading") or region == "separator"):
+                    return
+            except Exception:
+                # If any error, fall back to default behavior
+                pass
+            try:
+                self.tree.selection_remove(self.tree.selection())
+            except Exception:
+                pass
+
+        parent.bind("<Button-1>", _parent_click_clear)
         self.tree.bind("<Button-1>", self._on_tree_click)
+        # Right-click price to copy formatted product info to clipboard
+        self.tree.bind("<Button-3>", self._on_tree_right_click)
+
+        # Adjust columns when the tree size changes
+        try:
+            self.tree.bind("<Configure>", lambda e: self._adjust_tree_columns())
+        except Exception:
+            pass
 
     def _setup_treeview_style(self):
         style = ttk.Style()
@@ -593,13 +636,209 @@ class TransactionWindow(ctk.CTkFrame):
             darkcolor=[("active", theme.get("primary_hover"))]
         )
 
+    def _adjust_tree_columns(self):
+        """Dynamically allocate widths giving priority to non-name columns.
+
+        The Name column is made the last priority and will shrink first when
+        space is limited.
+        """
+        if not hasattr(self, 'tree'):
+            return
+        try:
+            total_w = max(100, self.tree.winfo_width())
+        except Exception:
+            return
+
+        columns = ("date", "qty_restock", "cost", "name", "qty", "price", "stock")
+        # Desired widths and minimums (match column_config defaults)
+        # Give DATE a larger desired width to avoid year cropping in half-screen.
+        desired = {"date": 110, "qty_restock": 80, "cost": 70, "name": 200, "qty": 40, "price": 70, "stock": 50}
+        minw = {k: max(30, int(desired[k] * 0.4)) for k in desired}
+        # Make name column min smaller so it shrinks first
+        minw["name"] = 60
+
+        non_name = [c for c in columns if c != "name"]
+        sum_desired_nonname = sum(desired[c] for c in non_name)
+
+        # If enough space for all desired widths, use desired.
+        # However, when in very wide windows (fullscreen) prefer a larger
+        # `name` column so product names are emphasized.
+        if total_w >= sum_desired_nonname + desired["name"]:
+            if total_w >= 1200:
+                # allocate a larger share to name on wide screens
+                name_w = max(desired["name"], int(total_w * 0.45))
+                remaining = total_w - name_w
+                # distribute remaining proportionally among other columns
+                non_name_total = sum(desired[c] for c in non_name)
+                for c in non_name:
+                    w = int(remaining * (desired[c] / non_name_total))
+                    w = max(minw[c], w)
+                    self.tree.column(c, width=w)
+                self.tree.column("name", width=name_w)
+                return
+            else:
+                for c in columns:
+                    self.tree.column(c, width=desired[c])
+                return
+
+        # Otherwise, reserve as much as possible for non-name columns then name
+        name_width = max(minw["name"], total_w - sum_desired_nonname)
+        remaining = total_w - name_width
+        if remaining <= 0:
+            # Worst case: give minimums
+            for c in non_name:
+                self.tree.column(c, width=minw[c])
+            self.tree.column("name", width=minw["name"])
+            return
+
+        # Distribute remaining to non-name columns proportionally to desired widths
+        total_des = sum(desired[c] for c in non_name)
+        for c in non_name:
+            w = int(remaining * (desired[c] / total_des))
+            w = max(minw[c], w)
+            self.tree.column(c, width=w)
+
+        # Finally set name column
+        self.tree.column("name", width=name_width)
+
     def _on_tree_click(self, event):
+        # Allow header/separator interactions (sorting/resizing) to proceed.
+        try:
+            region = self.tree.identify_region(event.x, event.y)
+            if region in ("heading", "separator"):
+                return None
+        except Exception:
+            pass
+
         item = self.tree.identify_row(event.y)
         if item:
             self.tree.selection_set(item)
         else:
             self.tree.selection_remove(self.tree.selection())
         return "break"
+
+    def _on_tree_right_click(self, event):
+        """If right-clicked on the price column, copy formatted product info to clipboard."""
+        try:
+            item = self.tree.identify_row(event.y)
+            if not item:
+                return
+            col = self.tree.identify_column(event.x)
+            # identify_column returns like '#1'..'#7' for our columns; price is column index 6 -> '#6'
+            try:
+                col_idx = int(col.lstrip('#')) - 1
+            except Exception:
+                col_idx = -1
+
+            # Price column index is 5 (0-based)
+            if col_idx != 5:
+                return
+
+            vals = self.tree.item(item).get('values') or []
+            price_val = ""
+            if len(vals) > 5 and vals[5]:
+                # vals[5] is formatted like '₱12.34' or similar
+                price_val = vals[5]
+            else:
+                # fallback to product SRP stored in details
+                price_val = format_price_display(self.details.get('price', 0.0)) if self.details else ""
+
+            # Build first line from product details
+            t = (self.details.get('type', '') if self.details else '').strip()
+            id_ = (self.details.get('id', '') if self.details else '').strip()
+            od = (self.details.get('od', '') if self.details else '').strip()
+            th = (self.details.get('th', '') if self.details else '').strip()
+            brand = (self.details.get('brand', '') if self.details else '').strip()
+            origin = (self.details.get('country_of_origin', '') if self.details else '').strip()
+
+            origin_part = f" {origin}" if origin else ""
+            first_line = f"{t} {id_}-{od}-{th} {brand} Oil Seal{origin_part}".strip()
+
+            # Normalize price_val to numeric if possible
+            p_num = None
+            try:
+                # remove peso symbol and commas
+                cleaned = str(price_val).replace('₱', '').replace(',', '').strip()
+                if cleaned.endswith('-'):
+                    cleaned = cleaned[:-1]
+                p_num = float(cleaned)
+            except Exception:
+                try:
+                    p_num = float(self.details.get('price', 0.0))
+                except Exception:
+                    p_num = 0.0
+
+            if abs(p_num - int(p_num)) < 1e-9:
+                price_line = f"₱{int(p_num)}- / pc."
+            else:
+                price_line = f"₱{p_num:.2f} / pc."
+
+            out_text = f"{first_line}\n{price_line}"
+
+            try:
+                # Use the widget's clipboard
+                self.clipboard_clear()
+                self.clipboard_append(out_text)
+                # temporary feedback
+                old = self.history_status_label.cget('text') if hasattr(self, 'history_status_label') else ''
+                try:
+                    self.history_status_label.configure(text='Copied to clipboard!')
+                    self.after(1500, lambda: self.history_status_label.configure(text=old))
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        except Exception:
+            return
+
+    def _copy_product_info_to_clipboard(self):
+        """Copy the product card's formatted info to clipboard."""
+        try:
+            details = getattr(self, 'details', {}) or {}
+            t = (details.get('type', '') or '').strip()
+            id_ = (details.get('id', '') or '').strip()
+            od = (details.get('od', '') or '').strip()
+            th = (details.get('th', '') or '').strip()
+            brand = (details.get('brand', '') or '').strip()
+            origin = (details.get('country_of_origin', '') or '').strip()
+
+            origin_part = f" {origin}" if origin else ""
+            first_line = f"{t} {id_}-{od}-{th} {brand} Oil Seal{origin_part}".strip()
+
+            # srp_var may contain formatted price like '₱123.00' or plain number
+            raw_price = str(self.srp_var.get() or "").replace('₱', '').replace(',', '').strip()
+            try:
+                if raw_price.endswith('-'):
+                    raw_price = raw_price[:-1].strip()
+                pnum = float(raw_price) if raw_price != '' else float(details.get('price', 0.0) or 0.0)
+            except Exception:
+                try:
+                    pnum = float(details.get('price', 0.0) or 0.0)
+                except Exception:
+                    pnum = 0.0
+
+            if abs(pnum - int(pnum)) < 1e-9:
+                price_line = f"₱{int(pnum)}- / pc."
+            else:
+                price_line = f"₱{pnum:.2f} / pc."
+
+            out_text = f"{first_line}\n{price_line}"
+
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(out_text)
+                # brief feedback on history_status_label
+                try:
+                    old = self.history_status_label.cget('text') if hasattr(self, 'history_status_label') else ''
+                    self.history_status_label.configure(text='Copied to clipboard!')
+                    self.after(1500, lambda: self.history_status_label.configure(text=old))
+                except Exception:
+                    pass
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def set_details(self, details: Dict[str, Any], main_app):
         self.details = details
@@ -618,18 +857,128 @@ class TransactionWindow(ctk.CTkFrame):
         self.sub_header_label.configure(text=create_subtitle_text(self.details))
 
         self.tree.delete(*self.tree.get_children())
-        summarized = summarize_running_stock(rows)
+
+        # Build running stock map (per-row) using same rules as summarize_running_stock
+        running_stock = 0
+        running_map = {}
+        for idx, row in enumerate(rows):
+            date, name, qty, cost, is_restock, brand = row
+            if is_restock == 2:
+                running_stock = int(qty)
+            else:
+                running_stock += int(qty)
+            running_map[idx] = running_stock
+
+        # Identify fabrication pairs (same date and name: one restock + one sale)
+        groups = {}
+        for idx, row in enumerate(rows):
+            date, name, qty, cost, is_restock, brand = row
+            key = (date, name)
+            groups.setdefault(key, {'restocks': [], 'sales': []})
+            if is_restock == 1:
+                groups[key]['restocks'].append(idx)
+            elif is_restock == 0:
+                groups[key]['sales'].append(idx)
+
+        pairs = {}
+        for key, lists in groups.items():
+            rlist = lists['restocks']
+            slist = lists['sales']
+            # Pair greedily by order
+            count = min(len(rlist), len(slist))
+            for i in range(count):
+                r_idx = rlist[i]
+                s_idx = slist[i]
+                pairs[r_idx] = (r_idx, s_idx)
+                pairs[s_idx] = (r_idx, s_idx)
+
+        displayed = []
+        emitted = set()
+
+        def format_date(d):
+            try:
+                dt = datetime.strptime(d, "%Y-%m-%d")
+            except ValueError:
+                dt = datetime.strptime(d, "%m/%d/%y")
+            return dt.strftime("%m/%d/%y")
+
+        for idx, row in enumerate(rows):
+            if idx in emitted:
+                continue
+
+            if idx in pairs:
+                r_idx, s_idx = pairs[idx]
+                # Only emit once, pick the earlier index to preserve order
+                first_idx = min(r_idx, s_idx)
+                if idx != first_idx:
+                    continue
+                rrow = rows[r_idx]
+                srow = rows[s_idx]
+                # build merged display
+                date_str = format_date(rrow[0])
+                # qty_restock from the restock record
+                qty_restock = rrow[2] if rrow[4] == 1 else ""
+                cost_str = ""  # leave cost empty for merged fabrication rows
+                name = rrow[1]
+                qty_sold = abs(int(srow[2])) if srow[4] == 0 else ""
+                # prefer sale price if available
+                price_val = None
+                try:
+                    if srow[3] is not None:
+                        price_val = float(srow[3])
+                except (ValueError, TypeError):
+                    price_val = None
+                price_str = f"₱{price_val:.2f}" if price_val is not None else ""
+                later_idx = max(r_idx, s_idx)
+                stock_after = running_map.get(later_idx, "")
+                displayed.append(((date_str, qty_restock, cost_str, name, qty_sold, price_str, stock_after), 'gray'))
+                emitted.add(r_idx)
+                emitted.add(s_idx)
+            else:
+                # Unpaired row: format like summarize_running_stock
+                date, name, qty, cost, is_restock, brand = row
+                date_str = format_date(date)
+                qty_restock = ""
+                cost_str = ""
+                price_str = ""
+                display_qty = ""
+                if is_restock == 1:
+                    qty_restock = qty
+                    try:
+                        cost_value = float(cost) if cost is not None else 0.0
+                    except (ValueError, TypeError):
+                        cost_value = 0.0
+                    # Display cost as integer centavos for reference (e.g., 99.00 -> 9900)
+                    cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
+                elif is_restock == 0:
+                    display_qty = abs(int(qty))
+                    try:
+                        price_val = float(cost) if cost is not None else 0.0
+                    except (ValueError, TypeError):
+                        price_val = 0.0
+                    price_str = format_price_display(price_val) if price_val is not None else ""
+                elif is_restock == 2:
+                    # Actual transaction: optional cost shown in cost column as centavos integer
+                    try:
+                        cost_value = float(cost) if cost is not None else 0.0
+                    except (ValueError, TypeError):
+                        cost_value = 0.0
+                    cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
+                stock_after = running_map.get(idx, "")
+                tag = get_transaction_tag(qty_restock, price_str)
+                if is_restock == 2:
+                    tag = 'green'
+                displayed.append(((date_str, qty_restock, cost_str, name, display_qty, price_str, stock_after), tag))
 
         def custom_sort_key(item):
-            dt = datetime.strptime(item[0], "%m/%d/%y")
-            tag = get_transaction_tag(item[1], item[5])
-            tag_priority = {'blue': 0, 'red': 1, 'green': 2}
+            vals, tag = item
+            dt = datetime.strptime(vals[0], "%m/%d/%y")
+            tag_priority = {'blue': 0, 'gray': 0, 'red': 1, 'green': 2}
             return (dt, tag_priority.get(tag, 99))
 
-        summarized.sort(key=custom_sort_key)
+        displayed.sort(key=custom_sort_key)
 
-        for vals in summarized:
-            tag = get_transaction_tag(vals[1], vals[5])
+        for vals, tag in displayed:
             self.tree.insert("", "end", values=vals, tags=(tag,))
 
         # Add auto-scroll to bottom to show latest date

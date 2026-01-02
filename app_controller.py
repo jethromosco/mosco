@@ -30,8 +30,17 @@ CATEGORY_FOLDER_MAP = {
 class AppController:
     def __init__(self, root):
         self.root = root
-        self.root.attributes('-fullscreen', True)
+        # Do not force any window state here; respect user's window sizing.
         self.root.configure(bg=theme.get("bg"))
+
+        # Track exclusive fullscreen state and remember previous geometry to
+        # restore when exiting fullscreen.
+        self._is_fullscreen = False
+        self._previous_geometry = None
+        try:
+            self.root.bind("<F11>", lambda e: self._toggle_fullscreen())
+        except Exception:
+            pass
 
         # Create container frame using CustomTkinter
         self.container = ctk.CTkFrame(root, fg_color=theme.get("bg"))
@@ -101,6 +110,29 @@ class AppController:
             frame = self.frames[page_name]
             frame.place(x=0, y=0, relwidth=1, relheight=1)
             frame.lift()
+
+    def _toggle_fullscreen(self, event=None):
+        try:
+            entering = not getattr(self, "_is_fullscreen", False)
+            if entering:
+                # save current geometry to restore later
+                try:
+                    self._previous_geometry = self.root.geometry()
+                except Exception:
+                    self._previous_geometry = None
+            self._is_fullscreen = entering
+            self.root.attributes("-fullscreen", entering)
+            if not entering:
+                # restore previous geometry if available
+                try:
+                    if self._previous_geometry:
+                        # make sure fullscreen flag is off first
+                        self.root.attributes("-fullscreen", False)
+                        self.root.geometry(self._previous_geometry)
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def go_back(self, page_name):
         self.show_frame(page_name)

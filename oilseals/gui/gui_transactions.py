@@ -4,7 +4,7 @@ from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
 from datetime import datetime
 from .gui_trans_aed import TransactionFormHandler
-from ..admin.transactions import TransactionsLogic, parse_date
+from ..admin.transactions import TransactionsLogic, parse_date, parse_date_db, format_currency
 from theme import theme
 
 
@@ -162,6 +162,10 @@ class TransactionTab:
         )
         self.clear_btn.pack(side="left", padx=10)
 
+        # Transaction count label (shows number of filtered transactions)
+        self.count_label = ctk.CTkLabel(row, text="Total: 0", font=("Poppins", 14, "bold"), text_color=theme.get("muted"))
+        self.count_label.pack(side="right", padx=(10, 0))
+
         # Filter label
         filter_label = ctk.CTkLabel(row, text="Filter:", font=("Poppins", 14, "bold"), text_color=theme.get("text"))
         filter_label.pack(side="left", padx=(10, 10))
@@ -313,82 +317,7 @@ class TransactionTab:
                 rowid = int(sel[0])
             except Exception:
                 return self.form_handler.edit_transaction()
-
-            # If this rowid is part of a fabrication pair, block editing
-            if rowid in getattr(self, 'fabrication_records', set()):
-                parent_win = self.frame.winfo_toplevel()
-                dlg = ctk.CTkToplevel(parent_win)
-                dlg.title("Cannot Edit Fabrication")
-                dlg.resizable(False, False)
-                dlg.configure(fg_color=theme.get("bg"))
-                dlg.transient(parent_win)
-                dlg.grab_set()
-
-                frm = ctk.CTkFrame(dlg, fg_color=theme.get("card"), corner_radius=12)
-                frm.pack(padx=24, pady=18, fill="both", expand=True)
-
-                # Simple centered message
-                lbl = ctk.CTkLabel(frm, text="Fabrication transactions are stored as paired Restock+Sale and cannot be edited.",
-                                    font=("Poppins", 13), text_color=theme.get("text"), wraplength=420)
-                lbl.pack(pady=(0, 8))
-
-                sublbl = ctk.CTkLabel(frm, text="Delete the fabrication pair and add a new one instead.",
-                                       font=("Poppins", 11), text_color=theme.get("muted"))
-                sublbl.pack(pady=(0, 12))
-
-                btn_frame = ctk.CTkFrame(frm, fg_color="transparent")
-                btn_frame.pack(pady=(6, 0))
-
-                def on_delete():
-                    try:
-                        # Always try DB lookup to find partner, not just filtered view
-                        partner_rowid = self.logic.find_fabrication_partner(rowid)
-
-                        deleted_any = False
-                        ok1, _ = self.logic.delete_transaction(rowid)
-                        if ok1:
-                            deleted_any = True
-                        if partner_rowid:
-                            ok2, _ = self.logic.delete_transaction(partner_rowid)
-                            if ok2:
-                                deleted_any = True
-
-                        if deleted_any:
-                            if self.on_refresh_callback:
-                                self.on_refresh_callback()
-                            dlg.destroy()
-                        else:
-                            messagebox.showerror("Delete Failed", "Failed to delete fabrication pair.", parent=dlg)
-                    except Exception:
-                        messagebox.showerror("Error", "Failed to delete fabrication. See console for details.", parent=dlg)
-                        dlg.destroy()
-
-                def on_cancel():
-                    dlg.destroy()
-
-                del_btn = ctk.CTkButton(btn_frame, text="Delete", fg_color="#EF4444", hover_color="#DC2626",
-                                         text_color="#FFFFFF", width=140, height=36, command=on_delete)
-                del_btn.pack(side="left", padx=(0, 12))
-
-                cancel_btn = ctk.CTkButton(btn_frame, text="Cancel", fg_color=theme.get("accent_hover"),
-                                           hover_color=theme.get("accent"), text_color=theme.get("text"), width=100, height=36,
-                                           command=on_cancel)
-                cancel_btn.pack(side="right")
-
-                # Center the dialog on screen
-                dlg.update_idletasks()
-                w = dlg.winfo_reqwidth()
-                h = dlg.winfo_reqheight()
-                sx = dlg.winfo_screenwidth()
-                sy = dlg.winfo_screenheight()
-                x = (sx - w) // 2
-                y = (sy - h) // 2
-                dlg.geometry(f"{w}x{h}+{x}+{y}")
-
-                dlg.focus()
-                return
-
-            # Not a fabrication: proceed to normal edit
+            # Proceed to edit (form handler will handle fabrication pairs)
             return self.form_handler.edit_transaction()
 
         edit_btn = ctk.CTkButton(
@@ -418,8 +347,11 @@ class TransactionTab:
         # Get all transactions from logic
         all_records = self.logic.get_all_transactions()
 
-        # Identify fabrication records
-        self.fabrication_records = self.logic.identify_fabrication_records(all_records)
+        # Identify fabrication pairs (based on same date + same product name)
+        # `pairs_map` maps a rowid -> (restock_record, sale_record)
+        self.fabrication_pairs = self.logic.get_fabrication_pairs(all_records)
+        # Derive a set of rowids that are part of fabrication pairs
+        self.fabrication_records = set(self.fabrication_pairs.keys())
 
         # Apply filters
         keyword = self.tran_search_var.get()
@@ -441,6 +373,24 @@ class TransactionTab:
         # Render the filtered transactions
         self.render_transactions(self.filtered_records)
 
+        # Update transaction count label: count fabrication pairs as one transaction
+        try:
+            pairs_map = getattr(self, 'fabrication_pairs', {}) or {}
+            display_ids = set()
+            for rec in self.filtered_records:
+                if rec.rowid in pairs_map:
+                    restock_rec, sale_rec = pairs_map[rec.rowid]
+                    canonical = min(restock_rec.rowid, sale_rec.rowid)
+                    display_ids.add(('p', canonical))
+                else:
+                    display_ids.add(('s', rec.rowid))
+            self.count_label.configure(text=f"Total: {len(display_ids)}")
+        except Exception:
+            try:
+                self.count_label.configure(text=f"Total: {len(self.filtered_records)}")
+            except Exception:
+                pass
+
         # Trigger refresh callback if provided
         if self.on_refresh_callback:
             self.on_refresh_callback()
@@ -457,16 +407,100 @@ class TransactionTab:
         if not records:
             return
 
-        # Calculate running stock using logic
+        # Calculate running stock using logic for the filtered records (used for normal rows)
         records_with_stock = self.logic.calculate_running_stock(records)
 
-        # Sort by date (newest first) for display
+        # Also calculate running stock across ALL transactions so we can lookup
+        # stock values for rowids that were removed by fabrication filtering.
+        all_records = self.logic.get_all_transactions()
+        all_with_stock = self.logic.calculate_running_stock(all_records)
+        stock_map_all = {rec.rowid: stock for rec, stock in all_with_stock}
+
+        # Sort the filtered records_with_stock by date (newest first) for display
         records_with_stock.sort(key=lambda x: (x[0].date, x[0].rowid), reverse=True)
 
-        # Add items to treeview
-        for record, stock in records_with_stock:
-            display_data = self.logic.format_transaction_for_display(record, stock)
+        emitted = set()
+        pairs_map = getattr(self, 'fabrication_pairs', {}) or {}
 
+        # Add items to treeview (merge fabrication pairs)
+        for record, stock in records_with_stock:
+            if record.rowid in emitted:
+                continue
+
+            # If this record is part of a fabrication pair, render merged row once
+            if record.rowid in pairs_map:
+                restock_rec, sale_rec = pairs_map[record.rowid]
+
+                # Ensure canonical ordering (restock, sale)
+                if restock_rec.is_restock != 1:
+                    restock_rec, sale_rec = sale_rec, restock_rec
+
+                # Compute final quantity = restock_qty - sold_qty
+                try:
+                    restock_qty = int(restock_rec.quantity)
+                except Exception:
+                    restock_qty = 0
+                try:
+                    sold_qty = abs(int(sale_rec.quantity))
+                except Exception:
+                    sold_qty = 0
+                final_qty = restock_qty - sold_qty
+
+                # Keep price from sale if present, otherwise restock
+                price_val = sale_rec.price if sale_rec.price and sale_rec.price > 0 else restock_rec.price
+                price_str = format_currency(price_val) if price_val else ""
+
+                # Build item string
+                item_str = f"{restock_rec.type} {restock_rec.id_size}-{restock_rec.od_size}-{restock_rec.th_size}"
+                if restock_rec.brand:
+                    item_str += f" {restock_rec.brand}"
+
+                formatted_date_obj = parse_date_db(restock_rec.date)
+                if formatted_date_obj:
+                    formatted_date = formatted_date_obj.strftime("%m/%d/%y")
+                else:
+                    formatted_date = "Invalid Date"
+
+                # Choose stock after the later of the two records
+                later = restock_rec
+                try:
+                    d1 = parse_date_db(restock_rec.date)
+                    d2 = parse_date_db(sale_rec.date)
+                    if d2 and d1 and (d2, sale_rec.rowid) > (d1, restock_rec.rowid):
+                        later = sale_rec
+                except Exception:
+                    if sale_rec.rowid > restock_rec.rowid:
+                        later = sale_rec
+
+                # Prefer stock from the full history so later.rowid (which may have been
+                # filtered out) still returns a meaningful stock-after value.
+                stock_after = stock_map_all.get(later.rowid, "")
+
+                # Show Fabricated Qty (restock), Net Qty (cost column), Sold Qty, and preserve Price
+                # Treeview columns: (item, date, qty_restock, cost, name, qty, price, stock)
+                values = (
+                    item_str,
+                    formatted_date,
+                    restock_qty,
+                    "",               # leave cost column empty (do not display Net here)
+                    restock_rec.name,
+                    sold_qty,
+                    price_str,
+                    stock_after,
+                )
+                tag = "gray"
+
+                # Use restock rowid as iid for merged display (keeps deletion/edit flows)
+                iid = restock_rec.rowid
+                self.tran_tree.insert("", tk.END, iid=iid, values=values, tags=(tag,))
+
+                # Mark both as emitted so we don't render them separately
+                emitted.add(restock_rec.rowid)
+                emitted.add(sale_rec.rowid)
+                continue
+
+            # Not a fabrication pair: render normally
+            display_data = self.logic.format_transaction_for_display(record, stock)
             self.tran_tree.insert("", tk.END,
                                   iid=display_data['rowid'],
                                   values=display_data['values'],

@@ -1,4 +1,5 @@
 from ..database import connect_db
+import os
 from .brand_utils import canonicalize_brand
 import ast
 import sqlite3
@@ -65,11 +66,12 @@ class ProductFormLogic:
 		"""Apply formatting rules to text fields."""
 		formatted_data = data.copy()
 		
-		# TYPE and BRAND: uppercase letters only
+		# TYPE and BRAND: uppercase letters only; preserve periods in brand (e.g., 'T.Y.')
 		type_idx = self.FIELDS.index("TYPE")
 		brand_idx = self.FIELDS.index("BRAND")
 		formatted_data[type_idx] = data[type_idx].upper()
-		formatted_data[brand_idx] = ''.join(filter(str.isalpha, data[brand_idx])).upper()
+		# Keep alphabetic characters and dots for brand
+		formatted_data[brand_idx] = ''.join(c for c in data[brand_idx] if (c.isalpha() or c == '.')).upper()
 		
 		# ORIGIN: capitalize
 		origin_idx = self.FIELDS.index("ORIGIN")
@@ -322,6 +324,55 @@ class ProductFormLogic:
 					except Exception:
 						pass
 					trans_logic.update_transactions_for_product(orig_keys, new_keys, alt_original_brand=alt_brand)
+					# Also attempt to reliably rename associated product photo files so they remain linked after key change
+					try:
+						# Import helpers from UI to locate existing photo paths and build safe filenames
+						from ..ui.transaction_window import get_photo_path_by_type, create_safe_filename, get_photos_directory
+						# Build an original details dict and new details dict
+						orig_details = {
+							'type': original_type,
+							'id': original_id,
+							'od': original_od,
+							'th': original_th,
+							'brand': original_brand
+						}
+						new_details = {
+							'type': validated_data[0],
+							'id': validated_data[1],
+							'od': validated_data[2],
+							'th': validated_data[3],
+							'brand': validated_data[4]
+						}
+						photos_dir = get_photos_directory()
+						# Try to find an existing photo for the original details
+						src_path = get_photo_path_by_type(orig_details)
+						if not src_path:
+							# fallback: glob-match any file that begins with the original base
+							old_base = f"{original_type}-{sanitize_dimension_for_filename(original_id)}-{sanitize_dimension_for_filename(original_od)}-{sanitize_dimension_for_filename(original_th)}-{original_brand.replace('/', 'x').replace(' ', '_')}"
+							for ext in ('.jpg', '.jpeg', '.png'):
+								candidate = os.path.join(photos_dir, old_base + ext)
+								if os.path.exists(candidate):
+									src_path = candidate
+									break
+						# If we found a source, compute a new safe filename and move it
+						if src_path and os.path.exists(src_path):
+							# Determine extension
+							_, ext = os.path.splitext(src_path)
+							new_filename = create_safe_filename(new_details, ext)
+							target_path = os.path.join(photos_dir, new_filename)
+							try:
+								os.replace(src_path, target_path)
+							except Exception:
+								# If replace fails, attempt copy+remove as fallback
+								try:
+									import shutil
+									shutil.copy2(src_path, target_path)
+									os.remove(src_path)
+								except Exception:
+									pass
+					except Exception:
+						# non-fatal
+							pass
 				except Exception:
 					# non-fatal: continue
 					pass
@@ -397,15 +448,25 @@ class ProductFormLogic:
 			if len(values) >= 4:
 				extracted[7] = safe_str_extract(values[3]).strip() if values[3] else ""  # NOTES
 				
-			# Handle price - should be the last field
-			if len(values) >= 6:
+			# Handle price - the products tree stores price at index 4 (0-based)
+			if len(values) >= 5:
 				try:
-					price_str = str(values[5]).replace("₱", "").replace(",", "").strip()
-					if price_str and (price_str.replace(".", "").isdigit() or price_str == "0"):
-						extracted[8] = price_str  # PRICE
+					price_str = str(values[4]).replace("₱", "").replace(",", "").strip()
+					# Accept numeric strings like '123' or '123.45'
+					if price_str:
+						# allow leading/trailing whitespace handled above
+						# If price contains a trailing '-' (some displays use '₱123-'), strip it
+						if price_str.endswith('-'):
+							price_str = price_str[:-1].strip()
+						# Validate numeric
+						try:
+							float(price_str)
+							extracted[8] = price_str
+						except Exception:
+							extracted[8] = "0"
 					else:
 						extracted[8] = "0"
-				except:
+				except Exception:
 					extracted[8] = "0"
 			
 			return tuple(extracted)

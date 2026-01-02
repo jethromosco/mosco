@@ -13,6 +13,23 @@ if __name__ == "__main__":
 
     root = ctk.CTk()
     root.title("MOSCO Inventory System")
+    # Start the app in a maximized (windowed-fullscreen) state by default
+    # to improve the first-launch experience.
+    try:
+        root.state('zoomed')
+    except Exception:
+        try:
+            w = root.winfo_screenwidth()
+            h = root.winfo_screenheight()
+            root.geometry(f"{w}x{h}")
+        except Exception:
+            pass
+    # Some window managers apply state after the mainloop starts; queue a call.
+    try:
+        root.after(0, lambda: root.state('zoomed'))
+    except Exception:
+        pass
+
     app = AppController(root)
     root.mainloop()
 

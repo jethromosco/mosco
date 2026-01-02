@@ -4,6 +4,7 @@ from tkinter import messagebox
 from tkcalendar import DateEntry
 from datetime import datetime
 from ..admin.trans_aed import TransactionLogic, center_window
+from ..database import connect_db
 import re
 from theme import theme
 
@@ -30,48 +31,22 @@ class TransactionFormHandler:
                                           parent=self.parent_frame.winfo_toplevel())
         try:
             rowid = int(item)
-            # If this rowid is in fabrication_records (provided by parent tab), block edit.
+            # If this rowid is in fabrication_records (provided by parent tab), open combined edit form
             parent_tab = getattr(self.parent_frame, '_transaction_tab_ref', None)
             fabrication_set = set()
             if parent_tab is not None:
                 fabrication_set = getattr(parent_tab, 'fabrication_records', set())
 
-            if rowid in fabrication_set:
-                parent_win = self.parent_frame.winfo_toplevel()
-                dlg = ctk.CTkToplevel(parent_win)
-                dlg.title("Cannot Edit Fabrication")
-                dlg.resizable(False, False)
-                dlg.configure(fg_color=theme.get("bg"))
-                dlg.transient(parent_win)
-                dlg.grab_set()
-
-                frm = ctk.CTkFrame(dlg, fg_color=theme.get("card"), corner_radius=12)
-                frm.pack(padx=24, pady=18, fill="both", expand=True)
-
-                lbl = ctk.CTkLabel(frm, text="Fabrication transactions are stored as paired Restock+Sale and cannot be edited.",
-                                    font=("Poppins", 13), text_color=theme.get("text"), wraplength=420)
-                lbl.pack(pady=(0, 8))
-
-                sublbl = ctk.CTkLabel(frm, text="Delete the fabrication pair and add a new one instead.",
-                                       font=("Poppins", 11), text_color=theme.get("muted"))
-                sublbl.pack(pady=(0, 12))
-
-                ok_btn = ctk.CTkButton(frm, text="OK", fg_color=theme.get("accent_hover"), hover_color=theme.get("accent"),
-                                       text_color=theme.get("text"), width=100, height=36, command=dlg.destroy)
-                ok_btn.pack()
-
-                # Center dialog
-                dlg.update_idletasks()
-                w = dlg.winfo_reqwidth()
-                h = dlg.winfo_reqheight()
-                sx = dlg.winfo_screenwidth()
-                sy = dlg.winfo_screenheight()
-                x = (sx - w) // 2
-                y = (sy - h) // 2
-                dlg.geometry(f"{w}x{h}+{x}+{y}")
-
-                dlg.focus()
-                return
+            if rowid in fabrication_set and parent_tab is not None:
+                # Try to locate the paired records from the parent tab's pairs map
+                pairs = getattr(parent_tab, 'fabrication_pairs', {}) or {}
+                pair = pairs.get(rowid)
+                if pair:
+                    restock_rec, sale_rec = pair
+                    # Pass both records to the form for editing; rowid argument will be a tuple of both
+                    self._transaction_form("Edit", record=None, rowid=(restock_rec.rowid, sale_rec.rowid), fabrication_pair=(restock_rec, sale_rec))
+                    return
+                # Fall back to single-record edit if pair not found
 
             record = self.logic.get_record_by_id(rowid)
             if record is None:
@@ -130,7 +105,29 @@ class TransactionFormHandler:
         button_container.pack(pady=(0, 20))
 
         def confirm_delete():
-            if self.logic.delete_transactions(items):
+            # Expand selected items to include fabrication partners if present
+            expanded = set()
+            parent_tab = getattr(self.parent_frame, '_transaction_tab_ref', None)
+            pairs = getattr(parent_tab, 'fabrication_pairs', {}) if parent_tab is not None else {}
+            for it in items:
+                try:
+                    rid = int(it)
+                except Exception:
+                    try:
+                        rid = int(str(it))
+                    except Exception:
+                        rid = it
+                expanded.add(rid)
+                partner = pairs.get(rid)
+                if partner:
+                    # partner can be tuple of records
+                    try:
+                        a, b = partner
+                        expanded.add(a.rowid)
+                        expanded.add(b.rowid)
+                    except Exception:
+                        pass
+            if self.logic.delete_transactions(list(expanded)):
                 if self.on_refresh_callback:
                     self.on_refresh_callback()
             confirm_window.destroy()
@@ -179,7 +176,7 @@ class TransactionFormHandler:
                 text_var.set(upper_val)
         text_var.trace_add('write', on_change)
 
-    def _transaction_form(self, mode, record=None, rowid=None):
+    def _transaction_form(self, mode, record=None, rowid=None, fabrication_pair=None):
         """Create and display transaction form"""
         form = ctk.CTkToplevel(self.parent_frame.winfo_toplevel())
         form.title(f"{mode} Transaction")
@@ -283,9 +280,30 @@ class TransactionFormHandler:
                                             stock_left_var, form)
 
         # Populate form for editing
-        if mode == "Edit" and record:
-            self._populate_edit_form(vars, date_var, transaction_type_var,
-                                    qty_restock_var, qty_customer_var, record)
+        if mode == "Edit":
+            if fabrication_pair and isinstance(fabrication_pair, tuple):
+                # fabrication_pair is (restock_rec, sale_rec)
+                restock_rec, sale_rec = fabrication_pair
+                # Populate base fields from restock
+                vars["Type"].set(restock_rec.type.upper())
+                vars["ID"].set(restock_rec.id_size)
+                vars["OD"].set(restock_rec.od_size)
+                vars["TH"].set(restock_rec.th_size)
+                vars["Brand"].set((restock_rec.brand or "").upper())
+                vars["Name"].set((restock_rec.name or "").upper())
+                # Date (use restock date)
+                try:
+                    date_var.set(datetime.strptime(restock_rec.date, "%Y-%m-%d").strftime("%m/%d/%y"))
+                except Exception:
+                    date_var.set(restock_rec.date)
+                # Set fabrication fields
+                transaction_type_var.set("Fabrication")
+                qty_restock_var.set(str(restock_rec.quantity))
+                qty_customer_var.set(str(abs(sale_rec.quantity)))
+                vars["Price"].set(f"{sale_rec.price:.2f}" if sale_rec.price is not None else "")
+            elif record:
+                self._populate_edit_form(vars, date_var, transaction_type_var,
+                                        qty_restock_var, qty_customer_var, record)
 
         # Create buttons
         self._create_form_buttons(inner_container, form, mode, vars, date_var,
@@ -355,7 +373,7 @@ class TransactionFormHandler:
                 price_label_var.set("Price:")
             elif value == "Actual":
                 self.type_buttons["actual"].configure(fg_color="#22C55E", hover_color="#16A34A")
-                price_label_var.set("Price:")
+                price_label_var.set("Cost:")
             elif value == "Fabrication":
                 self.type_buttons["fabrication"].configure(fg_color=theme.get("accent_hover"), hover_color=theme.get("accent"))
                 price_label_var.set("Price:")
@@ -649,13 +667,13 @@ class TransactionFormHandler:
                 show_field_row("Price")
             elif trans_type == "Actual":
                 enable_disable([entry_widgets["Quantity"]], False)
-                enable_disable([entry_widgets["Price"]], False)
+                enable_disable([entry_widgets["Price"]], True)
                 enable_disable([entry_widgets["Stock"]], True)
                 enable_disable([self.qty_restock_entry, self.qty_customer_entry], False)
 
                 # Show only Stock; hide Quantity, Price and Fabrication
                 hide_field_row("Quantity")
-                hide_field_row("Price")
+                show_field_row("Price")
                 hide_fabrication_section()
                 show_field_row("Stock")
             elif trans_type == "Fabrication":
@@ -700,14 +718,27 @@ class TransactionFormHandler:
         if record.is_restock == 1:
             type_str = "Restock"
             vars["Quantity"].set(str(abs(record.quantity)))
-            vars["Price"].set(f"{record.price:.2f}")
+            try:
+                vars["Price"].set(f"{float(record.price):.2f}" if record.price is not None else "")
+            except Exception:
+                vars["Price"].set("")
         elif record.is_restock == 0 and record.quantity < 0:
             type_str = "Sale"
             vars["Quantity"].set(str(abs(record.quantity)))
-            vars["Price"].set(f"{record.price:.2f}")
+            try:
+                vars["Price"].set(f"{float(record.price):.2f}" if record.price is not None else "")
+            except Exception:
+                vars["Price"].set("")
         elif record.is_restock == 2:
             type_str = "Actual"
             vars["Stock"].set(str(record.quantity))
+            try:
+                if record.price is not None:
+                    vars["Price"].set(f"{float(record.price):.2f}")
+                else:
+                    vars["Price"].set("")
+            except Exception:
+                vars["Price"].set("")
         elif record.is_restock == 3:
                 # This shouldn't happen in normal editing since fabrication creates two separate records
                 # But if it does, handle it gracefully
@@ -807,13 +838,58 @@ class TransactionFormHandler:
                 messagebox.showerror("Product Not Found", "This product does not exist. Please add it first.", parent=form)
                 return
             
-            # Handle Fabrication differently (same as old code)
+            # Handle Fabrication differently
             if trans_type == "Fabrication":
                 data = self.logic.prepare_transaction_data(trans_type, form_data)
                 if not data:
                     messagebox.showerror("Invalid", "Error preparing data for saving.", parent=form)
                     return
-                success = self.logic.save_fabrication_transaction(data)
+                # If adding new fabrication, insert two records
+                if mode == "Add":
+                    success = self.logic.save_fabrication_transaction(data)
+                else:
+                    # Editing existing fabrication: rowid may be a tuple of (restock_rowid, sale_rowid)
+                    try:
+                        if isinstance(rowid, (list, tuple)) and len(rowid) == 2:
+                            restock_rid, sale_rid = rowid
+                            # Build restock and sale payloads for updating
+                            # normalize date to YYYY-MM-DD like prepare_transaction_data does
+                            try:
+                                norm_date = datetime.strptime(form_data['date'], "%m/%d/%y").strftime("%Y-%m-%d")
+                            except Exception:
+                                norm_date = form_data['date']
+                            restock_payload = {
+                                'date': norm_date,
+                                'item_type': form_data['item_type'],
+                                'id_size': form_data['id_size'],
+                                'od_size': form_data['od_size'],
+                                'th_size': form_data['th_size'],
+                                'brand': form_data['brand'],
+                                'name': form_data['name'],
+                                'quantity': int(form_data['qty_restock']),
+                                'price': None,
+                                'is_restock': 1
+                            }
+                            sale_payload = {
+                                'date': norm_date,
+                                'item_type': form_data['item_type'],
+                                'id_size': form_data['id_size'],
+                                'od_size': form_data['od_size'],
+                                'th_size': form_data['th_size'],
+                                'brand': form_data['brand'],
+                                'name': form_data['name'],
+                                'quantity': -int(form_data['qty_customer']),
+                                'price': float(form_data['price']),
+                                'is_restock': 0
+                            }
+                            ok1 = self.logic.save_transaction("Edit", restock_payload, restock_rid)
+                            ok2 = self.logic.save_transaction("Edit", sale_payload, sale_rid)
+                            success = bool(ok1 and ok2)
+                        else:
+                            # Unexpected: fall back to inserting new pair
+                            success = self.logic.save_fabrication_transaction(data)
+                    except Exception:
+                        success = False
             else:
                 # Prepare data for saving
                 data = self.logic.prepare_transaction_data(trans_type, form_data)
@@ -835,7 +911,61 @@ class TransactionFormHandler:
                 
                 if self.on_refresh_callback:
                     self.on_refresh_callback()
-                form.destroy()
+                # After successful save, open the Transaction Window for the affected product
+                try:
+                    # Build basic details from form data
+                    details = {
+                        'type': form_data['item_type'].strip().upper(),
+                        'id': form_data['id_size'].strip(),
+                        'od': form_data['od_size'].strip(),
+                        'th': form_data['th_size'].strip(),
+                        'brand': form_data['brand'].strip().upper(),
+                        'price': 0.0,
+                        'part_no': '',
+                        'country_of_origin': '',
+                        'notes': ''
+                    }
+                    # Try to fetch product metadata from products table
+                    try:
+                        conn = connect_db()
+                        cur = conn.cursor()
+                        cur.execute(
+                            "SELECT part_no, country_of_origin, notes, price FROM products WHERE type=? AND id=? AND od=? AND th=? AND brand=? LIMIT 1",
+                            (details['type'], details['id'], details['od'], details['th'], details['brand'])
+                        )
+                        row = cur.fetchone()
+                        conn.close()
+                        if row:
+                            details['part_no'] = row[0] or ''
+                            details['country_of_origin'] = row[1] or ''
+                            details['notes'] = row[2] or ''
+                            try:
+                                details['price'] = float(row[3]) if row[3] is not None else 0.0
+                            except Exception:
+                                details['price'] = 0.0
+                    except Exception:
+                        pass
+
+                    # Obtain controller and main_app from parent_frame reference if available
+                    controller = None
+                    main_app = None
+                    try:
+                        tab_ref = getattr(self.parent_frame, '_transaction_tab_ref', None)
+                        if tab_ref:
+                            controller = getattr(tab_ref, 'controller', None)
+                            main_app = getattr(tab_ref, 'main_app', None)
+                    except Exception:
+                        controller = None
+
+                    if controller:
+                        controller.show_transaction_window(details, main_app)
+                except Exception:
+                    # Fallback: just close the form
+                    pass
+                try:
+                    form.destroy()
+                except Exception:
+                    pass
             else:
                 messagebox.showerror("Error", "Failed to save transaction.", parent=form)
                 

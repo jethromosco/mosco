@@ -100,24 +100,43 @@ class TransactionsLogic:
     
     def identify_fabrication_records(self, records):
         """Identify fabrication records (matching restock/sale pairs on same date)."""
+        # Delegate to new pair-finding utility and return set of rowids
+        pairs = self.get_fabrication_pairs(records)
         fabrication_records = set()
-        
-        # Group records by date, item, and brand
-        date_item_groups = defaultdict(list)
-        for record in records:
-            key = (record.date, record.type, record.id_size, record.od_size, record.th_size, record.brand)
-            date_item_groups[key].append(record)
-
-        # Identify fabrication records (same date, same item, same brand, one restock + one sale)
-        for key, group_records in date_item_groups.items():
-            restocks = [r for r in group_records if r.is_restock == 1]
-            sales = [r for r in group_records if r.is_restock == 0]
-            # Only pair if exactly one restock and one sale for same brand
-            if len(restocks) == 1 and len(sales) == 1:
-                fabrication_records.add(restocks[0].rowid)
-                fabrication_records.add(sales[0].rowid)
-
+        for a, b in pairs.values():
+            fabrication_records.add(a.rowid)
+            fabrication_records.add(b.rowid)
         return fabrication_records
+
+    def get_fabrication_pairs(self, records):
+        """Return fabrication pairs found in `records`.
+
+        A fabrication pair is defined for this project as exactly one restock and
+        one sale that share the same date and the same `name` field. Returns a
+        mapping of rowid -> (restock_record, sale_record) for each matched pair.
+        """
+        pairs = {}
+
+        # Group by (date, name)
+        groups = defaultdict(list)
+        for r in records:
+            key = (r.date, (r.name or "").strip())
+            groups[key].append(r)
+
+        # For each group, pair up restocks and sales greedily by rowid order.
+        # If counts differ, unmatched records remain unpaired (display normally).
+        for key, grp in groups.items():
+            restocks = sorted([r for r in grp if r.is_restock == 1], key=lambda x: x.rowid)
+            sales = sorted([r for r in grp if r.is_restock == 0], key=lambda x: x.rowid)
+
+            pair_count = min(len(restocks), len(sales))
+            for i in range(pair_count):
+                restock = restocks[i]
+                sale = sales[i]
+                pairs[restock.rowid] = (restock, sale)
+                pairs[sale.rowid] = (restock, sale)
+
+        return pairs
     
     def filter_transactions(self, records, keyword="", restock_filter="All", date_filter=None, fabrication_records=None):
         """Filter transactions based on search criteria."""
@@ -203,16 +222,26 @@ class TransactionsLogic:
             tag = "blue"
             # Hide cost for fabrication restock (restock with 0 or null price and positive quantity)
             if record.price and record.price > 0:
-                cost = format_currency(record.price)
+                # Show cost as integer centavos for reference (e.g., 99.00 -> 9900)
+                try:
+                    cost = f"₱{int(record.price * 100)}"
+                except Exception:
+                    cost = format_currency(record.price)
             else:
                 cost = ""  # Empty for fabrication restock
             qty_restock = record.quantity
         elif record.is_restock == 0:  # Sale
             tag = "red"
-            price_str = format_currency(record.price)
+            price_str = format_currency(record.price) if record.price is not None else ""
             qty_sale = abs(record.quantity)
         elif record.is_restock == 2:  # Actual
             tag = "green"
+            # For Actual transactions, treat the stored price as an optional cost
+            if record.price is not None and record.price > 0:
+                try:
+                    cost = f"₱{int(record.price * 100)}"
+                except Exception:
+                    cost = format_currency(record.price)
         
         return {
             'rowid': record.rowid,
