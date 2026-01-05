@@ -4,6 +4,7 @@ import os
 from PIL import Image
 from ..database import connect_db
 from ..admin.trans_aed import sanitize_dimension_for_filename
+from .mm import apply_stock_transaction, format_stock_display, is_unknown_stock
 
 
 def get_existing_image_base(details: Dict[str, Any]) -> str:
@@ -116,16 +117,23 @@ def update_thresholds(details: Dict[str, Any], low: int, warn: int) -> None:
         conn.commit()
 
 
-def summarize_running_stock(rows: List[Tuple[Any, ...]]) -> List[Tuple[str, Any, Any, Any, Any, Any, int]]:
-    """Return list of tuples for display, computing running stock with reset on Actual (is_restock==2)."""
-    running_stock = 0
+def summarize_running_stock(rows: List[Tuple[Any, ...]]) -> List[Tuple[str, Any, Any, Any, Any, Any, Any]]:
+    """Return list of tuples for display, computing running stock with reset on Actual (is_restock==2).
+    Stock value can be int or None (for unknown stock displayed as ?).
+    """
+    running_stock: Any = 0
     result = []
     for row in rows:
         date, name, qty, cost, is_restock, brand = row
+        
         if is_restock == 2:
+            # Reset to actual count
             running_stock = int(qty)
         else:
-            running_stock += int(qty)
+            # Apply transaction using the new unknown stock logic
+            is_restock_tx = (is_restock == 1)  # 1 = restock, 0 = sale
+            running_stock = apply_stock_transaction(running_stock, int(qty), is_restock_tx)
+        
         # Always display date in mm/dd/yy format, regardless of input
         try:
             date_obj = datetime.strptime(date, "%Y-%m-%d")
@@ -156,17 +164,24 @@ def summarize_running_stock(rows: List[Tuple[Any, ...]]) -> List[Tuple[str, Any,
     return list(reversed(result))
 
 
-def calculate_current_stock(rows: List[Tuple[Any, ...]]) -> int:
-    """Calculate current stock from transaction history"""
+def calculate_current_stock(rows: List[Tuple[Any, ...]]) -> Any:
+    """Calculate current stock from transaction history.
+    Returns int or None (for unknown stock).
+    """
     if not rows:
         return 0
     summary = summarize_running_stock(rows)
     return summary[0][6] if summary else 0
 
 
-def get_stock_color(stock: int, low_threshold: int, warn_threshold: int) -> str:
-    """Get color code based on stock level and thresholds"""
-    if stock <= low_threshold:
+def get_stock_color(stock: Any, low_threshold: int, warn_threshold: int) -> str:
+    """Get color code based on stock level and thresholds.
+    stock can be int or None (for unknown stock).
+    """
+    if is_unknown_stock(stock):
+        return "#9CA3AF"  # Gray for unknown stock
+    stock_int = int(stock)
+    if stock_int <= low_threshold:
         return "#EF4444"  # Red
     elif stock <= warn_threshold:
         return "#F59E0B"  # Orange/Yellow

@@ -4,6 +4,7 @@ import tkinter as tk
 
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
+UNKNOWN_STOCK = None  # Special marker for unknown/insufficient stock
 
 BRAND_GROUPS = {
     "NOK_JAPAN": {
@@ -179,16 +180,61 @@ def _fetch_all_transactions() -> List[Tuple[Any, ...]]:
     return rows
 
 
-def _compute_stock_map(all_transactions: List[Tuple[Any, ...]]) -> Dict[Tuple[str, str, str, str], int]:
-    stock_map: Dict[Tuple[str, str, str, str, str], int] = {}
+def apply_stock_transaction(current_stock: Any, transaction_qty: int, is_restock: bool) -> Any:
+    """Apply a transaction to current stock following the unknown stock rules.
+    
+    Rules:
+    - If current stock would go negative from a sale, set to None (unknown)
+    - If current stock is unknown (None) and it's a sale, keep as None
+    - If current stock is unknown (None) and it's a restock, apply the restock amount
+    - Otherwise, apply the transaction normally
+    
+    Args:
+        current_stock: Current stock value (int or None)
+        transaction_qty: Quantity to add/subtract (positive for restock, negative for sale)
+        is_restock: True if this is a restock transaction, False if sale
+    
+    Returns:
+        Updated stock value (int or None)
+    """
+    # If current stock is unknown
+    if current_stock is None:
+        if is_restock and transaction_qty > 0:
+            # Restock: apply the amount
+            return int(transaction_qty)
+        else:
+            # Sale or invalid restock: keep as unknown
+            return None
+    
+    # Current stock is known
+    new_stock = int(current_stock) + int(transaction_qty)
+    
+    # If sale would make stock negative, mark as unknown
+    if not is_restock and new_stock < 0:
+        return None
+    
+    # Otherwise apply normally
+    return max(0, new_stock)  # Ensure non-negative for valid calculations
+
+
+def _compute_stock_map(all_transactions: List[Tuple[Any, ...]]) -> Dict[Tuple[str, str, str, str], Any]:
+    """Compute stock map from transactions, handling unknown stock.
+    Returns dict mapping product key to stock value (int or None).
+    """
+    stock_map: Dict[Tuple[str, str, str, str, str], Any] = {}
     for row in all_transactions:
         # Expect: type, id, od, th, brand, quantity, is_restock
         type_, id_raw, od_raw, th_raw, brand, quantity, is_restock = row
         key = (type_, id_raw, od_raw, th_raw, str(brand).strip().upper())
+        
         if is_restock == 2:
+            # Actual count: reset stock
             stock_map[key] = int(quantity)
         else:
-            stock_map[key] = stock_map.get(key, 0) + int(quantity)
+            # Apply transaction (restock=1 or sale=0)
+            current = stock_map.get(key, 0)
+            is_restock_tx = (is_restock == 1)
+            stock_map[key] = apply_stock_transaction(current, int(quantity), is_restock_tx)
     return stock_map
 
 
@@ -234,14 +280,24 @@ def _parse_multi_component_sort(val: Any) -> Tuple[float, float]:
             return (0.0, 0.0)
 
 
-def stock_filter_matches(qty: int, stock_filter: str) -> bool:
+def stock_filter_matches(qty: Any, stock_filter: str) -> bool:
+    """Check if stock quantity matches the given filter.
+    qty can be int or None (unknown stock).
+    """
+    # Unknown stock (None) matching logic
+    if qty is None:
+        return stock_filter in ("All", "Unknown Stock")
+    
+    qty_int = int(qty)
     if stock_filter == "Low Stock":
-        return 0 < qty <= LOW_STOCK_THRESHOLD
+        return 0 < qty_int <= LOW_STOCK_THRESHOLD
     if stock_filter == "Out of Stock":
-        return qty == OUT_OF_STOCK
+        return qty_int == OUT_OF_STOCK
     if stock_filter == "In Stock":
-        return qty > OUT_OF_STOCK
-    return True
+        return qty_int > OUT_OF_STOCK
+    if stock_filter == "Unknown Stock":
+        return False  # qty is not None, so not unknown
+    return True  # "All" filter
 
 
 def build_products_display_data(
@@ -299,7 +355,14 @@ def build_products_display_data(
         display_data.sort(key=_size_key)
     elif sort_by == "Quantity":
         # qty is at index 4 in the new tuple
-        display_data.sort(key=lambda x: x[4], reverse=True)
+        # Sort quantities in descending order, with unknown stock (None) appearing at the end
+        def qty_sort_key(item):
+            qty = item[4]
+            if qty is None:
+                return (0, 1)  # Unknown stock sorts to end
+            else:
+                return (qty, 0)  # Known quantities sort by value
+        display_data.sort(key=qty_sort_key, reverse=True)
 
     return display_data
 
@@ -358,11 +421,16 @@ def create_product_details(item_values: List[Any]) -> Dict[str, Any]:
     }
 
 
-def get_stock_tag(qty: int) -> str:
-    """Get stock status tag based on quantity"""
-    if qty < 0 or qty == OUT_OF_STOCK:  # Explicitly handle negative OR zero
+def get_stock_tag(qty: Any) -> str:
+    """Get stock status tag based on quantity.
+    qty can be int or None (unknown stock).
+    """
+    if is_unknown_stock(qty):
+        return "unknown"
+    qty_int = int(qty)
+    if qty_int < 0 or qty_int == OUT_OF_STOCK:
         return "out"
-    elif qty <= LOW_STOCK_THRESHOLD:
+    elif qty_int <= LOW_STOCK_THRESHOLD:
         return "low"
     else:
         return "normal"
@@ -371,3 +439,19 @@ def get_stock_tag(qty: int) -> str:
 def should_uppercase_field(field_name: str) -> bool:
     """Check if a field should be automatically uppercased"""
     return field_name in ["type", "brand", "part_no"]
+
+
+def is_unknown_stock(qty: Any) -> bool:
+    """Check if stock value represents unknown/insufficient stock (displayed as ?)"""
+    return qty is None
+
+
+def format_stock_display(qty: Any) -> str:
+    """Format stock quantity for display, showing ? for unknown stock"""
+    if is_unknown_stock(qty):
+        return "?"
+    try:
+        return str(int(qty))
+    except (ValueError, TypeError):
+        return "?"
+

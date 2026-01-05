@@ -914,12 +914,16 @@ class TransactionFormHandler:
                 # After successful save, open the Transaction Window for the affected product
                 try:
                     # Build basic details from form data
+                    # IMPORTANT: Use canonicalized brand (what's in DB) not form input
+                    from ..admin.brand_utils import canonicalize_brand
+                    canonical_brand, _ = canonicalize_brand(form_data['brand'].strip().upper())
+                    
                     details = {
                         'type': form_data['item_type'].strip().upper(),
                         'id': form_data['id_size'].strip(),
                         'od': form_data['od_size'].strip(),
                         'th': form_data['th_size'].strip(),
-                        'brand': form_data['brand'].strip().upper(),
+                        'brand': canonical_brand,  # Use canonicalized brand for lookup
                         'price': 0.0,
                         'part_no': '',
                         'country_of_origin': '',

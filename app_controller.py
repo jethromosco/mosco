@@ -156,10 +156,12 @@ class AppController:
             return_to = self.get_current_frame_name()
 
         frame = TransactionWindow(self.container, details, controller=self, return_to=return_to)
-        frame.set_details(details, main_app)
         self.frames["TransactionWindow"] = frame
         frame.place(x=0, y=0, relwidth=1, relheight=1)
         frame.lift()
+        # Ensure frame is rendered, then load data
+        frame.update_idletasks()
+        frame.set_details(details, main_app)
 
     def show_coming_soon(self, category_name):
         frame_name = f"{category_name}ComingSoon"

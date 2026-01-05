@@ -521,7 +521,7 @@ class TransactionWindow(ctk.CTkFrame):
         colors = {
             "red": "#B22222" if theme.mode == "light" else "#EF4444",
             "blue": "#1E40AF" if theme.mode == "light" else "#3B82F6",
-            "green": "#166534" if theme.mode == "light" else "#22C55E",
+            "green": "#2D3436" if theme.mode == "light" else "#22C55E",  # Dark grey in light mode for fabrication
             "gray": "#9CA3AF"
         }
 
@@ -849,6 +849,18 @@ class TransactionWindow(ctk.CTkFrame):
         self._load_location()
         self._load_transactions()
         self._load_photo()
+        
+        # Schedule a refresh after a brief delay to ensure rendering is complete
+        # This fixes the issue where transaction history appears empty immediately after redirect
+        self.after(100, self._refresh_transaction_display)
+
+    def _refresh_transaction_display(self):
+        """Force refresh of transaction display - ensures data is shown after redirect"""
+        try:
+            if hasattr(self, 'tree') and hasattr(self, 'details'):
+                self._load_transactions()
+        except Exception:
+            pass
 
     def _load_transactions(self):
         rows = load_transactions_records(self.details)
@@ -858,15 +870,19 @@ class TransactionWindow(ctk.CTkFrame):
 
         self.tree.delete(*self.tree.get_children())
 
-        # Build running stock map (per-row) using same rules as summarize_running_stock
+        # Build running stock map (per-row) using new unknown stock logic
+        from ..ui.mm import apply_stock_transaction, format_stock_display
         running_stock = 0
         running_map = {}
         for idx, row in enumerate(rows):
             date, name, qty, cost, is_restock, brand = row
             if is_restock == 2:
+                # Reset to actual count
                 running_stock = int(qty)
             else:
-                running_stock += int(qty)
+                # Apply transaction using the new unknown stock logic
+                is_restock_tx = (is_restock == 1)  # 1 = restock, 0 = sale
+                running_stock = apply_stock_transaction(running_stock, int(qty), is_restock_tx)
             running_map[idx] = running_stock
 
         # Identify fabrication pairs (same date and name: one restock + one sale)
@@ -931,7 +947,8 @@ class TransactionWindow(ctk.CTkFrame):
                 price_str = f"₱{price_val:.2f}" if price_val is not None else ""
                 later_idx = max(r_idx, s_idx)
                 stock_after = running_map.get(later_idx, "")
-                displayed.append(((date_str, qty_restock, cost_str, name, qty_sold, price_str, stock_after), 'gray'))
+                stock_after_display = format_stock_display(stock_after)  # Format for display
+                displayed.append(((date_str, qty_restock, cost_str, name, qty_sold, price_str, stock_after_display), 'gray'))
                 emitted.add(r_idx)
                 emitted.add(s_idx)
             else:
@@ -965,10 +982,11 @@ class TransactionWindow(ctk.CTkFrame):
                         cost_value = 0.0
                     cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
                 stock_after = running_map.get(idx, "")
+                stock_after_display = format_stock_display(stock_after)  # Format for display
                 tag = get_transaction_tag(qty_restock, price_str)
                 if is_restock == 2:
                     tag = 'green'
-                displayed.append(((date_str, qty_restock, cost_str, name, display_qty, price_str, stock_after), tag))
+                displayed.append(((date_str, qty_restock, cost_str, name, display_qty, price_str, stock_after_display), tag))
 
         def custom_sort_key(item):
             vals, tag = item
@@ -992,7 +1010,9 @@ class TransactionWindow(ctk.CTkFrame):
         low, warn = get_thresholds(self.details)
         stock = calculate_current_stock(rows)
         color = get_stock_color(stock, low, warn)
-        self.stock_label.configure(text=f"STOCK: {stock}", text_color=color)
+        from ..ui.mm import format_stock_display
+        stock_display = format_stock_display(stock)
+        self.stock_label.configure(text=f"STOCK: {stock_display}", text_color=color)
 
     def _load_location(self):
         location, notes = get_location_and_notes(self.details)

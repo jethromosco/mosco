@@ -387,7 +387,7 @@ class InventoryApp(ctk.CTkFrame):
         stock_combo = self._create_combo_widget(
             stock_frame, 
             self.stock_filter, 
-            ["All", "In Stock", "Low Stock", "Out of Stock"]
+            ["All", "In Stock", "Low Stock", "Out of Stock", "Unknown Stock"]
         )
         stock_combo.grid(row=1, column=0, pady=(0, 8), sticky="ew")
         self.stock_filter.trace_add("write", lambda *args: self.refresh_product_list())
@@ -476,15 +476,10 @@ class InventoryApp(ctk.CTkFrame):
                         foreground=theme.get("heading_fg"),
                         font=("Poppins", 20, "bold"))
         
-        # Fixed selection styling for light/dark mode
-        if theme.mode == "dark":
-            style.map("Custom.Treeview", 
-                     background=[("selected", theme.get("table_selected"))],
-                     foreground=[("selected", "#FFFFFF")])  # White text on dark selection
-        else:
-            style.map("Custom.Treeview", 
-                     background=[("selected", "#D0D0D0")],  # Light grey selection in light mode
-                     foreground=[("selected", "#000000")])  # Black text on light selection
+        # Selection styling uses theme-aware table_selected color (distinct from unknown stock)
+        style.map("Custom.Treeview", 
+                 background=[("selected", theme.get("table_selected"))],
+                 foreground=[("selected", "#FFFFFF" if theme.mode == "dark" else "#000000")])
         
         style.map("Custom.Treeview.Heading", background=[("active", theme.get("accent_hover"))])
 
@@ -774,11 +769,17 @@ class InventoryApp(ctk.CTkFrame):
         for index, item in enumerate(display_data):
             qty = item[4]
             base_tag = get_stock_tag(qty)
+            # Format quantity for display (show ? for unknown stock)
+            from ..ui.mm import format_stock_display
+            qty_display = format_stock_display(qty)
+            # Create display row with formatted quantity
+            display_item = list(item[:6])
+            display_item[4] = qty_display  # Replace qty with formatted version
             if base_tag == "normal":
                 alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
-                self.tree.insert("", tk.END, values=item[:6], tags=(base_tag, alt_tag))
+                self.tree.insert("", tk.END, values=display_item, tags=(base_tag, alt_tag))
             else:
-                self.tree.insert("", tk.END, values=item[:6], tags=(base_tag,))
+                self.tree.insert("", tk.END, values=display_item, tags=(base_tag,))
 
         # Update status
         self.status_label.configure(text=f"Total Oil Seal Products: {len(display_data)}")
@@ -791,17 +792,20 @@ class InventoryApp(ctk.CTkFrame):
             # Alternate stripes for normal rows
             self.tree.tag_configure("alt_even", background=theme.get("card_alt"))
             self.tree.tag_configure("alt_odd", background=theme.get("card"))
-            # Stock highlight tags (paler in light mode)
+            # Stock highlight tags - use distinct colors per state
             if theme.mode == "dark":
                 low_bg = "#8B4513"
                 out_bg = "#8B0000"
+                unknown_bg = theme.get("unknown_stock_bg")  # #6B3FA0 purple
                 txt = "#FFFFFF"
             else:
                 low_bg = "#FFF1B8"
                 out_bg = "#F8B4B4"
+                unknown_bg = theme.get("unknown_stock_bg")  # #D9C4E8 light purple
                 txt = "#000000"
             self.tree.tag_configure("low", background=low_bg, foreground=txt)
             self.tree.tag_configure("out", background=out_bg, foreground=txt)
+            self.tree.tag_configure("unknown", background=unknown_bg, foreground=txt)
         except Exception:
             pass
 

@@ -17,7 +17,8 @@ DarkPalette: Dict[str, str] = {
     "primary_hover": "#B71C1C",
     "accent": "#4B5563",
     "accent_hover": "#6B7280",
-    "table_selected": "#505760",   # updated grey (was #374151)
+    "table_selected": "#505760",   # Grey for selected rows
+    "unknown_stock_bg": "#6B3FA0",  # Purple for unknown stock (dark)
     "heading_fg": "#D00000",
     "heading_bg": "#000000",
     "scroll_trough": "#111111",
@@ -40,7 +41,8 @@ LightPalette: Dict[str, str] = {
     "primary_hover": "#B71C1C",# Keep hover red as is
     "accent": "#C0C0C0",       # Sofmer accents
     "accent_hover": "#A8A8A8", # Softer hover accents
-    "table_selected": "#A8A8A8",# Softer grey for selected rows
+    "table_selected": "#D0D0D0",    # Grey for selected rows
+    "unknown_stock_bg": "#D9C4E8",  # Light purple for unknown stock (light)
     "heading_fg": "#D00000",   # Keep heading foreground red
     "heading_bg": "#E8E8E8",   # Softer heading background
     "scroll_trough": "#D0D0D0",# Scrollbar trough softer grey
