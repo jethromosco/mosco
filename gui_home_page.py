@@ -131,12 +131,76 @@ class HomePage(ctk.CTkFrame):
         self.on_search_change()
 
     def on_window_resize(self, event=None):
-        """Update absolute positioned elements on window resize"""
+        """Update absolute positioned elements and responsive layout on window resize"""
         if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn.winfo_exists():
             window_width = self.winfo_width()
             if window_width > 1:
                 self.theme_toggle_btn.place(x=window_width-140, y=40)  
                 # 100 (button width) + 40 (margin) = 140
+                
+                # Apply responsive layout for half-screen mode (width < 1000px)
+                self._update_responsive_layout(window_width)
+
+    def _update_responsive_layout(self, window_width):
+        """Apply responsive layout based on current window size"""
+        # Detect if window is in half-screen mode (typically < 1000px for a half-screen)
+        is_half_screen = window_width < 1000
+        
+        if hasattr(self, 'grid_frame') and hasattr(self, 'category_buttons'):
+            for btn_info in self.category_buttons.values():
+                btn = btn_info['button']
+                if is_half_screen:
+                    # Half-screen: Use responsive smaller sizes
+                    btn.configure(width=150, height=140, font=("Poppins", 14, "bold"))
+                else:
+                    # Fullscreen: Return to default original sizes
+                    btn.configure(width=504, height=268, font=("Poppins", 24, "bold"))
+        
+        # Update logo sizing based on window width
+        self._update_logo_size(window_width)
+
+    def _update_logo_size(self, window_width):
+        """Update logo and title image sizes based on window width"""
+        try:
+            is_half_screen = window_width < 1000
+            
+            if hasattr(self, 'logo_img1') and hasattr(self, 'logo_img_text'):
+                # Responsive sizing: fullscreen (240x240, 847x240) -> half-screen (120x120, 420x120)
+                if is_half_screen:
+                    # Half-screen: scale down to 50%
+                    logo_size = (120, 120)
+                    text_size = (420, 120)
+                else:
+                    # Fullscreen: use default sizes
+                    logo_size = (240, 240)
+                    text_size = (847, 240)
+                
+                # Reload images with new sizes
+                try:
+                    logo1_img = Image.open(f"{ICON_PATH}\\MOSCO_Logo.png").resize(logo_size)
+                    self.logo_img1 = ctk.CTkImage(light_image=logo1_img, size=logo_size)
+                    
+                    logo_text_img = Image.open(f"{ICON_PATH}\\MOSCO_Text.png").resize(text_size)
+                    self.logo_img_text = ctk.CTkImage(light_image=logo_text_img, size=text_size)
+                    
+                    # Update labels in logo frame
+                    for widget in self.logo_frame.winfo_children():
+                        if isinstance(widget, ctk.CTkLabel) and hasattr(widget, 'image'):
+                            if hasattr(self, 'logo_img1') and self.logo_img1:
+                                widget.destroy()
+                    
+                    # Recreate labels with new images
+                    lbl1 = ctk.CTkLabel(self.logo_frame, image=self.logo_img1, text="", bg_color=theme.get("bg"))
+                    lbl1.pack(side="left", padx=(0, 10))
+                    lbl1.bind("<Button-1>", self.remove_search_focus)
+                    
+                    lbl2 = ctk.CTkLabel(self.logo_frame, image=self.logo_img_text, text="", bg_color=theme.get("bg"))
+                    lbl2.pack(side="left")
+                    lbl2.bind("<Button-1>", self.remove_search_focus)
+                except Exception as e:
+                    print(f"Error resizing logo images: {e}")
+        except Exception as e:
+            print(f"Error in logo size update: {e}")
 
     def create_logo_section(self):
         for widget in self.logo_frame.winfo_children():
@@ -186,7 +250,8 @@ class HomePage(ctk.CTkFrame):
                     corner_radius=40,
                     width=504,
                     height=268,
-                    border_width=0,
+                    border_width=3,
+                    border_color=theme.get("primary"),
                     command=lambda l=label, s=sub_data: self.controller.show_subcategory(l, s)
                 )
                 btn.image = tk_img
@@ -194,8 +259,9 @@ class HomePage(ctk.CTkFrame):
                 btn.grid(row=row, column=col, padx=20, pady=20)
 
                 self.category_buttons[label] = {'button': btn, 'original_row': row, 'original_col': col}
-                btn.bind("<Enter>", lambda e, b=btn: b.configure(border_width=3, border_color=theme.get("primary"), text_color=theme.get("muted")))
-                btn.bind("<Leave>", lambda e, b=btn: b.configure(border_width=0, text_color=theme.get("text"), fg_color=theme.get("card")))
+                # Hover effects only change color, never size/border that affects positioning
+                btn.bind("<Enter>", lambda e, b=btn: b.configure(fg_color=theme.get("accent_hover"), text_color=theme.get("muted")))
+                btn.bind("<Leave>", lambda e, b=btn: b.configure(fg_color=theme.get("card"), text_color=theme.get("text")))
                 btn.bind("<Button-1>", self.remove_search_focus)
             except Exception as e:
                 print(f"Error creating button for {label}: {e}")
@@ -241,10 +307,10 @@ class HomePage(ctk.CTkFrame):
         for idx, (name, btn_info) in enumerate(matching_categories):
             btn = btn_info['button']
             row, col = divmod(idx, cols)
-            btn.grid(row=row, column=col, padx=20, pady=20)
-
     def _toggle_theme(self):
-        theme.toggle()
+        # Get the root window to preserve geometry
+        root = self.winfo_toplevel()
+        theme.toggle(root)
         self.theme_toggle_btn.configure(text="🌙" if theme.mode == "dark" else "🌞")
         self.apply_theme()
 
@@ -370,12 +436,30 @@ class CategoryPage(ctk.CTkFrame):
         self.bind("<Configure>", self.on_window_resize)
 
     def on_window_resize(self, event=None):
-        """Update absolute positioned elements on window resize"""
+        """Update absolute positioned elements and responsive layout on window resize"""
         if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn.winfo_exists():
             window_width = self.winfo_width()
             if window_width > 1:
                 self.theme_toggle_btn.place(x=window_width-140, y=40)  
                 # 100 (button width) + 40 (margin) = 140
+                
+                # Apply responsive layout for half-screen mode
+                self._update_responsive_layout(window_width)
+    
+    def _update_responsive_layout(self, window_width):
+        """Apply responsive layout when in half-screen mode"""
+        # Detect if window is in half-screen mode (typically < 1000px)
+        is_half_screen = window_width < 1000
+        
+        if hasattr(self, 'subcategory_buttons'):
+            for btn in self.subcategory_buttons:
+                if hasattr(btn, 'configure'):
+                    if is_half_screen:
+                        # Half-screen: reduce button size but keep border
+                        btn.configure(width=200, height=160, font=("Poppins", 14, "bold"), border_width=3)
+                    else:
+                        # Fullscreen: restore to default size
+                        btn.configure(width=404, height=220, font=("Poppins", 20, "bold"), border_width=3)
 
     def create_logo_section(self):
         """Create the MOSCO logo section (SAME SIZE AS HOMEPAGE)"""
@@ -441,18 +525,22 @@ class CategoryPage(ctk.CTkFrame):
                     font=("Poppins", 20, "bold"), fg_color=theme.get("card"),
                     hover_color=theme.get("accent_hover"), text_color=theme.get("text"),
                     corner_radius=40, width=404, height=220,
-                    border_width=0, command=command
+                    border_width=3, border_color=theme.get("primary"), command=command
                 )
                 btn.image = tk_img
                 row, col = divmod(idx, cols)
                 btn.grid(row=row, column=col, padx=15, pady=15)
-                btn.bind("<Enter>", lambda e, b=btn: b.configure(border_width=3, border_color=theme.get("primary"), text_color=theme.get("muted")))
-                btn.bind("<Leave>", lambda e, b=btn: b.configure(border_width=0, text_color=theme.get("text")))
-
                 self.subcategory_buttons.append(btn)
                 idx += 1
             except Exception as e:
                 print(f"Error creating subcategory button for {name}: {e}")
+
+    def on_window_resize_category(self, event=None):
+        """Handle resize events for subcategory buttons"""
+        if hasattr(self, 'grid_frame'):
+            window_width = self.winfo_width()
+            if window_width > 1:
+                self._update_responsive_layout(window_width)
 
     def apply_theme(self):
         try:
@@ -617,7 +705,9 @@ class ComingSoonPage(ctk.CTkFrame):
             title_label.pack()
 
     def _toggle_theme(self):
-        theme.toggle()
+        # Get the root window to preserve geometry
+        root = self.winfo_toplevel()
+        theme.toggle(root)
         self.theme_toggle_btn.configure(text="🌙" if theme.mode == "dark" else "🌞")
         self.apply_theme()
 

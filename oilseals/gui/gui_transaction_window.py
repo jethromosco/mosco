@@ -521,8 +521,8 @@ class TransactionWindow(ctk.CTkFrame):
         colors = {
             "red": "#B22222" if theme.mode == "light" else "#EF4444",
             "blue": "#1E40AF" if theme.mode == "light" else "#3B82F6",
-            "green": "#2D3436" if theme.mode == "light" else "#22C55E",  # Dark grey in light mode for fabrication
-            "gray": "#9CA3AF"
+            "green": "#16A34A" if theme.mode == "light" else "#22C55E",  # Darker green in light mode for Actual
+            "gray": "#000000" if theme.mode == "light" else "#9CA3AF",  # Black for Fabrication in light, gray in dark
         }
 
         for color, value in colors.items():

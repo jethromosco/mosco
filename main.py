@@ -13,22 +13,25 @@ if __name__ == "__main__":
 
     root = ctk.CTk()
     root.title("MOSCO Inventory System")
+    
+    # Set minimum window size to prevent shrinking too much during dragging
+    root.minsize(800, 600)
+    
     # Start the app in a maximized (windowed-fullscreen) state by default
     # to improve the first-launch experience.
-    try:
-        root.state('zoomed')
-    except Exception:
+    def maximize_window():
         try:
-            w = root.winfo_screenwidth()
-            h = root.winfo_screenheight()
-            root.geometry(f"{w}x{h}")
+            root.state('zoomed')
         except Exception:
-            pass
-    # Some window managers apply state after the mainloop starts; queue a call.
-    try:
-        root.after(0, lambda: root.state('zoomed'))
-    except Exception:
-        pass
+            try:
+                w = root.winfo_screenwidth()
+                h = root.winfo_screenheight()
+                root.geometry(f"{w}x{h}")
+            except Exception:
+                pass
+    
+    # Schedule maximization after window is created
+    root.after(100, maximize_window)
 
     app = AppController(root)
     root.mainloop()
@@ -100,11 +103,11 @@ if __name__ == "__main__":
 # Problems: UI admin modal consistency, centering srp stockleft(di masyado halata)
 # Add README.md and requirements.txt for project documentation and setup
 # still admin sa transactions GUI
-# C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES"
-# nagnenegative, not a problem pero di dapat mangyari
+# C:\My Drive\WAREHOUSE\PRODUCTS-DATA PICTURES\Oil Seals "TYPES" /
+# nagnenegative, not a problem pero di dapat mangyari /
 # yung speed ng animation bagalan para di malutong
 # pag kalahati na sa oilseals, isipin ano inenext na malapit lang sa oilseals
 # threshold di maayos sa lahat naka deafilt 5 lang
-# photos sa common types mag lagay
+# photos sa common types mag lagay /
 # yung sa inches mm ayusin lagay black white mode
 # di nakacenter stock count and srp sa screen pero sa container ayos

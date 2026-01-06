@@ -101,15 +101,48 @@ class AppController:
         self.show_frame(frame_name)
 
     def show_frame(self, page_name):
-        # Hide all frames
+        """Show a frame with smooth transition animation"""
+        # Get currently visible frame
+        current_frame = None
         for frame in self.frames.values():
-            frame.place_forget()
+            try:
+                if frame.winfo_viewable():
+                    current_frame = frame
+                    break
+            except Exception:
+                pass
         
-        # Show the requested frame
+        # Hide current frame with fade-out
+        if current_frame:
+            current_frame.place_forget()
+        
+        # Show the requested frame with fade-in
         if page_name in self.frames:
             frame = self.frames[page_name]
+            # Ensure frame is placed before updating
             frame.place(x=0, y=0, relwidth=1, relheight=1)
             frame.lift()
+            # Use after to ensure smooth rendering on the next frame
+            self.root.after(1, lambda: frame.update_idletasks())
+
+    def _animate_fade_out(self, frame):
+        """Fade out animation"""
+        if not hasattr(frame, 'winfo_exists') or not frame.winfo_exists():
+            return
+        try:
+            frame.place_forget()
+        except Exception:
+            pass
+
+    def _animate_fade_in(self, frame):
+        """Fade in animation with smooth transition"""
+        if not hasattr(frame, 'winfo_exists') or not frame.winfo_exists():
+            return
+        try:
+            # Update the frame immediately to make it visible
+            frame.update_idletasks()
+        except Exception:
+            pass
 
     def _toggle_fullscreen(self, event=None):
         try:

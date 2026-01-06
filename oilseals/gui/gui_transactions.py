@@ -256,18 +256,20 @@ class TransactionTab:
 
         # Set darker colors in light mode
         if theme.mode == "light":
-            red_color = "#B22222"   # Dark red
-            blue_color = "#1E40AF"  # Dark blue
-            green_color = "#166534" # Dark green
+            red_color = "#B22222"   # Dark red for Sale
+            blue_color = "#1E40AF"  # Dark blue for Restock
+            green_color = "#16A34A" # Darker green for Actual (better visibility on light bg)
+            gray_color = "#000000"  # Black for Fabrication (merged)
         else:
-            red_color = "#EF4444"   # Brighter red in dark mode
-            blue_color = "#3B82F6"  # Brighter blue in dark mode
-            green_color = "#22C55E" # Brighter green in dark mode
+            red_color = "#EF4444"   # Brighter red in dark mode for Sale
+            blue_color = "#3B82F6"  # Brighter blue in dark mode for Restock
+            green_color = "#22C55E" # Bright green in dark mode for Actual
+            gray_color = "#9CA3AF"  # Gray in dark mode for Fabrication (merged)
 
         self.tran_tree.tag_configure("red", foreground=red_color)
         self.tran_tree.tag_configure("blue", foreground=blue_color)
         self.tran_tree.tag_configure("green", foreground=green_color)
-        self.tran_tree.tag_configure("gray", foreground="#9CA3AF")
+        self.tran_tree.tag_configure("gray", foreground=gray_color)
 
         column_config = {
             "item": {"anchor": "center", "width": 180},

@@ -76,21 +76,42 @@ class ThemeManager:
         if callback in self._listeners:
             self._listeners.remove(callback)
 
-    def set_mode(self, mode: str) -> None:
+    def set_mode(self, mode: str, root_window=None) -> None:
         mode_lower = mode.lower()
         if mode_lower not in ("dark", "light"):
             return
+        
+        # Store current geometry to restore after theme change
+        current_geometry = None
+        if root_window and hasattr(root_window, 'geometry'):
+            try:
+                current_geometry = root_window.geometry()
+            except Exception:
+                pass
+        
         self._mode = mode_lower
         self._palette = DarkPalette.copy() if mode_lower == "dark" else LightPalette.copy()
-        ctk.set_appearance_mode("dark" if mode_lower == "dark" else "light")
+        
+        # Don't immediately call set_appearance_mode; let it be called after callbacks
+        # This prevents window resizing during theme switch
         for cb in list(self._listeners):
             try:
                 cb()
             except Exception:
                 pass
+        
+        # Now set appearance mode after callbacks complete
+        ctk.set_appearance_mode("dark" if mode_lower == "dark" else "light")
+        
+        # Restore geometry if it was saved
+        if root_window and current_geometry and hasattr(root_window, 'geometry'):
+            try:
+                root_window.after(50, lambda: root_window.geometry(current_geometry))
+            except Exception:
+                pass
 
-    def toggle(self) -> None:
-        self.set_mode("light" if self._mode == "dark" else "dark")
+    def toggle(self, root_window=None) -> None:
+        self.set_mode("light" if self._mode == "dark" else "dark", root_window)
 
 # Singleton instance
 theme = ThemeManager()
