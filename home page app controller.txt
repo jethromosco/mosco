@@ -1,0 +1,171 @@
+Enhance products.py and transactions.py by adding a dropdown selector system for Category → Sub-category → Unit:
+
+Dropdown behavior:
+
+Populate dropdowns based on the existing categories structure.
+
+Sub-category and Unit are optional:
+
+If a category has no sub-category or unit, the dropdowns should be disabled or skipped.
+
+Selecting a category without sub-category/unit should go directly to the corresponding table.
+
+The dropdowns should dynamically update: selecting a category filters sub-categories, selecting sub-category filters units.
+
+Behavior on selection / button press:
+
+After selecting Category → Sub-category → Unit and pressing a button:
+
+Access the database corresponding to the chosen category.
+
+Open the transaction_window and the admin page for that database.
+
+Existing functionality for adding products or transactions should remain exactly the same.
+
+The UI/UX should follow all current design patterns, layouts, fonts, colors, spacing, and field alignment.
+
+Admin folder integration:
+
+The code or UI added for Oilseals and Monoseals under the admin folder should be identical in structure and behavior.
+
+Only the database linking should differ (each pointing to its own category’s database).
+
+This setup will be the template for future categories, so the structure, field layout, and controls must be reusable.
+
+Constraints / Requirements:
+
+Do not delete, rename, or move any existing files.
+
+Maintain all existing logic and database functionality.
+
+Changes should be additive and backward-compatible.
+
+Optional dropdowns must handle missing sub-categories or units gracefully.
+
+Goal:
+
+Allow the admin to quickly select any category/subcategory/unit, open the correct database, and proceed with transactions or product management without breaking current behavior.
+
+Establish a standardized admin module for Oilseals and Monoseals that can be reused for all future categories, with only database linking needing adjustment.
+
+
+Add and integrate the new **Category → Sub-category → Unit selector feature** so that it is **clearly accessible from the Admin flow** and not hidden or unreachable in the UI.
+
+### Required Admin access flow (must be exact)
+
+1. From the main app, when the **Admin password is entered correctly**, the app must open the **Admin window**.
+2. The Admin window must continue to show the existing **Products** and **Transactions** sections exactly as they work now.
+3. **At the top of the Admin window**, above the Products and Transactions content, add the new **Category → Sub-category → Unit selector** feature so the admin can immediately see and use it.
+
+### Selector behavior
+
+* The selector consists of:
+
+  * Category dropdown
+  * Sub-category dropdown (optional)
+  * Unit dropdown (optional)
+* Dropdowns must be populated dynamically based on the existing `categories` structure.
+* If a selected category does not have a sub-category or unit:
+
+  * The corresponding dropdown(s) must be disabled or hidden.
+  * Selecting the category should immediately route to the correct table/database.
+* Changing the selection must update the active database context.
+
+### Behavior after selection
+
+* After selecting Category → Sub-category → Unit (or just Category if others are not required):
+
+  * The app must connect to the **database associated with that selection**.
+  * The **Products view** and **Transactions view** must automatically reflect the selected database.
+  * Opening the transaction window or adding/editing products must proceed exactly as it currently does, but against the selected database.
+
+### Admin folder consistency (very important)
+
+* Any code, UI, or logic added under the `admin` folder for **Oilseals** and **Monoseals** must be **identical in structure and behavior**.
+* The **only difference** between Oilseals and Monoseals implementations should be:
+
+  * Which database they connect to.
+* This shared structure will be the **template for future categories**, so avoid category-specific hacks or branching logic.
+
+### Constraints (must not be violated)
+
+* Do NOT delete, rename, or move any existing files.
+* Do NOT change existing filenames.
+* Do NOT break current Products or Transactions functionality.
+* Follow existing UI/UX principles exactly (layout, spacing, alignment, fonts, button styles).
+* All changes must be additive and backward-compatible.
+
+### Goal
+
+After entering the Admin password, the admin must immediately see:
+
+* The Admin window
+* The Products and Transactions sections
+* The new Category → Sub-category → Unit selector at the top
+
+From there, the admin can select a category and seamlessly manage products and transactions for the correct database without navigating elsewhere.
+
+
+I added a new module for **Monoseals**, but it is not working correctly because it is still being treated as part of **Packing Seals** instead of being routed properly as its own sub-module.
+
+The goal is to add and manage data specifically for **Monoseals (mm)**.
+
+Monoseals must follow the **same architecture, logic, UI patterns, and controller behavior as Oilseals** (same type of inventory screen, transaction handling, database access, fullscreen frame behavior, and navigation), **but they must live under Packing Seals**. This is why their folder structure is intentionally similar to Oilseals.
+
+### Required navigation behavior (must be exact)
+
+When the app is opened, the navigation flow must be:
+
+Packing Seals
+→ Monoseals
+→ MM
+
+At the final step, the app must open and display the screen defined in:
+
+packingseals/monoseals/ui/mm.py
+
+The `mm.py` file must be treated as the entry screen for **Monoseals (mm)**, in the same way that `oilseals/main.py` or equivalent entry files are handled.
+
+### Structural requirements
+
+* `packingseals/monoseals/` must be a **first-class module**, not implicitly grouped or hard-coded under another seal type
+* The folder structure under `packingseals/monoseals/` should mirror Oilseals where applicable (ui/, admin/, database access, transactions, photos, etc.)
+* `packingseals/monoseals/ui/mm.py` must be the canonical route and import target for Monoseals (mm)
+
+### Navigation and controller rules
+
+* Navigation must be handled through the existing **controller-based fullscreen frame system**
+* Only one frame should be visible at a time
+* Back/Home navigation must continue to work exactly as it does for Oilseals
+* No new windowing logic (no new Toplevels unless already part of fallback behavior)
+
+### Compatibility constraints (very important)
+
+* **Do not break any existing links, imports, or navigation**
+* Existing modules (Oilseals, Packing Seals, others) must continue working without modification to their behavior
+* Any necessary changes must be done by **following the new structure**, not by adding hacks, hard-coded paths, or special cases
+* Imports should be updated safely to reflect the new structure while preserving backward compatibility where required
+
+### What is allowed
+
+* Updating import paths to align with the new folder structure
+* Refactoring routing logic to properly register Monoseals (mm) as its own selectable screen
+* Reusing Oilseals logic and UI patterns where appropriate
+
+### What is NOT allowed
+
+* Changing existing UI layouts or visual design
+* Changing existing database logic unless strictly required for correct routing
+* Introducing duplicate logic that already exists for Oilseals
+* Breaking controller navigation or fullscreen behavior
+
+### End result
+
+Monoseals (mm) must behave exactly like Oilseals in functionality and UX, but be correctly accessed through:
+
+Packing Seals → Monoseals → MM
+
+and load its screen exclusively from:
+
+packingseals/monoseals/ui/mm.py
+
