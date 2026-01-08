@@ -22,7 +22,10 @@ class InventoryApp(ctk.CTkFrame):
         self.controller = controller
         self.root = controller.root if controller else self.winfo_toplevel()
 
-        self.root.title("Oil Seal Inventory Manager")
+        # Default return target for back button
+        self.return_to = "HomePage"
+
+        self.root.title("Monoseals Inventory Manager (MM)")
         # Do not force window state here — preserve whatever the user set
         # (main/app_controller should handle initial startup state).
         self._is_fullscreen = False

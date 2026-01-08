@@ -70,9 +70,9 @@ class HomePage(ctk.CTkFrame):
             self,
             text="🌙" if theme.mode == "dark" else "🌞",
             font=("Poppins", 18, "bold"),
-            width=100,          # match Admin button width
-            height=50,          # match Admin button height
-            corner_radius=25,   # match Admin button corner radius
+            width=100,
+            height=50,
+            corner_radius=25,
             fg_color=theme.get("card"),
             hover_color=theme.get("accent_hover"),
             text_color=theme.get("text"),
@@ -95,6 +95,7 @@ class HomePage(ctk.CTkFrame):
         self.logo_frame.pack(pady=20)
         self.logo_frame.bind("<Button-1>", self.remove_search_focus)
 
+        # Load BOTH logo images with light and dark versions
         self.logo_img1 = ctk.CTkImage(
             light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
             dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"),
@@ -135,28 +136,21 @@ class HomePage(ctk.CTkFrame):
         if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn.winfo_exists():
             window_width = self.winfo_width()
             if window_width > 1:
-                self.theme_toggle_btn.place(x=window_width-140, y=40)  
-                # 100 (button width) + 40 (margin) = 140
-                
-                # Apply responsive layout for half-screen mode (width < 1000px)
+                self.theme_toggle_btn.place(x=window_width-140, y=40)
                 self._update_responsive_layout(window_width)
 
     def _update_responsive_layout(self, window_width):
         """Apply responsive layout based on current window size"""
-        # Detect if window is in half-screen mode (typically < 1000px for a half-screen)
         is_half_screen = window_width < 1000
         
         if hasattr(self, 'grid_frame') and hasattr(self, 'category_buttons'):
             for btn_info in self.category_buttons.values():
                 btn = btn_info['button']
                 if is_half_screen:
-                    # Half-screen: Use responsive smaller sizes
                     btn.configure(width=150, height=140, font=("Poppins", 14, "bold"))
                 else:
-                    # Fullscreen: Return to default original sizes
                     btn.configure(width=504, height=268, font=("Poppins", 24, "bold"))
         
-        # Update logo sizing based on window width
         self._update_logo_size(window_width)
 
     def _update_logo_size(self, window_width):
@@ -165,31 +159,30 @@ class HomePage(ctk.CTkFrame):
             is_half_screen = window_width < 1000
             
             if hasattr(self, 'logo_img1') and hasattr(self, 'logo_img_text'):
-                # Responsive sizing: fullscreen (240x240, 847x240) -> half-screen (120x120, 420x120)
                 if is_half_screen:
-                    # Half-screen: scale down to 50%
                     logo_size = (120, 120)
                     text_size = (420, 120)
                 else:
-                    # Fullscreen: use default sizes
                     logo_size = (240, 240)
                     text_size = (847, 240)
                 
-                # Reload images with new sizes
                 try:
-                    logo1_img = Image.open(f"{ICON_PATH}\\MOSCO_Logo.png").resize(logo_size)
-                    self.logo_img1 = ctk.CTkImage(light_image=logo1_img, size=logo_size)
+                    # Reload BOTH images with light/dark versions for theme switching
+                    self.logo_img1 = ctk.CTkImage(
+                        light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
+                        dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"),
+                        size=logo_size
+                    )
+                    self.logo_img_text = ctk.CTkImage(
+                        light_image=Image.open(f"{ICON_PATH}\\mosco text light.png"),
+                        dark_image=Image.open(f"{ICON_PATH}\\mosco text.png"),
+                        size=text_size
+                    )
                     
-                    logo_text_img = Image.open(f"{ICON_PATH}\\MOSCO_Text.png").resize(text_size)
-                    self.logo_img_text = ctk.CTkImage(light_image=logo_text_img, size=text_size)
-                    
-                    # Update labels in logo frame
+                    # Recreate both labels
                     for widget in self.logo_frame.winfo_children():
-                        if isinstance(widget, ctk.CTkLabel) and hasattr(widget, 'image'):
-                            if hasattr(self, 'logo_img1') and self.logo_img1:
-                                widget.destroy()
+                        widget.destroy()
                     
-                    # Recreate labels with new images
                     lbl1 = ctk.CTkLabel(self.logo_frame, image=self.logo_img1, text="", bg_color=theme.get("bg"))
                     lbl1.pack(side="left", padx=(0, 10))
                     lbl1.bind("<Button-1>", self.remove_search_focus)
@@ -206,6 +199,7 @@ class HomePage(ctk.CTkFrame):
         for widget in self.logo_frame.winfo_children():
             widget.destroy()
         try:
+            # BOTH logos - circular AND text
             lbl1 = ctk.CTkLabel(self.logo_frame, image=self.logo_img1, text="", bg_color=theme.get("bg"))
             lbl1.pack(side="left", padx=(0, 10))
             lbl1.bind("<Button-1>", self.remove_search_focus)
@@ -259,7 +253,6 @@ class HomePage(ctk.CTkFrame):
                 btn.grid(row=row, column=col, padx=20, pady=20)
 
                 self.category_buttons[label] = {'button': btn, 'original_row': row, 'original_col': col}
-                # Hover effects only change color, never size/border that affects positioning
                 btn.bind("<Enter>", lambda e, b=btn: b.configure(fg_color=theme.get("accent_hover"), text_color=theme.get("muted")))
                 btn.bind("<Leave>", lambda e, b=btn: b.configure(fg_color=theme.get("card"), text_color=theme.get("text")))
                 btn.bind("<Button-1>", self.remove_search_focus)
@@ -272,7 +265,6 @@ class HomePage(ctk.CTkFrame):
     def on_search_change(self, event=None):
         query = self._normalize(self.search_entry.get())
         if not query:
-            # Show all categories when search is empty
             for name, btn_info in self.category_buttons.items():
                 btn = btn_info['button']
                 row = btn_info['original_row']
@@ -280,7 +272,6 @@ class HomePage(ctk.CTkFrame):
                 btn.grid(row=row, column=col, padx=20, pady=20)
             return
         
-        # Hide all categories first
         for btn_info in self.category_buttons.values():
             btn_info['button'].grid_remove()
         
@@ -289,26 +280,24 @@ class HomePage(ctk.CTkFrame):
         for name, btn_info in self.category_buttons.items():
             category_data = self.categories[name]
             
-            # Check if main category name matches
             if self._normalize(name).startswith(query) or query in self._normalize(name):
                 matching_categories.append((name, btn_info))
                 continue
             
-            # Check if any subcategory name matches
             if isinstance(category_data, dict):
                 for subcategory_name in category_data.keys():
                     normalized_sub = self._normalize(subcategory_name)
                     if query in normalized_sub or normalized_sub.startswith(query):
                         matching_categories.append((name, btn_info))
-                        break  # Found match in this category, no need to check more subcategories
+                        break
         
-        # Display matching categories
         cols = 3
         for idx, (name, btn_info) in enumerate(matching_categories):
             btn = btn_info['button']
             row, col = divmod(idx, cols)
+            btn.grid(row=row, column=col, padx=20, pady=20)
+
     def _toggle_theme(self):
-        # Get the root window to preserve geometry
         root = self.winfo_toplevel()
         theme.toggle(root)
         self.theme_toggle_btn.configure(text="🌙" if theme.mode == "dark" else "🌞")
@@ -337,7 +326,6 @@ class HomePage(ctk.CTkFrame):
                 text_color=theme.get("text"),
                 text="🌙" if theme.mode == "dark" else "🌞",
             )
-            # Update watermark theme
             self.watermark_label.configure(text_color=theme.get("muted"))
             
             for btn_info in self.category_buttons.values():
@@ -347,7 +335,6 @@ class HomePage(ctk.CTkFrame):
                     hover_color=theme.get("accent_hover"),
                     text_color=theme.get("text"),
                 )
-            # Update button positions after theme change
             self.after(10, self.on_window_resize)
         except Exception as e:
             print(f"Error applying theme: {e}")
@@ -359,17 +346,17 @@ class CategoryPage(ctk.CTkFrame):
         self.controller = controller
         self.category_name = category_name
         self.return_to = return_to
+        # Track the parent category for nested navigation
+        # This is populated by the controller when creating nested pages
+        self.parent_category = getattr(self, 'parent_category', None)
         theme.subscribe(self.apply_theme)
 
-        # Create main scroll frame that fills the entire window
         self.main_scroll = ctk.CTkScrollableFrame(self, fg_color=theme.get("bg"),
                                                   scrollbar_fg_color=theme.get("bg"),
                                                   scrollbar_button_color=theme.get("bg"),
                                                   scrollbar_button_hover_color=theme.get("bg"))
         self.main_scroll.pack(fill="both", expand=True)
 
-        # ABSOLUTE POSITIONED ELEMENTS - FIXED POSITIONS
-        # Back Button - Top Left
         self.back_btn = ctk.CTkButton(
             self,
             text="← Back", font=("Poppins", 20, "bold"),
@@ -379,14 +366,13 @@ class CategoryPage(ctk.CTkFrame):
         )
         self.back_btn.place(x=40, y=40)
 
-        # Theme Toggle Button - Top Right
         self.theme_toggle_btn = ctk.CTkButton(
             self,
             text="🌙" if theme.mode == "dark" else "🌞",
             font=("Poppins", 18, "bold"),
-            width=100,          # match Admin button width
-            height=50,          # match Admin button height
-            corner_radius=25,   # match Admin button corner radius
+            width=100,
+            height=50,
+            corner_radius=25,
             fg_color=theme.get("card"),
             hover_color=theme.get("accent_hover"),
             text_color=theme.get("text"),
@@ -394,7 +380,6 @@ class CategoryPage(ctk.CTkFrame):
         )
         self.theme_toggle_btn.place(x=1200, y=40)
 
-        # Watermark - Bottom Right
         self.watermark_label = ctk.CTkLabel(
             self,
             text="developed by jethro · 2025",
@@ -404,11 +389,10 @@ class CategoryPage(ctk.CTkFrame):
         )
         self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
 
-        # MOSCO Logo - SCROLLABLE (inside main_scroll, not fixed)
         self.logo_frame = ctk.CTkFrame(self.main_scroll, fg_color=theme.get("bg"))
         self.logo_frame.pack(pady=20)
 
-        # Load images with light and dark versions for mosco text image
+        # Load BOTH images with light and dark versions
         self.logo_img1 = ctk.CTkImage(
             light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
             dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"),
@@ -422,7 +406,6 @@ class CategoryPage(ctk.CTkFrame):
 
         self.create_logo_section()
 
-        # Category title - positioned below logo  
         self.title_label = ctk.CTkLabel(self.main_scroll, text=self.category_name,
                                         font=("Hero", 36, "bold"), text_color=theme.get("text"))
         self.title_label.pack(pady=(20, 40))
@@ -432,40 +415,29 @@ class CategoryPage(ctk.CTkFrame):
         self.subcategory_buttons = []
         self.create_subcategory_buttons(self.grid_frame, sub_data)
 
-        # Bind window resize to update button positions
         self.bind("<Configure>", self.on_window_resize)
 
     def on_window_resize(self, event=None):
-        """Update absolute positioned elements and responsive layout on window resize"""
         if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn.winfo_exists():
             window_width = self.winfo_width()
             if window_width > 1:
-                self.theme_toggle_btn.place(x=window_width-140, y=40)  
-                # 100 (button width) + 40 (margin) = 140
-                
-                # Apply responsive layout for half-screen mode
+                self.theme_toggle_btn.place(x=window_width-140, y=40)
                 self._update_responsive_layout(window_width)
     
     def _update_responsive_layout(self, window_width):
-        """Apply responsive layout when in half-screen mode"""
-        # Detect if window is in half-screen mode (typically < 1000px)
         is_half_screen = window_width < 1000
         
         if hasattr(self, 'subcategory_buttons'):
             for btn in self.subcategory_buttons:
                 if hasattr(btn, 'configure'):
                     if is_half_screen:
-                        # Half-screen: reduce button size but keep border
                         btn.configure(width=200, height=160, font=("Poppins", 14, "bold"), border_width=3)
                     else:
-                        # Fullscreen: restore to default size
                         btn.configure(width=404, height=220, font=("Poppins", 20, "bold"), border_width=3)
 
     def create_logo_section(self):
-        """Create the MOSCO logo section (SAME SIZE AS HOMEPAGE)"""
         for widget in self.logo_frame.winfo_children():
             widget.destroy()
-
         try:
             lbl1 = ctk.CTkLabel(self.logo_frame, image=self.logo_img1, text="", bg_color=theme.get("bg"))
             lbl1.pack(side="left", padx=(0, 10))
@@ -474,7 +446,6 @@ class CategoryPage(ctk.CTkFrame):
             lbl2 = ctk.CTkLabel(self.logo_frame, image=self.logo_img_text, text="", bg_color=theme.get("bg"))
             lbl2.pack(side="left")
             lbl2.bind("<Button-1>", self.remove_focus)
-
         except Exception as e:
             print(f"Error loading logos: {e}")
             title_label = ctk.CTkLabel(self.logo_frame, text="MOSCO", font=("Hero", 48, "bold"), text_color=theme.get("text"))
@@ -482,11 +453,9 @@ class CategoryPage(ctk.CTkFrame):
             title_label.bind("<Button-1>", self.remove_focus)
 
     def remove_focus(self, event=None):
-        """Remove focus from any focused widget"""
         self.focus()
 
     def _toggle_theme(self):
-        """Toggle between light and dark theme"""
         theme.toggle()
         self.theme_toggle_btn.configure(text="🌙" if theme.mode == "dark" else "🌞")
         self.apply_theme()
@@ -500,7 +469,6 @@ class CategoryPage(ctk.CTkFrame):
         idx = 0
         for name, sub in sub_data.items():
             try:
-                # Try to get icon from subcategory_icon_mapping first, then fallback to generic
                 img_path = subcategory_icon_mapping.get(name, None)
                 if img_path:
                     try:
@@ -511,7 +479,6 @@ class CategoryPage(ctk.CTkFrame):
                         img = Image.new('RGB', (150, 150), color='#333333')
                         tk_img = ctk.CTkImage(light_image=img, size=(150, 150))
                 else:
-                    # Fallback to generic placeholder
                     img = Image.new('RGB', (150, 150), color='#333333')
                     tk_img = ctk.CTkImage(light_image=img, size=(150, 150))
 
@@ -535,13 +502,6 @@ class CategoryPage(ctk.CTkFrame):
             except Exception as e:
                 print(f"Error creating subcategory button for {name}: {e}")
 
-    def on_window_resize_category(self, event=None):
-        """Handle resize events for subcategory buttons"""
-        if hasattr(self, 'grid_frame'):
-            window_width = self.winfo_width()
-            if window_width > 1:
-                self._update_responsive_layout(window_width)
-
     def apply_theme(self):
         try:
             self.configure(fg_color=theme.get("bg"))
@@ -560,7 +520,6 @@ class CategoryPage(ctk.CTkFrame):
                 text_color="#FFFFFF"
             )
 
-            # Update theme toggle button
             self.theme_toggle_btn.configure(
                 fg_color=theme.get("card"),
                 hover_color=theme.get("accent_hover"),
@@ -568,12 +527,8 @@ class CategoryPage(ctk.CTkFrame):
                 text="🌙" if theme.mode == "dark" else "🌞"
             )
 
-            # Update watermark theme
             self.watermark_label.configure(text_color=theme.get("muted"))
-
-            # Recreate logo section with new theme (important for light/dark mode switching)
             self.create_logo_section()
-
             self.title_label.configure(text_color=theme.get("text"))
 
             for btn in self.subcategory_buttons:
@@ -583,7 +538,6 @@ class CategoryPage(ctk.CTkFrame):
                     text_color=theme.get("text")
                 )
             
-            # Update button positions after theme change
             self.after(10, self.on_window_resize)
         except Exception as e:
             print(f"Error applying theme to CategoryPage: {e}")
@@ -597,7 +551,6 @@ class ComingSoonPage(ctk.CTkFrame):
         self.return_to = return_to
         theme.subscribe(self.apply_theme)
 
-        # Create main scroll frame that fills the entire window
         self.main_scroll = ctk.CTkScrollableFrame(self, fg_color=theme.get("bg"), scrollbar_fg_color=theme.get("scroll_trough"),
                                                   scrollbar_button_color=theme.get("scroll_thumb"), scrollbar_button_hover_color=theme.get("scroll_thumb_hover"))
         self.main_scroll.pack(fill="both", expand=True)
@@ -606,8 +559,6 @@ class ComingSoonPage(ctk.CTkFrame):
             self.main_scroll._parent_canvas.yview_scroll(int(-20*(event.delta/120)), "units")
         self.main_scroll._parent_canvas.bind("<MouseWheel>", _on_mousewheel)
         
-        # ABSOLUTE POSITIONED ELEMENTS - FIXED POSITIONS
-        # Back Button - Top Left
         self.back_btn = ctk.CTkButton(
             self,
             text="← Back", font=("Poppins", 20, "bold"),
@@ -617,14 +568,13 @@ class ComingSoonPage(ctk.CTkFrame):
         )
         self.back_btn.place(x=40, y=40)
 
-        # Theme Toggle Button - Top Right  
         self.theme_toggle_btn = ctk.CTkButton(
             self,
             text="🌙" if theme.mode == "dark" else "🌞",
             font=("Poppins", 18, "bold"),
-            width=100,          # match Admin button width
-            height=50,          # match Admin button height
-            corner_radius=25,   # match Admin button corner radius
+            width=100,
+            height=50,
+            corner_radius=25,
             fg_color=theme.get("card"),
             hover_color=theme.get("accent_hover"),
             text_color=theme.get("text"),
@@ -632,7 +582,6 @@ class ComingSoonPage(ctk.CTkFrame):
         )
         self.theme_toggle_btn.place(x=1200, y=40)
 
-        # Watermark - Bottom Right
         self.watermark_label = ctk.CTkLabel(
             self,
             text="developed by jethro · 2025",
@@ -642,11 +591,10 @@ class ComingSoonPage(ctk.CTkFrame):
         )
         self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
 
-        # MOSCO Logo - SCROLLABLE (inside main_scroll, not fixed)  
         self.logo_frame = ctk.CTkFrame(self.main_scroll, fg_color=theme.get("bg"))
         self.logo_frame.pack(pady=20)
 
-        # Load images with light and dark versions for mosco text image
+        # Load BOTH images with light and dark versions
         self.logo_img1 = ctk.CTkImage(
             light_image=Image.open(f"{ICON_PATH}\\mosco logo light.png"),
             dark_image=Image.open(f"{ICON_PATH}\\mosco logo.png"),
@@ -660,11 +608,9 @@ class ComingSoonPage(ctk.CTkFrame):
 
         self.create_logo_section()
         
-        # Content - positioned below fixed elements
         self.center_frame = ctk.CTkFrame(self.main_scroll, fg_color=theme.get("bg"))
         self.center_frame.pack(pady=(20, 0), fill="both", expand=True)
         
-        # Create inner frame for centering content
         self.inner_frame = ctk.CTkFrame(self.center_frame, fg_color="transparent")
         self.inner_frame.place(relx=0.5, rely=0.3, anchor="center")
         
@@ -676,19 +622,15 @@ class ComingSoonPage(ctk.CTkFrame):
                                       font=("Poppins", 24), text_color=theme.get("muted_alt"))
         self.msg_label.pack()
 
-        # Bind window resize to update button positions
         self.bind("<Configure>", self.on_window_resize)
 
     def on_window_resize(self, event=None):
-        """Update absolute positioned elements on window resize"""
         if hasattr(self, 'theme_toggle_btn') and self.theme_toggle_btn.winfo_exists():
             window_width = self.winfo_width()
             if window_width > 1:
-                self.theme_toggle_btn.place(x=window_width-140, y=40)  
-                # 100 (button width) + 40 (margin) = 140
+                self.theme_toggle_btn.place(x=window_width-140, y=40)
                 
     def create_logo_section(self):
-        """Create the MOSCO logo section"""
         for widget in self.logo_frame.winfo_children():
             widget.destroy()
 
@@ -698,14 +640,12 @@ class ComingSoonPage(ctk.CTkFrame):
 
             lbl2 = ctk.CTkLabel(self.logo_frame, image=self.logo_img_text, text="", bg_color=theme.get("bg"))
             lbl2.pack(side="left")
-
-        except Exception as e:
+        except Exception as e: 
             print(f"Error loading logos: {e}")
             title_label = ctk.CTkLabel(self.logo_frame, text="MOSCO", font=("Hero", 48, "bold"), text_color=theme.get("text"))
             title_label.pack()
 
     def _toggle_theme(self):
-        # Get the root window to preserve geometry
         root = self.winfo_toplevel()
         theme.toggle(root)
         self.theme_toggle_btn.configure(text="🌙" if theme.mode == "dark" else "🌞")
@@ -713,7 +653,6 @@ class ComingSoonPage(ctk.CTkFrame):
 
     def apply_theme(self):
         try:
-            # Update main frames
             self.configure(fg_color=theme.get("bg"))
             self.main_scroll.configure(
                 fg_color=theme.get("bg"),
@@ -724,14 +663,12 @@ class ComingSoonPage(ctk.CTkFrame):
             self.logo_frame.configure(fg_color=theme.get("bg"))
             self.center_frame.configure(fg_color=theme.get("bg"))
             
-            # Update back button
             self.back_btn.configure(
                 fg_color=theme.get("primary"),
                 hover_color=theme.get("primary_hover"),
                 text_color="#FFFFFF"
             )
 
-            # Update theme toggle button
             self.theme_toggle_btn.configure(
                 fg_color=theme.get("card"),
                 hover_color=theme.get("accent_hover"),
@@ -739,17 +676,12 @@ class ComingSoonPage(ctk.CTkFrame):
                 text="🌙" if theme.mode == "dark" else "🌞"
             )
 
-            # Update watermark theme
             self.watermark_label.configure(text_color=theme.get("muted"))
-
-            # Recreate logo section
             self.create_logo_section()
             
-            # Update labels
             self.title_label.configure(text_color=theme.get("text"))
             self.msg_label.configure(text_color=theme.get("muted_alt"))
             
-            # Update button positions
             self.after(10, self.on_window_resize)
             
         except Exception as e:

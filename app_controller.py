@@ -1,8 +1,12 @@
 import customtkinter as ctk
+import importlib
+import sys
+import pkgutil
+import importlib.util
+import os
 from theme import theme
-from oilseals.gui.gui_transaction_window import TransactionWindow
-from oilseals.gui.gui_mm import InventoryApp
 from home_page import HomePage, CategoryPage, ComingSoonPage
+from inventory_context import InventoryContext, create_context, INVALID_CONTEXT
 
 
 CATEGORY_FOLDER_MAP = {
@@ -47,6 +51,12 @@ class AppController:
         self.container.pack(fill="both", expand=True)
 
         self.frames = {}
+        # Current selected inventory context (single source of truth)
+        self.current_category = None
+        self.current_subcategory = None
+        self.current_unit = None
+        self.current_db_module = None
+        self.current_context = INVALID_CONTEXT  # The authoritative context object
 
         # Create and add home page
         home_page = HomePage(self.container, controller=self)
@@ -57,6 +67,8 @@ class AppController:
 
     def add_category_page(self, name, sub_data, return_to="HomePage"):
         frame = CategoryPage(self.container, self, name, sub_data, return_to=return_to)
+        # Track the parent category for nested navigation
+        frame.parent_category = self.current_category
         self.frames[name] = frame
         frame.place(x=0, y=0, relwidth=1, relheight=1)
 
@@ -78,27 +90,88 @@ class AppController:
         self.show_frame(name)
 
     def show_inventory_for(self, category_name):
-        frame_name = f"{category_name}InventoryApp"
-        if frame_name not in self.frames:
-            try:
-                parts = category_name.split()
-                base_folder = parts[0].lower() + parts[1].lower()
-                sub_module = parts[-1].lower()
+        # Backwards-compatible wrapper that attempts to load an InventoryApp
+        # for the given category by delegating to the new centralized loader.
+        # The new loader will try several candidate module paths and show
+        # a "Coming Soon" page when no implementation exists.
+        # 
+        # category_name can be:
+        # 1. "OIL SEALS MM" (category with unit)
+        # 2. "MONOSEALS MM" (subcategory + unit, when called from nested CategoryPage)
+        # 3. "PACKING SEALS MONOSEALS" (category + subcategory)
+        # 4. "PACKING SEALS WIPER SEALS MM" (category + multi-word subcategory + unit)
+        
+        parts = category_name.split()
+        
+        # Strategy: Look for known CATEGORY_FOLDER_MAP keys first
+        category = None
+        subcategory = None
+        unit = None
+        
+        # Try to match the first N words as a known category
+        for i in range(len(parts), 0, -1):
+            candidate_cat = " ".join(parts[:i])
+            if candidate_cat in CATEGORY_FOLDER_MAP:
+                category = candidate_cat
+                remaining = parts[i:]
+                if len(remaining) == 2:
+                    # category + subcategory + unit (or category + two-word subcategory)
+                    # Need to check if remaining is a valid subcategory pair or subcategory+unit
+                    subcategory = remaining[0]
+                    unit = remaining[1]
+                elif len(remaining) == 1:
+                    # category + unit (or category + subcategory if no children)
+                    unit = remaining[0]
+                elif len(remaining) >= 3:
+                    # Multiple remaining parts: try to parse as subcategory + unit
+                    # The last part is likely the unit (MM/INCH)
+                    unit = remaining[-1]
+                    subcategory = " ".join(remaining[:-1])
+                break
+        
+        # If no known category found, check if this is a nested subcategory
+        if category is None:
+            from home_page import categories
+            first_part = parts[0]
+            for cat_name, cat_data in categories.items():
+                if isinstance(cat_data, dict) and first_part in cat_data:
+                    # Found parent category with first_part as subcategory
+                    category = cat_name
+                    subcategory = first_part
+                    if len(parts) > 1:
+                        unit = parts[1]
+                    break
+            
+            # If still not found, try matching multi-word subcategories
+            if category is None and len(parts) >= 2:
+                for cat_name, cat_data in categories.items():
+                    if isinstance(cat_data, dict):
+                        # Try to match progressively longer subcategory names
+                        for i in range(len(parts)-1, 0, -1):
+                            candidate_subcat = " ".join(parts[:i])
+                            if candidate_subcat in cat_data:
+                                category = cat_name
+                                subcategory = candidate_subcat
+                                if i < len(parts):
+                                    unit = parts[i]
+                                break
+                    if category:
+                        break
+        
+        # Fallback
+        if category is None:
+            if len(parts) >= 3:
+                category = " ".join(parts[:-2])
+                subcategory = parts[-2]
+                unit = parts[-1]
+            elif len(parts) == 2:
+                category = parts[0]
+                unit = parts[1]
+            else:
+                category = category_name
+        
+        self.set_inventory_context(category, subcategory, unit)
 
-                module_path = f"{base_folder}.gui.gui_{sub_module}"
-                module = __import__(module_path, fromlist=["InventoryApp"])
-                InventoryClass = getattr(module, "InventoryApp")
-
-                frame = InventoryClass(self.container, controller=self)
-                frame.return_to = " ".join(parts[:2])  # back to category choice
-
-                self.frames[frame_name] = frame
-                frame.place(x=0, y=0, relwidth=1, relheight=1)
-            except ModuleNotFoundError:
-                # instead of printing, show "Coming Soon"
-                self.show_coming_soon(category_name)
-                return
-        self.show_frame(frame_name)
 
     def show_frame(self, page_name):
         """Show a frame with smooth transition animation"""
@@ -124,6 +197,179 @@ class AppController:
             frame.lift()
             # Use after to ensure smooth rendering on the next frame
             self.root.after(1, lambda: frame.update_idletasks())
+
+    # --- New centralized inventory context handling ---
+    def set_inventory_context(self, category, subcategory=None, unit=None) -> InventoryContext:
+        """Set the active inventory context and load the corresponding UI.
+
+        This is the **single source of truth** for what inventory is selected.
+        It returns an InventoryContext object that explicitly declares:
+        - products_available: Can products be shown?
+        - transactions_available: Can transactions be shown?
+        - coming_soon: Should Coming Soon be shown?
+        - reason: Why Coming Soon (if applicable)?
+        
+        RULES:
+        1. INCH is never implemented → always Coming Soon
+        2. Missing DB/module → Coming Soon
+        3. Only load UI if InventoryApp class exists
+        4. GUI must check context before assuming tabs exist
+        
+        Returns:
+            InventoryContext object describing availability
+        """
+        
+        # Store selected context
+        self.current_category = category
+        self.current_subcategory = subcategory
+        self.current_unit = unit
+
+        # RULE 1: INCH is never implemented
+        if unit and unit.upper() == "INCH":
+            reason = "INCH system not yet implemented"
+            print(f"[CONTEXT] {category} {subcategory or ''} {unit}: {reason}")
+            context = create_context(
+                category=category,
+                subcategory=subcategory,
+                unit=unit,
+                coming_soon=True,
+                reason=reason
+            )
+            self.current_context = context
+            self.show_coming_soon(f"{category} {subcategory or ''} {unit}".strip())
+            return context
+
+        # Try to load MM implementation
+        base_pkg = CATEGORY_FOLDER_MAP.get(category)
+        if not base_pkg:
+            cat_l = (category or '').lower()
+            for k, v in CATEGORY_FOLDER_MAP.items():
+                if k and k.lower() in cat_l:
+                    base_pkg = v
+                    break
+        if not base_pkg:
+            base_pkg = ''.join(word.lower() for word in (category or '').split())
+
+        candidates = []
+        sub_folder = (subcategory or '') and subcategory.replace(' ', '').lower()
+        unit_name = (unit or '').lower() if unit else None
+
+        # Candidate patterns (most specific first)
+        if base_pkg and sub_folder and unit_name:
+            candidates.append(f"{base_pkg}.{sub_folder}.gui.gui_{unit_name}")
+            candidates.append(f"{base_pkg}.{sub_folder}.gui.gui_{sub_folder}")
+        if base_pkg and unit_name:
+            candidates.append(f"{base_pkg}.gui.gui_{unit_name}")
+            if sub_folder:
+                candidates.append(f"{base_pkg}.gui.gui_{sub_folder}")
+
+        loaded = False
+        loaded_module = None
+        loaded_path = None
+        
+        print(f"[CONTEXT] Trying {len(candidates)} candidates for {category} {subcategory or ''} {unit or ''}")
+        
+        for mod_path in candidates:
+            try:
+                mod = importlib.import_module(mod_path)
+                InventoryClass = getattr(mod, 'InventoryApp', None)
+                if InventoryClass:
+                    loaded = True
+                    loaded_module = InventoryClass
+                    loaded_path = mod_path
+                    print(f"[CONTEXT] ✓ Found InventoryApp in {mod_path}")
+                    break
+                else:
+                    print(f"[CONTEXT] ✗ No InventoryApp in {mod_path}")
+            except Exception as e:
+                print(f"[CONTEXT] ✗ Failed to import {mod_path}: {type(e).__name__}")
+                continue
+
+        # Try fallbacks if primary candidates failed
+        if not loaded and base_pkg:
+            fallbacks = [f"{base_pkg}.gui.gui_mm"]
+            
+            # Scan subpackages (e.g., packingseals.monoseals)
+            try:
+                pkg = importlib.import_module(base_pkg)
+                if hasattr(pkg, '__path__'):
+                    for finder, name, ispkg in pkgutil.iter_modules(pkg.__path__):
+                        fallbacks.append(f"{base_pkg}.{name}.gui.gui_mm")
+                        fallbacks.append(f"{base_pkg}.{name}.gui.gui_{name}")
+            except Exception:
+                pass
+
+            print(f"[CONTEXT] Trying {len(fallbacks)} fallback modules")
+            
+            for mod_path in fallbacks:
+                try:
+                    mod = importlib.import_module(mod_path)
+                    InventoryClass = getattr(mod, 'InventoryApp', None)
+                    if InventoryClass:
+                        loaded = True
+                        loaded_module = InventoryClass
+                        loaded_path = mod_path
+                        print(f"[CONTEXT] ✓ Found InventoryApp in fallback {mod_path}")
+                        break
+                except Exception as e:
+                    print(f"[CONTEXT] ✗ Fallback failed {mod_path}: {type(e).__name__}")
+                    continue
+
+        # Create context object (this is authoritative)
+        if loaded and loaded_module:
+            # SUCCESS: We can show the full UI
+            context = create_context(
+                category=category,
+                subcategory=subcategory,
+                unit=unit,
+                products_available=True,
+                transactions_available=True,
+                coming_soon=False,
+                reason="Module loaded successfully",
+                module_path=loaded_path
+            )
+            print(f"[CONTEXT] ✓ {context}")
+            self.current_context = context
+            
+            # Load and show the InventoryApp
+            frame_key = f"{category}::{subcategory or ''}::{unit or ''}"
+            if frame_key not in self.frames:
+                try:
+                    frame = loaded_module(self.container, controller=self)
+                    self.frames[frame_key] = frame
+                    frame.place(x=0, y=0, relwidth=1, relheight=1)
+                    print(f"[CONTEXT] ✓ Created and placed InventoryApp frame")
+                except Exception as e:
+                    print(f"[CONTEXT] ✗ Failed to create InventoryApp: {e}")
+                    # Fall through to Coming Soon
+                    context = create_context(
+                        category=category,
+                        subcategory=subcategory,
+                        unit=unit,
+                        coming_soon=True,
+                        reason=f"Failed to initialize: {type(e).__name__}",
+                        error=str(e)
+                    )
+                    self.current_context = context
+                    self.show_coming_soon(f"{category} {subcategory or ''} {unit or ''}".strip())
+                    return context
+            
+            self.show_frame(frame_key)
+            return context
+        else:
+            # FAILURE: No module found → Coming Soon
+            context = create_context(
+                category=category,
+                subcategory=subcategory,
+                unit=unit,
+                coming_soon=True,
+                reason="No implementation found"
+            )
+            print(f"[CONTEXT] ✗ {context}")
+            self.current_context = context
+            self.show_coming_soon(f"{category} {subcategory or ''} {unit or ''}".strip())
+            return context
+
 
     def _animate_fade_out(self, frame):
         """Fade out animation"""
@@ -184,17 +430,50 @@ class AppController:
 
     def show_transaction_window(self, details, main_app, return_to=None):
         if "TransactionWindow" in self.frames:
-            self.frames["TransactionWindow"].destroy()
+            try:
+                self.frames["TransactionWindow"].destroy()
+            except Exception:
+                pass
         if not return_to:
             return_to = self.get_current_frame_name()
 
-        frame = TransactionWindow(self.container, details, controller=self, return_to=return_to)
+        # Determine TransactionWindow class dynamically from the caller's module
+        TransactionCls = None
+        try:
+            if main_app is not None and hasattr(main_app, '__module__'):
+                mod_base = main_app.__module__.rsplit('.', 1)[0]
+                try:
+                    tw_mod = importlib.import_module(f"{mod_base}.gui_transaction_window")
+                    TransactionCls = getattr(tw_mod, 'TransactionWindow', None)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # Fallback to oilseals gui transaction window
+        if TransactionCls is None:
+            try:
+                tw_mod = importlib.import_module('oilseals.gui.gui_transaction_window')
+                TransactionCls = getattr(tw_mod, 'TransactionWindow', None)
+            except Exception:
+                TransactionCls = None
+
+        if TransactionCls is None:
+            # Can't find a TransactionWindow implementation
+            self.show_coming_soon("Transactions")
+            return
+
+        frame = TransactionCls(self.container, details, controller=self, return_to=return_to)
         self.frames["TransactionWindow"] = frame
         frame.place(x=0, y=0, relwidth=1, relheight=1)
         frame.lift()
         # Ensure frame is rendered, then load data
-        frame.update_idletasks()
-        frame.set_details(details, main_app)
+        try:
+            frame.update_idletasks()
+            if hasattr(frame, 'set_details'):
+                frame.set_details(details, main_app)
+        except Exception:
+            pass
 
     def show_coming_soon(self, category_name):
         frame_name = f"{category_name}ComingSoon"
