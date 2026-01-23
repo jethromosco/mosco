@@ -585,6 +585,16 @@ class TransactionWindow(ctk.CTkFrame):
             self.tree.bind("<Configure>", lambda e: self._adjust_tree_columns())
         except Exception:
             pass
+    
+    def _apply_column_tag(self, item_id: str, color_tag: str):
+        """Apply color tag to item for column-only coloring."""
+        if not color_tag:
+            return
+        current_tags = self.tree.item(item_id, "tags")
+        new_tags = list(current_tags) if current_tags else []
+        if color_tag not in new_tags:
+            new_tags.append(color_tag)
+        self.tree.item(item_id, tags=tuple(new_tags))
 
     def _setup_treeview_style(self):
         style = ttk.Style()
@@ -596,7 +606,9 @@ class TransactionWindow(ctk.CTkFrame):
             foreground=theme.get("text"),
             fieldbackground=theme.get("card_alt"),
             font=("Poppins", 18),
-            rowheight=40
+            rowheight=40,
+            borderwidth=1,
+            relief="solid"
         )
 
         style.configure(

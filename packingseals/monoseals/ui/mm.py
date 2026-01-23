@@ -162,21 +162,33 @@ def _build_query_and_params(search_filters: Dict[str, str]) -> Tuple[str, List[A
 
 
 def _fetch_products(search_filters: Dict[str, str]) -> List[Tuple[Any, ...]]:
+    print(f"[DB_FETCH] _fetch_products called with filters: {search_filters}")
     query, params = _build_query_and_params(search_filters)
+    print(f"[DB_FETCH] SQL Query: {query}")
+    print(f"[DB_FETCH] Query params: {params}")
+    
     with connect_db() as conn:
+        print(f"[DB_FETCH] ✓ Created new DB connection")
         cur = conn.cursor()
         cur.execute(query, params)
         rows = cur.fetchall()
+    
+    print(f"[DB_FETCH] ✓ Fetched {len(rows)} products from database")
+    if rows:
+        print(f"[DB_FETCH] First row: {rows[0] if rows else 'none'}")
     return rows
 
 
 def _fetch_all_transactions() -> List[Tuple[Any, ...]]:
+    print(f"[DB_FETCH] _fetch_all_transactions called")
     with connect_db() as conn:
+        print(f"[DB_FETCH] ✓ Created new DB connection for transactions")
         cur = conn.cursor()
         cur.execute(
             """SELECT type, id_size, od_size, th_size, brand, quantity, is_restock FROM transactions ORDER BY date ASC"""
         )
         rows = cur.fetchall()
+    print(f"[DB_FETCH] ✓ Fetched {len(rows)} transactions from database")
     return rows
 
 

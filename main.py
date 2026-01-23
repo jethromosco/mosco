@@ -36,7 +36,7 @@ if __name__ == "__main__":
     app = AppController(root)
     root.mainloop()
 
-# 7/8 tsaka yung decimals /
+# 7/8 tsaka yung decimals ///
 # actual check (green) transactiaction tab + FAB MOS 4 BTNS - sa black yung JO /
 # inventroy app country - gawin brand /
 # lipat admin sa loob ng oil seal/

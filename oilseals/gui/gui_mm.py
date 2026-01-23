@@ -48,6 +48,7 @@ class InventoryApp(ctk.CTkFrame):
         self.entry_widgets = {}
         self.search_label_widgets = []
         self.combo_widgets = []
+        self.entry_fields = []  # For Backspace navigation
 
         # Setup UI and bindings
         self.create_widgets()
@@ -69,6 +70,8 @@ class InventoryApp(ctk.CTkFrame):
             self.root.bind("<F11>", lambda e: self.controller._toggle_fullscreen())
         else:
             self.root.bind("<F11>", lambda e: self._toggle_fullscreen())
+        # Setup Backspace navigation for search fields
+        self._setup_entry_backspace_navigation()
 
     def _toggle_fullscreen(self, event=None):
         # Fallback local handler that delegates to controller if present.
@@ -275,6 +278,7 @@ class InventoryApp(ctk.CTkFrame):
         entry.grid(row=1, column=0, pady=(0, 8), sticky="ew")
         
         self.entry_widgets[key] = entry
+        self.entry_fields.append(entry)  # Store for Backspace navigation
         self._setup_entry_bindings(entry, key, var)
 
         # Inch conversion label for size fields
@@ -348,6 +352,38 @@ class InventoryApp(ctk.CTkFrame):
         text, is_err = convert_mm_to_inches_display(self.get_var(key))
         color = "#FF4444" if is_err else theme.get("text")
         self.inch_labels[key].configure(text=text, text_color=color)
+
+    def _setup_entry_backspace_navigation(self):
+        """Setup Backspace navigation between Entry fields."""
+        if not self.entry_fields:
+            return
+        for i, entry in enumerate(self.entry_fields):
+            if hasattr(entry, '_entry'):
+                entry._entry.bind("<BackSpace>", lambda e, idx=i: self._handle_entry_backspace(idx, e))
+            else:
+                entry.bind("<BackSpace>", lambda e, idx=i: self._handle_entry_backspace(idx, e))
+
+    def _handle_entry_backspace(self, field_index: int, event):
+        """Handle Backspace key on Entry fields."""
+        current_entry = self.entry_fields[field_index]
+        current_text = current_entry.get() if hasattr(current_entry, 'get') else current_entry._entry.get()
+        
+        if current_text:
+            return None  # Allow normal deletion
+        
+        if field_index > 0:
+            prev_entry = self.entry_fields[field_index - 1]
+            prev_text = prev_entry.get() if hasattr(prev_entry, 'get') else prev_entry._entry.get()
+            
+            if prev_text:
+                if hasattr(prev_entry, 'delete'):
+                    prev_entry.delete(len(prev_text) - 1, "end")
+                else:
+                    prev_entry._entry.delete(len(prev_text) - 1, "end")
+            
+            prev_entry.focus() if hasattr(prev_entry, 'focus') else prev_entry._entry.focus()
+        
+        return "break"
 
     def _create_sort_controls(self, parent):
         """Create sort and filter controls"""
@@ -473,11 +509,14 @@ class InventoryApp(ctk.CTkFrame):
                         foreground=theme.get("text"),
                         fieldbackground=theme.get("card_alt"),
                         font=("Poppins", 18),
-                        rowheight=40)
+                        rowheight=40,
+                        borderwidth=1,
+                        relief="solid")
         style.configure("Custom.Treeview.Heading",
                         background=theme.get("heading_bg"),
                         foreground=theme.get("heading_fg"),
-                        font=("Poppins", 20, "bold"))
+                        font=("Poppins", 20, "bold"),
+                        borderwidth=1)
         
         # Selection styling uses theme-aware table_selected color (distinct from unknown stock)
         style.map("Custom.Treeview", 
@@ -768,7 +807,7 @@ class InventoryApp(ctk.CTkFrame):
         filters = {k: v.get().strip() for k, v in self.search_vars.items()}
         display_data = build_products_display_data(filters, self.sort_by.get(), self.stock_filter.get())
 
-        # Populate tree with alternating rows for normal tag
+        # Populate tree with alternating rows
         for index, item in enumerate(display_data):
             qty = item[4]
             base_tag = get_stock_tag(qty)
@@ -778,11 +817,15 @@ class InventoryApp(ctk.CTkFrame):
             # Create display row with formatted quantity
             display_item = list(item[:6])
             display_item[4] = qty_display  # Replace qty with formatted version
+            
+            # Always apply alternating background tag
+            alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
+            
+            # Apply both alternating tag and stock tag (stock tag provides text color)
             if base_tag == "normal":
-                alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
-                self.tree.insert("", tk.END, values=display_item, tags=(base_tag, alt_tag))
+                self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, "normal"))
             else:
-                self.tree.insert("", tk.END, values=display_item, tags=(base_tag,))
+                self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, base_tag))
 
         # Update status
         self.status_label.configure(text=f"Total Oil Seal Products: {len(display_data)}")
@@ -790,25 +833,24 @@ class InventoryApp(ctk.CTkFrame):
     def _apply_tree_tags_theme(self):
         """Apply tag colors for tree rows based on current theme/mode."""
         try:
-            # Normal rows use themed foreground
-            self.tree.tag_configure("normal", background=theme.get("card_alt"), foreground=theme.get("text"))
-            # Alternate stripes for normal rows
+            # Normal rows use themed foreground only (no background for column-specific coloring)
+            self.tree.tag_configure("normal", foreground=theme.get("text"))
+            # Alternate stripes - different background but no text coloring change
             self.tree.tag_configure("alt_even", background=theme.get("card_alt"))
             self.tree.tag_configure("alt_odd", background=theme.get("card"))
-            # Stock highlight tags - use distinct colors per state
+            # Stock highlight tags - use foreground colors only for Items column, keep default bg
             if theme.mode == "dark":
-                low_bg = "#8B4513"
-                out_bg = "#8B0000"
-                unknown_bg = theme.get("unknown_stock_bg")  # #6B3FA0 purple
-                txt = "#FFFFFF"
+                low_fg = "#FFD700"      # Gold for low stock
+                out_fg = "#FF6B6B"      # Red for out of stock
+                unknown_fg = "#D9C4E8"  # Purple for unknown stock
             else:
-                low_bg = "#FFF1B8"
-                out_bg = "#F8B4B4"
-                unknown_bg = theme.get("unknown_stock_bg")  # #D9C4E8 light purple
-                txt = "#000000"
-            self.tree.tag_configure("low", background=low_bg, foreground=txt)
-            self.tree.tag_configure("out", background=out_bg, foreground=txt)
-            self.tree.tag_configure("unknown", background=unknown_bg, foreground=txt)
+                low_fg = "#FF8C00"      # Dark orange for low stock
+                out_fg = "#B22222"      # Dark red for out of stock
+                unknown_fg = "#8B5FA0"  # Dark purple for unknown stock
+            
+            self.tree.tag_configure("low", foreground=low_fg)
+            self.tree.tag_configure("out", foreground=out_fg)
+            self.tree.tag_configure("unknown", foreground=unknown_fg)
         except Exception:
             pass
 

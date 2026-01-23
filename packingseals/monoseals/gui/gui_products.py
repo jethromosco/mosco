@@ -574,6 +574,8 @@ class AdminPanel:
                 # Re-attach treeview to form handler
                 if hasattr(self, 'prod_tree'):
                     self.prod_form_handler.prod_tree = self.prod_tree
+                # CRITICAL: Re-attach the product-added callback after recreation
+                self.prod_form_handler.on_product_added = self._handle_product_added
             
             # Recreate transaction logic and tab (CRITICAL: fully reinitialize)
             if hasattr(self, 'transaction_tab') and getattr(self, 'transaction_tab'):
@@ -800,47 +802,126 @@ class AdminPanel:
             self.on_close_callback()
         self.win.destroy()
 
+    def _handle_product_added(self, details):
+        """Handle post-product-add workflow: refresh inventory, auto-open transaction."""
+        try:
+            # CRITICAL FIX 1: Refresh the active GUI (gui_mm.py) immediately
+            # so the newly added product appears without delay
+            if hasattr(self.main_app, 'refresh_product_list'):
+                self.main_app.refresh_product_list()
+            
+            # CRITICAL FIX 2: Auto-open Add Transaction with pre-filled data
+            # DEFENSIVE: Check if transaction_tab exists and has form_handler
+            self.switch_tab("transactions")
+            self.transactions_frame.update_idletasks()
+            
+            # Only proceed if transaction_tab is available
+            if hasattr(self, 'transaction_tab') and self.transaction_tab is not None:
+                if hasattr(self.transaction_tab, 'form_handler') and self.transaction_tab.form_handler is not None:
+                    # Prepare keys mapping expected by TransactionFormHandler
+                    keys = {
+                        'Type': details.get('Type', ''),
+                        'ID': details.get('ID', ''),
+                        'OD': details.get('OD', ''),
+                        'TH': details.get('TH', ''),
+                        'Brand': details.get('Brand', ''),
+                    }
+                    try:
+                        # Set last_transaction_keys so transaction form will prefill
+                        self.transaction_tab.form_handler.last_transaction_keys = keys
+                        # Open Add Transaction form
+                        self.transaction_tab.form_handler.add_transaction()
+                    except Exception as e:
+                        print(f"[WARNING] Failed to auto-open transaction form: {type(e).__name__}")
+        except Exception as e:
+            print(f"[WARNING] Product add hook failed: {type(e).__name__}")
+
+    def _handle_product_added(self, details):
+        """Handle post-product-add workflow: refresh inventory, auto-open transaction."""
+        try:
+            print(f"\n[CALLBACK_START] _handle_product_added triggered")
+            print(f"[CALLBACK] Product details: {details}")
+            
+            # CRITICAL FIX 1: Refresh the active GUI (gui_mm.py) immediately
+            # so the newly added product appears without delay
+            if hasattr(self.main_app, 'refresh_product_list'):
+                print(f"[CALLBACK] ✓ main_app has refresh_product_list")
+                print(f"[CALLBACK] main_app class: {self.main_app.__class__.__name__}")
+                print(f"[CALLBACK] main_app id: {id(self.main_app)}")
+                
+                # Check tree state before refresh
+                if hasattr(self.main_app, 'tree'):
+                    tree_items_before = len(self.main_app.tree.get_children())
+                    print(f"[CALLBACK] Tree has {tree_items_before} items BEFORE refresh")
+                else:
+                    print(f"[CALLBACK] WARNING: main_app.tree does not exist!")
+                
+                # CALL THE REFRESH
+                print(f"[CALLBACK] Calling main_app.refresh_product_list()...")
+                self.main_app.refresh_product_list()
+                self.main_app.update_idletasks()  # Force UI update
+                print(f"[CALLBACK] ✓ refresh_product_list() completed")
+                
+                # Check tree state after refresh
+                if hasattr(self.main_app, 'tree'):
+                    tree_items_after = len(self.main_app.tree.get_children())
+                    print(f"[CALLBACK] Tree has {tree_items_after} items AFTER refresh")
+                    print(f"[CALLBACK] Items added: {tree_items_after - tree_items_before}")
+                    
+                    if tree_items_after == tree_items_before:
+                        print(f"[CALLBACK] ⚠️ WARNING: Tree count didn't change! Product might not be in DB or filters excluded it")
+                    elif tree_items_after > tree_items_before:
+                        print(f"[CALLBACK] ✓ SUCCESS: New product appeared in tree")
+                else:
+                    print(f"[CALLBACK] WARNING: main_app.tree does not exist after refresh!")
+            else:
+                print(f"[CALLBACK] ❌ ERROR: main_app does not have refresh_product_list method!")
+                print(f"[CALLBACK] main_app type: {type(self.main_app)}")
+                print(f"[CALLBACK] main_app methods: {[m for m in dir(self.main_app) if not m.startswith('_')]}")
+            
+            # CRITICAL FIX 2: Auto-open Add Transaction with pre-filled data
+            # DEFENSIVE: Check if transaction_tab exists and has form_handler
+            self.switch_tab("transactions")
+            self.transactions_frame.update_idletasks()
+            
+            # Only proceed if transaction_tab is available
+            if hasattr(self, 'transaction_tab') and self.transaction_tab is not None:
+                if hasattr(self.transaction_tab, 'form_handler') and self.transaction_tab.form_handler is not None:
+                    # Prepare keys mapping expected by TransactionFormHandler
+                    keys = {
+                        'Type': details.get('Type', ''),
+                        'ID': details.get('ID', ''),
+                        'OD': details.get('OD', ''),
+                        'TH': details.get('TH', ''),
+                        'Brand': details.get('Brand', ''),
+                    }
+                    try:
+                        # Set last_transaction_keys so transaction form will prefill
+                        self.transaction_tab.form_handler.last_transaction_keys = keys
+                        # Open Add Transaction form
+                        self.transaction_tab.form_handler.add_transaction()
+                        print(f"[CALLBACK] ✓ Transaction form opened")
+                    except Exception as e:
+                        print(f"[CALLBACK] ⚠️ Failed to auto-open transaction form: {type(e).__name__}: {e}")
+            else:
+                print(f"[CALLBACK] ⚠️ transaction_tab not available for auto-opening")
+                
+            print(f"[CALLBACK_END] _handle_product_added completed\n")
+        except Exception as e:
+            import traceback
+            print(f"[CALLBACK] ❌ CRITICAL ERROR in _handle_product_added: {type(e).__name__}: {e}")
+            traceback.print_exc()
+            print(f"[CALLBACK_END]\n")
+
     def create_products_tab(self):
         self.prod_form_handler = ProductFormHandler(
             self.win,
             None,
             self.refresh_products
         )
-
-        def _on_product_added(details):
-            try:
-                # CRITICAL FIX 1: Refresh the active GUI (gui_mm.py) immediately
-                # so the newly added product appears without delay
-                if hasattr(self.main_app, 'refresh_product_list'):
-                    self.main_app.refresh_product_list()
-                
-                # CRITICAL FIX 2: Auto-open Add Transaction with pre-filled data
-                # DEFENSIVE: Check if transaction_tab exists and has form_handler
-                self.switch_tab("transactions")
-                self.transactions_frame.update_idletasks()
-                
-                # Only proceed if transaction_tab is available
-                if hasattr(self, 'transaction_tab') and self.transaction_tab is not None:
-                    if hasattr(self.transaction_tab, 'form_handler') and self.transaction_tab.form_handler is not None:
-                        # Prepare keys mapping expected by TransactionFormHandler
-                        keys = {
-                            'Type': details.get('Type', ''),
-                            'ID': details.get('ID', ''),
-                            'OD': details.get('OD', ''),
-                            'TH': details.get('TH', ''),
-                            'Brand': details.get('Brand', ''),
-                        }
-                        try:
-                            # Set last_transaction_keys so transaction form will prefill
-                            self.transaction_tab.form_handler.last_transaction_keys = keys
-                            # Open Add Transaction form
-                            self.transaction_tab.form_handler.add_transaction()
-                        except Exception as e:
-                            print(f"[WARNING] Failed to auto-open transaction form: {type(e).__name__}")
-            except Exception as e:
-                print(f"[WARNING] Product add hook failed: {type(e).__name__}")
-
-        self.prod_form_handler.on_product_added = _on_product_added
+        # Attach a post-add hook so that after adding a product we can
+        # switch to the Transactions tab and open the Add Transaction form
+        self.prod_form_handler.on_product_added = self._handle_product_added
 
         self.table_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card"), corner_radius=40)
         self.table_container.pack(fill="both", expand=True, pady=(0, 15), padx=20)

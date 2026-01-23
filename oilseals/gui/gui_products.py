@@ -615,6 +615,8 @@ class AdminPanel:
                 # Re-attach treeview to form handler
                 if hasattr(self, 'prod_tree'):
                     self.prod_form_handler.prod_tree = self.prod_tree
+                # CRITICAL: Re-attach the product-added callback after recreation
+                self.prod_form_handler.on_product_added = self._handle_product_added
             
             # Recreate transaction logic and tab (CRITICAL: fully reinitialize)
             if hasattr(self, 'transaction_tab') and getattr(self, 'transaction_tab'):
@@ -841,6 +843,40 @@ class AdminPanel:
             self.on_close_callback()
         self.win.destroy()
 
+    def _handle_product_added(self, details):
+        """Handle post-product-add workflow: refresh inventory, auto-open transaction."""
+        try:
+            # CRITICAL FIX 1: Refresh the active GUI (gui_mm.py) immediately
+            # so the newly added product appears without delay
+            if hasattr(self.main_app, 'refresh_product_list'):
+                self.main_app.refresh_product_list()
+            
+            # CRITICAL FIX 2: Auto-open Add Transaction with pre-filled data
+            # DEFENSIVE: Check if transaction_tab exists and has form_handler
+            self.switch_tab("transactions")
+            self.transactions_frame.update_idletasks()
+            
+            # Only proceed if transaction_tab is available
+            if hasattr(self, 'transaction_tab') and self.transaction_tab is not None:
+                if hasattr(self.transaction_tab, 'form_handler') and self.transaction_tab.form_handler is not None:
+                    # Prepare keys mapping expected by TransactionFormHandler
+                    keys = {
+                        'Type': details.get('Type', ''),
+                        'ID': details.get('ID', ''),
+                        'OD': details.get('OD', ''),
+                        'TH': details.get('TH', ''),
+                        'Brand': details.get('Brand', ''),
+                    }
+                    try:
+                        # Set last_transaction_keys so transaction form will prefill
+                        self.transaction_tab.form_handler.last_transaction_keys = keys
+                        # Open Add Transaction form
+                        self.transaction_tab.form_handler.add_transaction()
+                    except Exception as e:
+                        print(f"[WARNING] Failed to auto-open transaction form: {type(e).__name__}")
+        except Exception as e:
+            print(f"[WARNING] Product add hook failed: {type(e).__name__}")
+
     def create_products_tab(self):
         self.prod_form_handler = ProductFormHandler(
             self.win,
@@ -849,41 +885,7 @@ class AdminPanel:
         )
         # Attach a post-add hook so that after adding a product we can
         # switch to the Transactions tab and open the Add Transaction form
-        def _on_product_added(details):
-            try:
-                # CRITICAL FIX 1: Refresh the active GUI (gui_mm.py) immediately
-                # so the newly added product appears without delay
-                if hasattr(self.main_app, 'refresh_product_list'):
-                    self.main_app.refresh_product_list()
-                
-                # CRITICAL FIX 2: Auto-open Add Transaction with pre-filled data
-                # DEFENSIVE: Check if transaction_tab exists and has form_handler
-                self.switch_tab("transactions")
-                self.transactions_frame.update_idletasks()
-                
-                # Only proceed if transaction_tab is available
-                if hasattr(self, 'transaction_tab') and self.transaction_tab is not None:
-                    if hasattr(self.transaction_tab, 'form_handler') and self.transaction_tab.form_handler is not None:
-                        # Prepare keys mapping expected by TransactionFormHandler
-                        keys = {
-                            'Type': details.get('Type', ''),
-                            'ID': details.get('ID', ''),
-                            'OD': details.get('OD', ''),
-                            'TH': details.get('TH', ''),
-                            'Brand': details.get('Brand', ''),
-                        }
-                        try:
-                            # Set last_transaction_keys so transaction form will prefill
-                            self.transaction_tab.form_handler.last_transaction_keys = keys
-                            # Open Add Transaction form
-                            self.transaction_tab.form_handler.add_transaction()
-                        except Exception as e:
-                            print(f"[WARNING] Failed to auto-open transaction form: {type(e).__name__}")
-            except Exception as e:
-                print(f"[WARNING] Product add hook failed: {type(e).__name__}")
-
-        # assign hook
-        self.prod_form_handler.on_product_added = _on_product_added
+        self.prod_form_handler.on_product_added = self._handle_product_added
 
         self.table_container = ctk.CTkFrame(self.products_frame, fg_color=theme.get("card"), corner_radius=40)
         self.table_container.pack(fill="both", expand=True, pady=(0, 15), padx=20)
