@@ -219,11 +219,12 @@ class TransactionLogic:
                 date = datetime.strptime(date_str, "%m/%d/%y").strftime("%Y-%m-%d")
             except Exception:
                 date = date_str  # fallback, may error later if not valid
-            item_type = form_data['item_type'].strip().upper()
-            id_size = form_data['id_size'].strip()
-            od_size = form_data['od_size'].strip()
-            th_size = form_data['th_size'].strip()
-            brand = form_data['brand'].strip().upper()
+            # Apply formatting rules
+            item_type = form_data['item_type'].strip().replace(' ', '').upper()
+            id_size = ''.join(c for c in form_data['id_size'].strip() if c in '0123456789./')
+            od_size = ''.join(c for c in form_data['od_size'].strip() if c in '0123456789./')
+            th_size = ''.join(c for c in form_data['th_size'].strip() if c in '0123456789./')
+            brand = ''.join(c for c in form_data['brand'].strip() if c.isalnum()).upper()
             name = form_data['name'].strip().upper()
             data = {
                 'date': date,
@@ -237,7 +238,7 @@ class TransactionLogic:
             if trans_type in ["Restock", "Sale"]:
                 qty = abs(int(form_data['quantity']))
                 # sanitize price input (allow values like '₱99', '99.00', '₱9900')
-                price_raw = str(form_data.get('price') or '').replace('₱', '').replace(',', '').strip()
+                price_raw = str(form_data.get('price') or '').replace('₱', '').replace(',', '').replace(' ', '').strip()
                 try:
                     price = float(price_raw)
                 except Exception:
@@ -298,8 +299,11 @@ class TransactionLogic:
                 try:
                     qty = int(form_data['quantity'])
                     price = float(form_data['price'])
-                    if qty <= 0 or price <= 0:
-                        errors.append("Quantity and Price must be greater than 0.")
+                    if qty <= 0:
+                        errors.append("Quantity must be greater than 0.")
+                    if trans_type == "Sale" and price <= 0:
+                        errors.append("Price must be greater than 0 for Sale transactions.")
+                    # Restock can have price = 0 (no cost)
                 except (ValueError, TypeError):
                     errors.append("Quantity must be a valid integer and Price must be a valid number.")
         elif trans_type == "Actual":

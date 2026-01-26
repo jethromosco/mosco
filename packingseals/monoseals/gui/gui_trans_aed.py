@@ -71,7 +71,7 @@ class TransactionFormHandler:
         """Show delete confirmation dialog"""
         parent_window = self.parent_frame.winfo_toplevel()
         confirm_window = ctk.CTkToplevel(parent_window)
-        confirm_window.title("Confirm Delete")
+        confirm_window.title("MOS Inventory")
         confirm_window.geometry("400x200")
         confirm_window.resizable(False, False)
         confirm_window.configure(fg_color=theme.get("bg"))
@@ -179,7 +179,7 @@ class TransactionFormHandler:
     def _transaction_form(self, mode, record=None, rowid=None, fabrication_pair=None):
         """Create and display transaction form"""
         form = ctk.CTkToplevel(self.parent_frame.winfo_toplevel())
-        form.title(f"{mode} Transaction")
+        form.title("MOS Inventory")
 
         form.withdraw()
         form.resizable(False, False)
@@ -442,22 +442,36 @@ class TransactionFormHandler:
         fields_section = ctk.CTkFrame(parent, fg_color="transparent")
         fields_section.pack(fill="x", pady=(0, 20))
 
-        # Text fields (create Type/ID/OD/TH/Brand first)
+        # Text fields (create Type first)
         entry_widgets = {}
-        fields = [
-            ("Type", "Type"), ("ID", "ID"), ("OD", "OD"), ("TH", "TH"),
-            ("Brand", "Brand")
+        text_fields = [
+            ("Type", "Type")
         ]
 
-        for label_text, var_key in fields:
+        for label_text, var_key in text_fields:
             entry = self._create_text_field(fields_section, label_text, vars[var_key], form)
             entry_widgets[var_key] = entry
 
-            # Auto uppercase for Type and Brand during typing
-            if label_text in ["Type", "Brand"]:
+            # Auto uppercase for Type
+            if label_text in ["Type"]:
                 self.setup_auto_uppercase(vars[var_key])
 
-        # Place Date field after Brand so it's the next field users type into
+        # Number fields for ID, OD, TH
+        number_fields = [
+            ("ID", "ID"), ("OD", "OD"), ("TH", "TH")
+        ]
+
+        for label_text, var_key in number_fields:
+            entry = self._create_number_field(fields_section, label_text, vars[var_key], form, "measurement")
+            entry_widgets[var_key] = entry
+
+        # Brand field (after TH)
+        brand_entry = self._create_text_field(fields_section, "Brand", vars["Brand"], form)
+        entry_widgets["Brand"] = brand_entry
+        # Auto uppercase for Brand
+        self.setup_auto_uppercase(vars["Brand"])
+
+        # Place Date field after TH so it's the next field users type into
         # and set it as the first_entry so the form will focus it immediately.
         self.first_entry = self._create_date_field(fields_section, date_var)
 
@@ -553,6 +567,15 @@ class TransactionFormHandler:
             border_width=1,
             border_color=theme.get("border")
         )
+        
+        # Add validation for Type and Brand to prevent spaces
+        if label_text in ["Type", "Brand"]:
+            def validate_no_spaces(new_val):
+                return ' ' not in new_val
+            
+            vcmd = (parent.register(validate_no_spaces), '%P')
+            entry.configure(validate='key', validatecommand=vcmd)
+        
         entry.grid(row=0, column=1, sticky="ew")
         
         # Add hover and focus effects
@@ -583,7 +606,7 @@ class TransactionFormHandler:
         )
         label.grid(row=0, column=0, sticky="w", padx=(0, 15))
         
-        validate_func = self._validate_integer if field_type == "integer" else self._validate_float_price
+        validate_func = self._validate_integer if field_type == "integer" else (self._validate_measurement if field_type == "measurement" else self._validate_float_price)
         
         entry = ctk.CTkEntry(
             field_frame,
@@ -1004,6 +1027,28 @@ class TransactionFormHandler:
         if text != upper_text:
             var.set(upper_text)
 
+    def _validate_measurement(self, new_val):
+        """Validate measurement input (numbers, decimals, slashes)"""
+        if new_val == "":
+            return True
+        # Allow digits, dots, slashes
+        if all(c in '0123456789./' for c in new_val):
+            # Check structure: parts separated by / should be valid numbers
+            parts = new_val.split('/')
+            for part in parts:
+                if part and not self._is_valid_number(part):
+                    return False
+            return True
+        return False
+
+    def _is_valid_number(self, s):
+        """Check if string is a valid number (int or float)"""
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+
     def _validate_integer(self, new_val):
         """Validate integer input"""
         if new_val == "":
@@ -1014,6 +1059,9 @@ class TransactionFormHandler:
         """Validate float input for price"""
         if new_val == "":
             return True
+        # Reject spaces
+        if ' ' in new_val:
+            return False
         try:
             float(new_val)
             if new_val.count(".") > 1:

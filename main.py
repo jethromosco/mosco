@@ -12,7 +12,7 @@ if __name__ == "__main__":
     ctk.set_default_color_theme("blue")
 
     root = ctk.CTk()
-    root.title("MOSCO Inventory System")
+    root.title("MOS Inventory")
     
     # Set minimum window size to prevent shrinking too much during dragging
     root.minsize(800, 600)

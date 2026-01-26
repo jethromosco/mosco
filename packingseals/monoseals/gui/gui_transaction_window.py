@@ -130,7 +130,7 @@ class TransactionWindow(ctk.CTkFrame):
     def _create_password_window(self, callback=None):
         """Create admin access password modal consistent with InventoryApp style"""
         password_window = ctk.CTkToplevel(self.master)
-        password_window.title("Admin Access")
+        password_window.title("MOS Inventory")
         password_window.geometry("450x350")
         password_window.resizable(False, False)
         password_window.configure(fg_color=theme.get("bg"))
@@ -527,6 +527,9 @@ class TransactionWindow(ctk.CTkFrame):
 
         for color, value in colors.items():
             self.tree.tag_configure(color, foreground=value, font=("Poppins", 18))
+
+        self.tree.tag_configure("alt_even", background=theme.get("card_alt"))
+        self.tree.tag_configure("alt_odd", background=theme.get("card"))
 
         column_config = {
             "date": {"text": "DATE", "anchor": "center", "width": 90, "minwidth": 50},
@@ -1008,8 +1011,9 @@ class TransactionWindow(ctk.CTkFrame):
 
         displayed.sort(key=custom_sort_key)
 
-        for vals, tag in displayed:
-            self.tree.insert("", "end", values=vals, tags=(tag,))
+        for index, (vals, tag) in enumerate(displayed):
+            alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
+            self.tree.insert("", "end", values=vals, tags=(alt_tag, tag))
 
         # Add auto-scroll to bottom to show latest date
         if self.tree.get_children():
@@ -1121,7 +1125,7 @@ class TransactionWindow(ctk.CTkFrame):
     def _create_settings_window(self):
         """Create stock settings window"""
         settings = ctk.CTkToplevel(self)
-        settings.title("Stock Color Settings")
+        settings.title("MOS Inventory")
         settings.geometry("400x300")
         settings.resizable(False, False)
         settings.configure(fg_color=theme.get("bg"))
@@ -1374,7 +1378,7 @@ class TransactionWindow(ctk.CTkFrame):
     def _create_photo_viewer_window(self):
         """Create photo viewer window"""
         viewer = ctk.CTkToplevel(self)
-        viewer.title("Photo Viewer")
+        viewer.title("MOS Inventory")
         viewer.transient(self)
         viewer.grab_set()
         viewer.configure(fg_color=theme.get("bg"))

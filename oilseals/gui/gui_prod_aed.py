@@ -81,7 +81,7 @@ class ProductFormHandler:
     def _show_delete_confirmation(self, type_, id_str, od_str, th_str, brand, item_str):
         """Show delete confirmation dialog."""
         confirm_window = ctk.CTkToplevel(self.parent_window)
-        confirm_window.title("Confirm Delete")
+        confirm_window.title("MOS Inventory")
         confirm_window.geometry("400x200")
         confirm_window.resizable(False, False)
         confirm_window.configure(fg_color=theme.get("bg"))
@@ -162,7 +162,7 @@ class ProductFormHandler:
     def _product_form(self, title, values=None):
         """Create and show the product form dialog."""
         form = ctk.CTkToplevel(self.parent_window)
-        form.title(title)
+        form.title("MOS Inventory")
         form.resizable(False, False)
         form.configure(fg_color=theme.get("bg"))
         form.transient(self.parent_window)
@@ -205,6 +205,8 @@ class ProductFormHandler:
 
             vars["TYPE"].set(formatted_data[0])
             vars["BRAND"].set(formatted_data[4])
+            vars["PART_NO"].set(formatted_data[5])
+            vars["NOTES"].set(formatted_data[7])
             vars["ORIGIN"].set(formatted_data[6])
 
         def validate_numbers(*args):
@@ -265,6 +267,8 @@ class ProductFormHandler:
         # Bind validation callbacks
         vars["TYPE"].trace_add("write", force_uppercase)
         vars["BRAND"].trace_add("write", force_uppercase)
+        vars["PART_NO"].trace_add("write", force_uppercase)
+        vars["NOTES"].trace_add("write", force_uppercase)
         vars["ORIGIN"].trace_add("write", force_uppercase)
         for key in ["ID", "OD", "TH", "PRICE"]:
             vars[key].trace_add("write", validate_numbers)

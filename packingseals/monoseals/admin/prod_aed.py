@@ -66,13 +66,21 @@ class ProductFormLogic:
 		"""Apply formatting rules to text fields."""
 		formatted_data = data.copy()
 		
-		# TYPE and BRAND: uppercase letters only; preserve periods in brand (e.g., 'T.Y.')
+		# TYPE: no spaces, uppercase
 		type_idx = self.FIELDS.index("TYPE")
+		formatted_data[type_idx] = data[type_idx].replace(' ', '').upper()
+
+		# BRAND: no spaces, letters and numbers allowed, uppercase
 		brand_idx = self.FIELDS.index("BRAND")
-		formatted_data[type_idx] = data[type_idx].upper()
-		# Keep alphabetic characters and dots for brand
-		formatted_data[brand_idx] = ''.join(c for c in data[brand_idx] if (c.isalpha() or c == '.')).upper()
+		# Keep alphanumeric characters only, remove spaces
+		formatted_data[brand_idx] = ''.join(c for c in data[brand_idx] if c.isalnum()).upper()
 		
+		# Part Num and Notes: all caps
+		part_no_idx = self.FIELDS.index("PART_NO")
+		notes_idx = self.FIELDS.index("NOTES")
+		formatted_data[part_no_idx] = data[part_no_idx].upper()
+		formatted_data[notes_idx] = data[notes_idx].upper()
+
 		# ORIGIN: capitalize
 		origin_idx = self.FIELDS.index("ORIGIN")
 		formatted_data[origin_idx] = data[origin_idx].capitalize()
@@ -86,12 +94,24 @@ class ProductFormLogic:
 		# ID, OD, TH: numbers, decimals, slashes only
 		for field in ["ID", "OD", "TH"]:
 			field_idx = self.FIELDS.index(field)
-			allowed_chars = "0123456789./"
-			formatted_data[field_idx] = ''.join(c for c in data[field_idx] if c in allowed_chars)
-		
+			value = data[field_idx]
+			# First, filter out any invalid characters
+			value = ''.join(c for c in value if c in '0123456789./')
+			# Then, validate the structure
+			parts = value.split('/')
+			for i, part in enumerate(parts):
+				if part.count('.') > 1:
+					first_dot = part.find('.')
+					parts[i] = part[:first_dot+1] + part[first_dot+1:].replace('.', '')
+			formatted_data[field_idx] = '/'.join(parts)
+
 		# PRICE: numbers and decimals only
 		price_idx = self.FIELDS.index("PRICE")
-		price_val = ''.join(c for c in data[price_idx] if c in '0123456789.')
+		price_val = data[price_idx]
+		price_val = ''.join(c for c in price_val if c in '0123456789.')
+		if price_val.count('.') > 1:
+			first_dot = price_val.find('.')
+			price_val = price_val[:first_dot+1] + price_val[first_dot+1:].replace('.', '')
 		formatted_data[price_idx] = price_val
 		
 		return formatted_data

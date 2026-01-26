@@ -25,7 +25,7 @@ class InventoryApp(ctk.CTkFrame):
         # Default return target for back button
         self.return_to = "HomePage"
 
-        self.root.title("Monoseals Inventory Manager (MM)")
+        self.root.title("MOS Inventory")
         # Do not force window state here — preserve whatever the user set
         # (main/app_controller should handle initial startup state).
         self._is_fullscreen = False
@@ -590,7 +590,7 @@ class InventoryApp(ctk.CTkFrame):
     def create_password_window(self, callback=None):
         """Create password input dialog"""
         password_window = ctk.CTkToplevel(self.root)
-        password_window.title("Admin Access")
+        password_window.title("MOS Inventory")
         password_window.geometry("450x350")
         password_window.resizable(False, False)
         password_window.configure(fg_color=theme.get("bg"))

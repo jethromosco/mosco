@@ -24,7 +24,7 @@ class AdminPanel:
         self.products_logic = ProductsLogic()
 
         self.win = ctk.CTkToplevel(parent)
-        self.win.title("Manage Database - Oil Seals")
+        self.win.title("MOS Inventory")
         self.win.configure(fg_color=theme.get("bg"))
         try:
             self.win.minsize(900, 600)
