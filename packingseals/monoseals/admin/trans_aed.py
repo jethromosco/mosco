@@ -21,9 +21,8 @@ def format_currency(val):
     return f"\u20B1{val:.2f}"
 
 
-@staticmethod
 def save_fabrication_transaction(data):
-    """Save a fabrication transaction (creates two records)"""
+    """Save a fabrication transaction (creates two records) - First fallback attempt"""
     try:
         conn = connect_db()
         cur = conn.cursor()

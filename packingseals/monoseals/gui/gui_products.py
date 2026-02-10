@@ -10,10 +10,11 @@ from .gui_prod_aed import ProductFormHandler
 
 
 class AdminPanel:
-    """AdminPanel for Monoseals matching Oilseals UI exactly.
+    """Minimal AdminPanel with Category->Sub-category->Unit selector.
 
     This implementation delegates selection handling to `controller.set_inventory_context`.
-    Auto-selects "Packingseals" → "Monoseals" → "MM" on startup.
+    It avoids top-level imports that caused circular issues and keeps the UI minimal
+    so InventoryApp modules can be loaded by the controller.
     """
 
     def __init__(self, parent, main_app, controller, on_close_callback=None):
@@ -53,19 +54,22 @@ class AdminPanel:
 
         self.win.protocol("WM_DELETE_WINDOW", self.on_closing)
 
+        # Mark initialization as complete so dropdown changes trigger auto-refresh
+        self._initialized = True
+
         # Show window
         self.win.deiconify()
 
-        # Configure minimum usable size
+        # Configure minimum usable size to avoid too-small layouts
         try:
             self.win.minsize(1000, 700)
         except Exception:
             pass
 
-        # Bind to minimize/unmap
+        # Bind to minimize/unmap to implement custom shrink-and-center behavior
         self.win.bind("<Unmap>", self._on_unmap_minimize)
 
-        # Subscribe to theme changes
+        # Subscribe to theme changes to update colors dynamically
         theme.subscribe(self.update_colors)
 
         # Add keyboard shortcut bindings
@@ -74,36 +78,86 @@ class AdminPanel:
     def _bind_shortcuts(self):
         """Bind keyboard shortcuts for the admin panel"""
         root = self.win
+        
+        # Existing shortcut
         root.bind("<Control-Key-2>", lambda event: self.prod_form_handler.add_product())
+        
+        # Add Ctrl+Tab for switching between tabs
         root.bind("<Control-Tab>", self._cycle_tabs)
         root.bind("<Control-Shift-Tab>", self._reverse_cycle_tabs)
 
     def _cycle_tabs(self, event=None):
-        """Cycle forward through tabs"""
+        """Cycle forward through tabs (Products → Transactions → Products...)"""
         if self.current_tab == "products":
             self.switch_tab("transactions")
         else:
             self.switch_tab("products")
+        
+        # Prevent default Tab behavior
         return "break"
 
     def _reverse_cycle_tabs(self, event=None):
-        """Cycle backward through tabs"""
+        """Cycle backward through tabs (same as forward since only 2 tabs)"""
         if self.current_tab == "products":
             self.switch_tab("transactions")
         else:
             self.switch_tab("products")
+        
+        # Prevent default Tab behavior
         return "break"
 
-    def _on_unmap_minimize(self, event):
-        """When the window is minimized, shrink and center instead"""
+    def _apply_initial_maximized_state(self):
+        """Maximize using the window manager to avoid geometry/titlebar mismatches.
+
+        Tries native 'zoomed' state first, then falls back to the WM-reported
+        maximum size to emulate a proper windowed-fullscreen without cutting off
+        content when toggling maximize.
+        """
         try:
+            # Request maximize via WM
+            self.win.update_idletasks()
+            self.win.state("zoomed")
+
+            # Validate maximize took effect; if not, fall back
+            self.win.update_idletasks()
+            max_w, max_h = self.win.wm_maxsize()
+            cur_w = self.win.winfo_width()
+            cur_h = self.win.winfo_height()
+            if cur_w <= 1 or cur_h <= 1:
+                # Window not yet realized; compute after another update
+                self.win.update()
+                cur_w = self.win.winfo_width()
+                cur_h = self.win.winfo_height()
+
+            # If not close to WM max size, apply fallback geometry
+            if max_w and max_h and (abs(cur_w - max_w) > 10 or abs(cur_h - max_h) > 10):
+                self.win.geometry(f"{max_w}x{max_h}+0+0")
+        except Exception:
+            # Fallback purely to wm_maxsize if zoomed is unsupported
+            try:
+                max_w, max_h = self.win.wm_maxsize()
+                if max_w and max_h:
+                    self.win.geometry(f"{max_w}x{max_h}+0+0")
+                else:
+                    # Last-resort: use screen size
+                    screen_w = self.win.winfo_screenwidth()
+                    screen_h = self.win.winfo_screenheight()
+                    self.win.geometry(f"{screen_w}x{screen_h}+0+0")
+            except Exception:
+                pass
+
+    def _on_unmap_minimize(self, event):
+        """When the window is minimized/iconified, shrink and center instead of hiding."""
+        try:
+            # Only intercept actual minimize/iconify actions
             if self.win.state() == "iconic":
+                # Deiconify and switch to normal state
                 self.win.after(1, self._shrink_and_center)
         except Exception:
             pass
 
     def _shrink_and_center(self):
-        """Resize to smaller, centered window"""
+        """Resize to a smaller, centered window that remains visible."""
         try:
             self.win.deiconify()
             self.win.state("normal")
@@ -112,6 +166,7 @@ class AdminPanel:
             screen_w = self.win.winfo_screenwidth()
             screen_h = self.win.winfo_screenheight()
 
+            # Reasonable smaller size (not too small)
             target_w = max(int(screen_w * 0.7), 1000)
             target_h = max(int(screen_h * 0.7), 700)
 
@@ -125,12 +180,13 @@ class AdminPanel:
     def _create_tab_header(self, parent):
         """Create tab header buttons at the top"""
         tab_header = ctk.CTkFrame(parent, fg_color="transparent", height=60)
-        tab_header.pack(fill="x", pady=(0, 10))
+        tab_header.pack(fill="x", pady=(0, 10))  # Reduced bottom padding
         tab_header.pack_propagate(False)
 
         tab_buttons_frame = ctk.CTkFrame(tab_header, fg_color="transparent")
         tab_buttons_frame.pack(fill="x", expand=True, pady=8)
 
+        # Left spacer for centering
         left_spacer = ctk.CTkFrame(tab_buttons_frame, fg_color="transparent")
         left_spacer.pack(side="left", expand=True)
 
@@ -164,32 +220,36 @@ class AdminPanel:
         )
         self.transactions_tab_btn.pack(side="left")
 
+        # Right spacer for centering
         right_spacer = ctk.CTkFrame(tab_buttons_frame, fg_color="transparent")
         right_spacer.pack(side="left", expand=True)
 
     def _create_admin_selector(self, parent):
         """Create selector section with search inline"""
+        # Outer card container
         selector_card = ctk.CTkFrame(parent, fg_color=theme.get("card"), corner_radius=40)
         selector_card.pack(fill="x", pady=(0, 10), padx=20)
         
+        # Inner content with reduced padding
         card_inner = ctk.CTkFrame(selector_card, fg_color="transparent")
         card_inner.pack(fill="both", expand=True, padx=20, pady=12)
         
+        # Centered container for all selector controls
         selector_container = ctk.CTkFrame(card_inner, fg_color="transparent")
         selector_container.pack(fill="x", expand=True)
-        selector_container.grid_columnconfigure(0, weight=1)
-        selector_container.grid_columnconfigure(1, weight=0, minsize=150)
-        selector_container.grid_columnconfigure(2, weight=0, minsize=20)
-        selector_container.grid_columnconfigure(3, weight=0, minsize=150)
-        selector_container.grid_columnconfigure(4, weight=0, minsize=20)
-        selector_container.grid_columnconfigure(5, weight=0, minsize=140)
-        selector_container.grid_columnconfigure(6, weight=0, minsize=20)
-        selector_container.grid_columnconfigure(7, weight=0, minsize=120)
-        selector_container.grid_columnconfigure(8, weight=0, minsize=20)
-        selector_container.grid_columnconfigure(9, weight=0, minsize=100)
-        selector_container.grid_columnconfigure(10, weight=1)
+        selector_container.grid_columnconfigure(0, weight=1)  # Left spacer
+        selector_container.grid_columnconfigure(1, weight=0, minsize=150)  # Search
+        selector_container.grid_columnconfigure(2, weight=0, minsize=20)  # Spacing
+        selector_container.grid_columnconfigure(3, weight=0, minsize=150)  # Category
+        selector_container.grid_columnconfigure(4, weight=0, minsize=20)  # Spacing
+        selector_container.grid_columnconfigure(5, weight=0, minsize=140)  # Subcategory
+        selector_container.grid_columnconfigure(6, weight=0, minsize=20)  # Spacing
+        selector_container.grid_columnconfigure(7, weight=0, minsize=120)  # Unit
+        selector_container.grid_columnconfigure(8, weight=0, minsize=20)  # Spacing
+        selector_container.grid_columnconfigure(9, weight=0, minsize=100)  # Button
+        selector_container.grid_columnconfigure(10, weight=1)  # Right spacer
 
-        # Search field
+        # Search field (FIRST - on the left)
         search_label = ctk.CTkLabel(
             selector_container,
             text="Search",
@@ -248,11 +308,11 @@ class AdminPanel:
             border_color=theme.get("border"),
             command=self._on_category_change
         )
-        self._cat_menu.grid(row=1, column=3, sticky="ew")
+        self._cat_menu.grid(row=1, column=3, sticky="ew")  # ← FIXED! Changed from column=1 to column=3
         self._cat_menu.bind("<Enter>", lambda e: self._on_combo_hover(self._cat_menu, True))
         self._cat_menu.bind("<Leave>", lambda e: self._on_combo_hover(self._cat_menu, False))
 
-        # Subcategory selector
+    # Subcategory selector
         sub_label = ctk.CTkLabel(
             selector_container,
             text="Sub-category",
@@ -286,7 +346,7 @@ class AdminPanel:
         self._sub_menu.bind("<Enter>", lambda e: self._on_combo_hover(self._sub_menu, True))
         self._sub_menu.bind("<Leave>", lambda e: self._on_combo_hover(self._sub_menu, False))
 
-        # Unit selector
+    # Unit selector
         unit_label = ctk.CTkLabel(
             selector_container,
             text="Unit",
@@ -313,7 +373,8 @@ class AdminPanel:
             font=("Poppins", 14),
             corner_radius=40,
             border_width=1,
-            border_color=theme.get("border")
+            border_color=theme.get("border"),
+            command=self._on_unit_change
         )
         self._unit_menu.grid(row=1, column=7, sticky="ew")
         self._unit_menu.bind("<Enter>", lambda e: self._on_combo_hover(self._unit_menu, True))
@@ -335,32 +396,40 @@ class AdminPanel:
 
         self.prod_search_var.trace_add("write", lambda *args: self.refresh_products())
 
-        # AUTO-SELECT for Monoseals: PACKING SEALS → MONOSEALS → MM
         if cat_vals:
-            if "PACKING SEALS" in cat_vals:
-                self._cat_var.set("PACKING SEALS")
-                self._on_category_change("PACKING SEALS")
-                
-                cat_value = categories.get("PACKING SEALS", {})
-                if isinstance(cat_value, dict):
-                    subcats = list(cat_value.keys())
-                    if "MONOSEALS" in subcats:
-                        self._sub_var.set("MONOSEALS")
-                        self._on_subcategory_change("MONOSEALS")
-                        
-                        if "MONOSEALS" in cat_value and isinstance(cat_value["MONOSEALS"], dict):
-                            units = list(cat_value["MONOSEALS"].keys())
-                            if "MM" in units:
-                                self._unit_var.set("MM")
-            else:
-                self._cat_var.set(cat_vals[0])
-                try:
-                    self._on_category_change(cat_vals[0])
-                except Exception:
-                    pass
+            # Restore last-selected category from controller, or default to first category
+            default_category = cat_vals[0]
+            if self.controller and hasattr(self.controller, 'current_category') and self.controller.current_category:
+                if self.controller.current_category in cat_vals:
+                    default_category = self.controller.current_category
+            
+            self._cat_var.set(default_category)
+            try:
+                self._on_category_change(default_category)
+                # Restore subcategory if available
+                if self.controller and hasattr(self.controller, 'current_subcategory') and self.controller.current_subcategory:
+                    try:
+                        current_subcats = self._sub_menu.cget("values")
+                        if self.controller.current_subcategory in current_subcats:
+                            self._sub_var.set(self.controller.current_subcategory)
+                            self._on_subcategory_change(self.controller.current_subcategory)
+                    except Exception:
+                        pass
+                # Restore unit if available
+                if self.controller and hasattr(self.controller, 'current_unit') and self.controller.current_unit:
+                    try:
+                        current_units = self._unit_menu.cget("values")
+                        if self.controller.current_unit in current_units:
+                            self._unit_var.set(self.controller.current_unit)
+                    except Exception:
+                        pass
+                # Apply selection to load the data
+                self.win.after(100, self._apply_selection)
+            except Exception:
+                pass
 
     def _on_combo_hover(self, combo, is_enter):
-        """Handle combo box hover effects"""
+        """Handle combo box hover effects matching mm.py"""
         if is_enter:
             combo.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("accent"))
         else:
@@ -380,7 +449,7 @@ class AdminPanel:
             entry.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("input_focus") if theme.get("input_focus") else theme.get("input"))
         else:
             entry.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
-            
+
     def _on_category_change(self, value):
         try:
             cat_value = categories.get(value)
@@ -450,6 +519,9 @@ class AdminPanel:
                         pass
         except Exception:
             pass
+
+    def _on_unit_change(self, value):
+        pass
 
 
     def _apply_selection(self):
@@ -761,12 +833,12 @@ class AdminPanel:
             self.products_tab_btn.configure(
                 fg_color=theme.get("primary"),
                 hover_color=theme.get("primary_hover"),
-                text_color="#FFFFFF"
+                text_color="#FFFFFF"  # white text when selected
             )
             self.transactions_tab_btn.configure(
                 fg_color=theme.get("accent"),
                 hover_color=theme.get("accent_hover"),
-                text_color=theme.get("text")
+                text_color=theme.get("text")  # normal text color when unselected
             )
             self.products_frame.pack(fill="both", expand=True)
         else:
@@ -798,6 +870,20 @@ class AdminPanel:
             self.on_close_callback()
 
     def on_closing(self):
+        # Persist current selection to controller before closing
+        try:
+            if self.controller:
+                cat = self._cat_var.get() if hasattr(self, '_cat_var') else None
+                sub = self._sub_var.get() if hasattr(self, '_sub_var') else None
+                unit = self._unit_var.get() if hasattr(self, '_unit_var') else None
+                if cat and cat != "-":
+                    self.controller.current_category = cat
+                if sub and sub != "-":
+                    self.controller.current_subcategory = sub
+                if unit and unit != "-":
+                    self.controller.current_unit = unit
+        except Exception:
+            pass
         if self.on_close_callback:
             self.on_close_callback()
         self.win.destroy()
@@ -836,83 +922,6 @@ class AdminPanel:
         except Exception as e:
             print(f"[WARNING] Product add hook failed: {type(e).__name__}")
 
-    def _handle_product_added(self, details):
-        """Handle post-product-add workflow: refresh inventory, auto-open transaction."""
-        try:
-            print(f"\n[CALLBACK_START] _handle_product_added triggered")
-            print(f"[CALLBACK] Product details: {details}")
-            
-            # CRITICAL FIX 1: Refresh the active GUI (gui_mm.py) immediately
-            # so the newly added product appears without delay
-            if hasattr(self.main_app, 'refresh_product_list'):
-                print(f"[CALLBACK] ✓ main_app has refresh_product_list")
-                print(f"[CALLBACK] main_app class: {self.main_app.__class__.__name__}")
-                print(f"[CALLBACK] main_app id: {id(self.main_app)}")
-                
-                # Check tree state before refresh
-                if hasattr(self.main_app, 'tree'):
-                    tree_items_before = len(self.main_app.tree.get_children())
-                    print(f"[CALLBACK] Tree has {tree_items_before} items BEFORE refresh")
-                else:
-                    print(f"[CALLBACK] WARNING: main_app.tree does not exist!")
-                
-                # CALL THE REFRESH
-                print(f"[CALLBACK] Calling main_app.refresh_product_list()...")
-                self.main_app.refresh_product_list()
-                self.main_app.update_idletasks()  # Force UI update
-                print(f"[CALLBACK] ✓ refresh_product_list() completed")
-                
-                # Check tree state after refresh
-                if hasattr(self.main_app, 'tree'):
-                    tree_items_after = len(self.main_app.tree.get_children())
-                    print(f"[CALLBACK] Tree has {tree_items_after} items AFTER refresh")
-                    print(f"[CALLBACK] Items added: {tree_items_after - tree_items_before}")
-                    
-                    if tree_items_after == tree_items_before:
-                        print(f"[CALLBACK] ⚠️ WARNING: Tree count didn't change! Product might not be in DB or filters excluded it")
-                    elif tree_items_after > tree_items_before:
-                        print(f"[CALLBACK] ✓ SUCCESS: New product appeared in tree")
-                else:
-                    print(f"[CALLBACK] WARNING: main_app.tree does not exist after refresh!")
-            else:
-                print(f"[CALLBACK] ❌ ERROR: main_app does not have refresh_product_list method!")
-                print(f"[CALLBACK] main_app type: {type(self.main_app)}")
-                print(f"[CALLBACK] main_app methods: {[m for m in dir(self.main_app) if not m.startswith('_')]}")
-            
-            # CRITICAL FIX 2: Auto-open Add Transaction with pre-filled data
-            # DEFENSIVE: Check if transaction_tab exists and has form_handler
-            self.switch_tab("transactions")
-            self.transactions_frame.update_idletasks()
-            
-            # Only proceed if transaction_tab is available
-            if hasattr(self, 'transaction_tab') and self.transaction_tab is not None:
-                if hasattr(self.transaction_tab, 'form_handler') and self.transaction_tab.form_handler is not None:
-                    # Prepare keys mapping expected by TransactionFormHandler
-                    keys = {
-                        'Type': details.get('Type', ''),
-                        'ID': details.get('ID', ''),
-                        'OD': details.get('OD', ''),
-                        'TH': details.get('TH', ''),
-                        'Brand': details.get('Brand', ''),
-                    }
-                    try:
-                        # Set last_transaction_keys so transaction form will prefill
-                        self.transaction_tab.form_handler.last_transaction_keys = keys
-                        # Open Add Transaction form
-                        self.transaction_tab.form_handler.add_transaction()
-                        print(f"[CALLBACK] ✓ Transaction form opened")
-                    except Exception as e:
-                        print(f"[CALLBACK] ⚠️ Failed to auto-open transaction form: {type(e).__name__}: {e}")
-            else:
-                print(f"[CALLBACK] ⚠️ transaction_tab not available for auto-opening")
-                
-            print(f"[CALLBACK_END] _handle_product_added completed\n")
-        except Exception as e:
-            import traceback
-            print(f"[CALLBACK] ❌ CRITICAL ERROR in _handle_product_added: {type(e).__name__}: {e}")
-            traceback.print_exc()
-            print(f"[CALLBACK_END]\n")
-
     def create_products_tab(self):
         self.prod_form_handler = ProductFormHandler(
             self.win,
@@ -945,7 +954,7 @@ class AdminPanel:
         style.map("Products.Treeview",
                   background=[("selected", theme.get("table_selected"))],
                   foreground=[("selected", selected_fg)])
-        style.map("Products.Treeview.Heading", background=[("active", theme.get("heading_bg"))])
+        style.map("Products.Treeview.Heading", background=[("active", theme.get("heading_bg")   )])
 
         columns = ("item", "part_no", "origin", "notes", "price")
         self.headers = ["ITEM", "PART_NO", "ORIGIN", "NOTES", "PRICE"]
@@ -1013,6 +1022,7 @@ class AdminPanel:
 
         self.refresh_products()
 
+
     def refresh_products(self):
         self.prod_tree.delete(*self.prod_tree.get_children())
         keyword = self.prod_search_var.get()
@@ -1025,6 +1035,7 @@ class AdminPanel:
                 product['notes'],
                 product['price']
             ))
+
 
     def sort_column(self, col):
         if col in ("part_no", "notes"):
@@ -1053,10 +1064,13 @@ class AdminPanel:
             arrow = " ↑" if c == col and ascending else " ↓" if c == col else ""
             self.prod_tree.heading(c, text=h + arrow)
 
+
     def update_colors(self):
         self.win.configure(fg_color=theme.get("bg"))
         self.main_container.configure(fg_color=theme.get("bg"))
 
+        if hasattr(self, "search_container"):
+            self.search_container.configure(fg_color=theme.get("card"))
         if hasattr(self, "table_container"):
             self.table_container.configure(fg_color=theme.get("card_alt"))
 
@@ -1075,6 +1089,7 @@ class AdminPanel:
                   foreground=[("selected", selected_fg)])
         style.map("Products.Treeview.Heading", background=[("active", theme.get("heading_bg"))])
 
+        # Update tab buttons text colors on theme change and selection
         if self.current_tab == "products":
             self.products_tab_btn.configure(
                 fg_color=theme.get("primary"),

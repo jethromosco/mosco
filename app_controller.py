@@ -10,16 +10,32 @@ from inventory_context import InventoryContext, create_context, INVALID_CONTEXT
 
 
 CATEGORY_FOLDER_MAP = {
+    # Main categories with implementations
     "OIL SEALS": "oilseals",
     "O-RINGS": "orings",
     "O-CORDS": "ocords",
     "O-RING KITS": "oringkits",
     "QUAD RINGS (AIR SEALS)": "quadrings",
     "PACKING SEALS": "packingseals",
-    "MECHANICAL SHAFT SEALS": None,  # placeholder
+    
+    # Packing seals subcategories - explicit mappings for modular structure
+    # These allow each subcategory to have its own database and GUI implementation
+    "PACKING SEALS MONOSEALS": "packingseals/monoseals",
+    "PACKING SEALS WIPER SEALS": "packingseals/wiperseals",
+    "PACKING SEALS WIPERMONO": "packingseals/wipermono",
+    "PACKING SEALS VEE PACKING": "packingseals/vee",
+    "PACKING SEALS ZF PACKING": "packingseals/zf",
+    
+    # Lock rings with subtypes
     "LOCK RINGS (CIRCLIPS)": "lockrings",
+    
+    # Other categories with implementations
     "V-RINGS": "vrings",
     "PISTON CUPS": "pistoncups",
+    "VALVE SEALS": "valveseals",
+    
+    # Coming Soon / Future categories (None = not yet implemented)
+    "MECHANICAL SHAFT SEALS": None,
     "OIL CAPS": None,
     "RUBBER DIAPHRAGMS": None,
     "COUPLING INSERTS": None,
@@ -287,20 +303,24 @@ class AppController:
 
         # Try fallbacks if primary candidates failed
         if not loaded and base_pkg:
-            fallbacks = [f"{base_pkg}.gui.gui_mm"]
-            
-            # Scan subpackages (e.g., packingseals.monoseals)
+            # Only allow fallback to a module if it matches the requested subcategory/unit
+            # Never fallback to a different subcategory (e.g., never load Mono for WiperMono)
+            fallbacks = []
+            # Only add {base_pkg}.gui.gui_mm if there is no subcategory (top-level only)
+            if not sub_folder:
+                fallbacks.append(f"{base_pkg}.gui.gui_mm")
+            # Scan subpackages, but only allow fallback to the exact requested subcategory
             try:
                 pkg = importlib.import_module(base_pkg)
-                if hasattr(pkg, '__path__'):
+                if hasattr(pkg, '__path__') and sub_folder:
                     for finder, name, ispkg in pkgutil.iter_modules(pkg.__path__):
-                        fallbacks.append(f"{base_pkg}.{name}.gui.gui_mm")
-                        fallbacks.append(f"{base_pkg}.{name}.gui.gui_{name}")
+                        if name == sub_folder:
+                            fallbacks.append(f"{base_pkg}.{name}.gui.gui_mm")
+                            fallbacks.append(f"{base_pkg}.{name}.gui.gui_{name}")
             except Exception:
                 pass
 
-            print(f"[CONTEXT] Trying {len(fallbacks)} fallback modules")
-            
+            print(f"[CONTEXT] Trying {len(fallbacks)} fallback modules (filtered by subcategory)")
             for mod_path in fallbacks:
                 try:
                     mod = importlib.import_module(mod_path)
