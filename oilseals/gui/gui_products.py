@@ -26,8 +26,10 @@ class AdminPanel:
         self.win = ctk.CTkToplevel(parent)
         self.win.title("MOS Inventory")
         self.win.configure(fg_color=theme.get("bg"))
+        
+        # Set initial minimum size - allow horizontal shrinking more than vertical
         try:
-            self.win.minsize(900, 600)
+            self.win.minsize(850, 650)  # Allow more horizontal flexibility
         except Exception:
             pass
 
@@ -56,15 +58,20 @@ class AdminPanel:
 
         # Mark initialization as complete so dropdown changes trigger auto-refresh
         self._initialized = True
+        
+        # Flag to lock geometry after first layout complete
+        self._geometry_locked = False
 
-        # Show window
+        # Show window and center it on screen
         self.win.deiconify()
-
-        # Configure minimum usable size to avoid too-small layouts
-        try:
-            self.win.minsize(1000, 700)
-        except Exception:
-            pass
+        self.win.update_idletasks()  # Ensure all widgets are laid out
+        
+        # Center window on screen AFTER layout is complete
+        self._center_window_on_screen()
+        
+        # Lock geometry to prevent resize when switching tabs
+        self.win.geometry(self.win.geometry())
+        self._geometry_locked = True
 
         # Bind to minimize/unmap to implement custom shrink-and-center behavior
         self.win.bind("<Unmap>", self._on_unmap_minimize)
@@ -145,6 +152,23 @@ class AdminPanel:
                     self.win.geometry(f"{screen_w}x{screen_h}+0+0")
             except Exception:
                 pass
+
+    def _center_window_on_screen(self):
+        """Center the window on the screen."""
+        try:
+            self.win.update_idletasks()  # Ensure dimensions are set
+            screen_w = self.win.winfo_screenwidth()
+            screen_h = self.win.winfo_screenheight()
+            window_w = self.win.winfo_width()
+            window_h = self.win.winfo_height()
+            
+            # Calculate center position
+            pos_x = max((screen_w - window_w) // 2, 0)
+            pos_y = max((screen_h - window_h) // 2, 0)
+            
+            self.win.geometry(f"+{pos_x}+{pos_y}")
+        except Exception:
+            pass
 
     def _on_unmap_minimize(self, event):
         """When the window is minimized/iconified, shrink and center instead of hiding."""
@@ -825,7 +849,17 @@ class AdminPanel:
         This is DEFENSIVE: It checks if the transaction_tab exists before
         calling ANY methods on it. This prevents AttributeError crashes
         when switching to Coming Soon or when transactions aren't available.
+        
+        Also prevents window resize during tab switch by locking geometry.
         """
+        # Lock window size before switching tabs to prevent resize
+        try:
+            if self._geometry_locked:
+                current_geom = self.win.geometry()
+                self.win.geometry(current_geom)
+        except Exception:
+            pass
+        
         self.products_frame.pack_forget()
         self.transactions_frame.pack_forget()
 
@@ -863,6 +897,14 @@ class AdminPanel:
                     print(f"[WARNING] Failed to refresh transactions: {type(e).__name__}: {e}")
 
         self.current_tab = tab_name
+        
+        # Update and maintain geometry after tab switch
+        try:
+            self.win.update_idletasks()
+            if self._geometry_locked:
+                self.win.geometry(self.win.geometry())
+        except Exception:
+            pass
 
     def refresh_all_tabs(self):
         self.refresh_products()

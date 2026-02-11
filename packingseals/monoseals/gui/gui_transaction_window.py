@@ -63,6 +63,26 @@ class TransactionWindow(ctk.CTkFrame):
         )
         self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
         
+    def _detect_category(self) -> str:
+        """Detect category name from module path."""
+        module_name = self.__class__.__module__
+        if 'oilseals' in module_name:
+            return 'OIL SEALS'
+        elif 'monoseals' in module_name:
+            return 'MONOSEALS'
+        elif 'wiperseals' in module_name or 'wiper_seals' in module_name:
+            return 'WIPER SEALS'
+        return 'PRODUCTS'
+
+    def _get_product_type_label(self) -> str:
+        """Get category-specific product type label for display."""
+        category = self._detect_category()
+        if 'MONOSEALS' in category:
+            return 'Monoseal'
+        elif 'WIPER' in category:
+            return 'Wiper Seal'
+        return 'Oil Seal'
+        
     def _setup_bindings(self):
         self.bind("<Configure>", self._on_window_resize)
 
@@ -148,32 +168,127 @@ class TransactionWindow(ctk.CTkFrame):
         y = py + (sh - h) // 2
         password_window.geometry(f"{w}x{h}+{x}+{y}")
         
-        main_frame = ctk.CTkFrame(password_window, fg_color=theme.get("card"), corner_radius=40)
-        main_frame.pack(fill="both", expand=True, padx=30, pady=30)
+        main_frame = ctk.CTkFrame(password_window, fg_color=theme.get("bg"), corner_radius=0)
+        main_frame.pack(fill="both", expand=True)
         
-        title_lbl = ctk.CTkLabel(main_frame, text="Admin Access", font=("Poppins", 28, "bold"), text_color=theme.get("heading_fg"))
-        title_lbl.pack(pady=(40, 10))
-        
-        subtitle_lbl = ctk.CTkLabel(main_frame, text="Enter admin password to continue", font=("Poppins", 16), text_color=theme.get("text"))
-        subtitle_lbl.pack(pady=(0, 30))
-        
-        entry_container = ctk.CTkFrame(main_frame, fg_color="transparent")
-        entry_container.pack(pady=(0, 20))
-        
-        pwd_entry = ctk.CTkEntry(
-            entry_container, width=280, height=40,
-            corner_radius=20, fg_color=theme.get("input"), text_color=theme.get("text"),
-            placeholder_text="Enter password", show="*",
-            font=("Poppins", 16)
+        content_frame = ctk.CTkFrame(
+            main_frame, 
+            fg_color=theme.get("card"), 
+            corner_radius=40, 
+            border_width=1, 
+            border_color=theme.get("border")
         )
-        pwd_entry.pack()
-        pwd_entry.focus()
+        content_frame.pack(fill="both", expand=True, padx=30, pady=30)
+
+        title_label = ctk.CTkLabel(
+            content_frame, 
+            text="Admin Access", 
+            font=("Poppins", 28, "bold"), 
+            text_color=theme.get("heading_fg")
+        )
+        title_label.pack(pady=(40, 20))
         
-        err_lbl = ctk.CTkLabel(entry_container, text="", font=("Poppins", 12), text_color="#FF4444")
-        err_lbl.pack()
+        subtitle_label = ctk.CTkLabel(
+            content_frame, 
+            text="Enter admin password to continue", 
+            font=("Poppins", 16), 
+            text_color=theme.get("text")
+        )
+        subtitle_label.pack(pady=(0, 40))
+
+        entry_container = ctk.CTkFrame(content_frame, fg_color="transparent")
+        entry_container.pack(pady=(0, 30))
         
-        pwd_entry.bind("<Return>", lambda e: self._check_password(pwd_entry, err_lbl, password_window, callback))
-        password_window.bind("<Escape>", lambda e: self._close_password_window(password_window, callback, False))
+        password_label = ctk.CTkLabel(
+            entry_container, 
+            text="Password", 
+            font=("Poppins", 16, "bold"), 
+            text_color=theme.get("text")
+        )
+        password_label.pack(pady=(0, 10))
+        
+        password_entry = ctk.CTkEntry(
+            entry_container,
+            width=280,
+            height=40,
+            fg_color=theme.get("input"),
+            text_color=theme.get("text"),
+            font=("Poppins", 14),
+            corner_radius=40,
+            border_width=2,
+            border_color=theme.get("border"),
+            placeholder_text="Enter password",
+            show="*"
+        )
+        password_entry.pack(pady=(0, 10))
+
+        def focus_entry(event):
+            password_entry.focus()
+
+        password_entry.bind("<Map>", focus_entry)
+
+        def on_enter(event):
+            if password_entry.focus_get() != password_entry:
+                password_entry.configure(border_color=theme.get("primary"), fg_color=theme.get("accent"))
+        
+        def on_leave(event):
+            if password_entry.focus_get() != password_entry:
+                password_entry.configure(border_color=theme.get("border"), fg_color=theme.get("input"))
+        
+        def on_focus_in(event):
+            password_entry.configure(border_color=theme.get("primary"), fg_color=theme.get("input_focus"))
+        
+        def on_focus_out(event):
+            password_entry.configure(border_color=theme.get("border"), fg_color=theme.get("input"))
+        
+        password_entry.bind("<Enter>", on_enter)
+        password_entry.bind("<Leave>", on_leave)
+        password_entry.bind("<FocusIn>", on_focus_in)
+        password_entry.bind("<FocusOut>", on_focus_out)
+
+        error_label = ctk.CTkLabel(
+            entry_container, 
+            text="", 
+            font=("Poppins", 12), 
+            text_color="#FF4444"
+        )
+        error_label.pack()
+
+        button_container = ctk.CTkFrame(content_frame, fg_color="transparent")
+        button_container.pack(pady=(20, 30))
+        
+        cancel_btn = ctk.CTkButton(
+            button_container, 
+            text="Cancel", 
+            font=("Poppins", 16, "bold"), 
+            fg_color=theme.get("accent_hover"), 
+            hover_color=theme.get("accent"), 
+            text_color=theme.get("text"), 
+            corner_radius=40, 
+            width=120, 
+            height=45, 
+            command=lambda: self._close_password_window(password_window, callback, False)
+        )
+        cancel_btn.pack(side="left", padx=(0, 20))
+        
+        submit_btn = ctk.CTkButton(
+            button_container, 
+            text="Submit", 
+            font=("Poppins", 16, "bold"), 
+            fg_color=theme.get("primary"), 
+            hover_color=theme.get("primary_hover"), 
+            text_color="#FFFFFF",
+            corner_radius=40, 
+            width=120, 
+            height=45, 
+            command=lambda: self._check_password(password_entry, error_label, password_window, callback)
+        )
+        submit_btn.pack(side="right", padx=(20, 0))
+
+        password_window.bind('<Return>', lambda e: self._check_password(password_entry, error_label, password_window, callback))
+        password_window.bind('<Escape>', lambda e: self._close_password_window(password_window, callback, False))
+        
+        password_entry.focus()
 
 
     def _check_password(self, entry, err_lbl, window, callback):
@@ -767,7 +882,8 @@ class TransactionWindow(ctk.CTkFrame):
             origin = (self.details.get('country_of_origin', '') if self.details else '').strip()
 
             origin_part = f" {origin}" if origin else ""
-            first_line = f"{t} {id_}-{od}-{th} {brand} Oil Seal{origin_part}".strip()
+            product_type = self._get_product_type_label()
+            first_line = f"{t} {id_}-{od}-{th} {brand} {product_type}{origin_part}".strip()
 
             # Normalize price_val to numeric if possible
             p_num = None
@@ -819,7 +935,8 @@ class TransactionWindow(ctk.CTkFrame):
             origin = (details.get('country_of_origin', '') or '').strip()
 
             origin_part = f" {origin}" if origin else ""
-            first_line = f"{t} {id_}-{od}-{th} {brand} Oil Seal{origin_part}".strip()
+            product_type = self._get_product_type_label()
+            first_line = f"{t} {id_}-{od}-{th} {brand} {product_type}{origin_part}".strip()
 
             # srp_var may contain formatted price like '₱123.00' or plain number
             raw_price = str(self.srp_var.get() or "").replace('₱', '').replace(',', '').strip()
@@ -873,6 +990,7 @@ class TransactionWindow(ctk.CTkFrame):
         """Force refresh of transaction display - ensures data is shown after redirect"""
         try:
             if hasattr(self, 'tree') and hasattr(self, 'details'):
+                self.tree.update_idletasks()
                 self._load_transactions()
         except Exception:
             pass

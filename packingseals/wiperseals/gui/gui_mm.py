@@ -24,6 +24,9 @@ class InventoryApp(ctk.CTkFrame):
 
         # Default return target for back button
         self.return_to = "HomePage"
+        
+        # Detect category from module path for consistency
+        self._category_name = self._detect_category()
 
         self.root.title("MOS Inventory")
         # Do not force window state here — preserve whatever the user set
@@ -86,6 +89,35 @@ class InventoryApp(ctk.CTkFrame):
     def _exit_fullscreen_or_clear_filters(self, event=None):
         """Deprecated helper (previously handled Escape)."""
         return None
+
+    def _detect_category(self) -> str:
+        """Detect category name from module path."""
+        module_name = self.__class__.__module__
+        if 'oilseals' in module_name:
+            return 'OIL SEALS'
+        elif 'monoseals' in module_name:
+            return 'MONOSEALS'
+        elif 'wiperseals' in module_name or 'wiper_seals' in module_name:
+            return 'WIPER SEALS'
+        return 'PRODUCTS'
+
+    def _get_product_type_label(self) -> str:
+        """Get category-specific product type label for display."""
+        category = self._category_name
+        if 'MONOSEALS' in category:
+            return 'Monoseal'
+        elif 'WIPER' in category:
+            return 'Wiper Seal'
+        return 'Oil Seal'
+
+    def _get_status_label_text(self, count: int) -> str:
+        """Get category-specific status label text."""
+        category = self._category_name
+        if 'MONOSEALS' in category:
+            return f"Total Monoseal Products: {count}"
+        elif 'WIPER' in category:
+            return f"Total Wiper Seal Products: {count}"
+        return f"Total Oil Seal Products: {count}"
 
     def on_window_resize(self, event=None):
         """Update absolute positioned elements on window resize"""
@@ -828,7 +860,7 @@ class InventoryApp(ctk.CTkFrame):
                 self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, base_tag))
 
         # Update status
-        self.status_label.configure(text=f"Total Oil Seal Products: {len(display_data)}")
+        self.status_label.configure(text=self._get_status_label_text(len(display_data)))
 
     def _apply_tree_tags_theme(self):
         """Apply tag colors for tree rows based on current theme/mode."""
@@ -892,16 +924,17 @@ class InventoryApp(ctk.CTkFrame):
             if not details:
                 return
 
-            # Build first line: TYPE ID-OD-TH BRAND Oil Seal (Origin)
+            # Build first line: TYPE ID-OD-TH BRAND [Product Type] (Origin)
             id_ = details.get('id', '')
             od = details.get('od', '')
             th = details.get('th', '')
             type_ = details.get('type', '')
             brand = details.get('brand', '')
             origin = details.get('country_of_origin', '')
+            product_type = self._get_product_type_label()
 
             origin_part = f" {origin}" if origin else ""
-            first_line = f"{type_} {id_}-{od}-{th} {brand} Oil Seal{origin_part}"
+            first_line = f"{type_} {id_}-{od}-{th} {brand} {product_type}{origin_part}"
 
             # Price line: format as integer with trailing hyphen if no cents, else two decimals
             price = details.get('price', 0.0)
@@ -923,7 +956,7 @@ class InventoryApp(ctk.CTkFrame):
                 # Temporary status update
                 try:
                     self.status_label.configure(text="Copied to clipboard!")
-                    self.after(1500, lambda: self.status_label.configure(text=f"Total Oil Seal Products: {len(self.tree.get_children())}"))
+                    self.after(1500, lambda: self.status_label.configure(text=self._get_status_label_text(len(self.tree.get_children()))))
                 except Exception:
                     pass
             except Exception:
