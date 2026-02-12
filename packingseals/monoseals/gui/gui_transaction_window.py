@@ -860,11 +860,12 @@ class TransactionWindow(ctk.CTkFrame):
             except Exception:
                 col_idx = -1
 
-            # Price column index is 5 (0-based)
-            if col_idx != 5:
-                return
-
             vals = self.tree.item(item).get('values') or []
+            item_tags = self.tree.item(item).get('tags') or []
+            
+            # Check if this is a restock row (blue tag)
+            is_restock = 'blue' in item_tags
+
             price_val = ""
             if len(vals) > 5 and vals[5]:
                 # vals[5] is formatted like '₱12.34' or similar
@@ -881,30 +882,52 @@ class TransactionWindow(ctk.CTkFrame):
             brand = (self.details.get('brand', '') if self.details else '').strip()
             origin = (self.details.get('country_of_origin', '') if self.details else '').strip()
 
-            origin_part = f" {origin}" if origin else ""
             product_type = self._get_product_type_label()
-            first_line = f"{t} {id_}-{od}-{th} {brand} {product_type}{origin_part}".strip()
-
-            # Normalize price_val to numeric if possible
-            p_num = None
-            try:
-                # remove peso symbol and commas
-                cleaned = str(price_val).replace('₱', '').replace(',', '').strip()
-                if cleaned.endswith('-'):
-                    cleaned = cleaned[:-1]
-                p_num = float(cleaned)
-            except Exception:
-                try:
-                    p_num = float(self.details.get('price', 0.0))
-                except Exception:
-                    p_num = 0.0
-
-            if abs(p_num - int(p_num)) < 1e-9:
-                price_line = f"₱{int(p_num)}- / pc."
+            
+            # Special handling for restock transactions
+            if is_restock:
+                # Extract brand from NAME column (vals[3])
+                name_field = (vals[3] if len(vals) > 3 else '').strip()
+                
+                # Get first word from name field
+                if name_field:
+                    if name_field.startswith('('):
+                        # No explicit brand provided
+                        extracted_brand = '(?)'
+                    else:
+                        # Extract first word
+                        parts = name_field.split()
+                        extracted_brand = parts[0] if parts else brand
+                else:
+                    extracted_brand = brand
+                
+                first_line = (f"{id_}-{od}-{th} {extracted_brand} {product_type}" if t.startswith('SPL') else f"{t} {id_}-{od}-{th} {extracted_brand} {product_type}").strip()
+                # For restock, price is just "₱" with no amount
+                price_line = "₱"
             else:
-                price_line = f"₱{p_num:.2f} / pc."
+                # Normal (non-restock) behavior for sales and actual transactions
+                first_line = (f"{id_}-{od}-{th} {brand} {product_type}" if t.startswith('SPL') else f"{t} {id_}-{od}-{th} {brand} {product_type}").strip()
+                
+                # Normalize price_val to numeric if possible
+                p_num = None
+                try:
+                    # remove peso symbol and commas
+                    cleaned = str(price_val).replace('₱', '').replace(',', '').strip()
+                    if cleaned.endswith('-'):
+                        cleaned = cleaned[:-1]
+                    p_num = float(cleaned)
+                except Exception:
+                    try:
+                        p_num = float(self.details.get('price', 0.0))
+                    except Exception:
+                        p_num = 0.0
 
-            out_text = f"{first_line}\n{price_line}"
+                if abs(p_num - int(p_num)) < 1e-9:
+                    price_line = f"₱{int(p_num)}- / pc."
+                else:
+                    price_line = f"₱{p_num:.2f} / pc."
+
+            out_text = f"{first_line}\n{price_line}\n\n"
 
             try:
                 # Use the widget's clipboard
@@ -934,9 +957,8 @@ class TransactionWindow(ctk.CTkFrame):
             brand = (details.get('brand', '') or '').strip()
             origin = (details.get('country_of_origin', '') or '').strip()
 
-            origin_part = f" {origin}" if origin else ""
             product_type = self._get_product_type_label()
-            first_line = f"{t} {id_}-{od}-{th} {brand} {product_type}{origin_part}".strip()
+            first_line = (f"{id_}-{od}-{th} {brand} {product_type}" if t.startswith('SPL') else f"{t} {id_}-{od}-{th} {brand} {product_type}").strip()
 
             # srp_var may contain formatted price like '₱123.00' or plain number
             raw_price = str(self.srp_var.get() or "").replace('₱', '').replace(',', '').strip()
@@ -955,7 +977,7 @@ class TransactionWindow(ctk.CTkFrame):
             else:
                 price_line = f"₱{pnum:.2f} / pc."
 
-            out_text = f"{first_line}\n{price_line}"
+            out_text = f"{first_line}\n{price_line}\n\n"
 
             try:
                 self.clipboard_clear()

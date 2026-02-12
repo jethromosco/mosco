@@ -92,12 +92,71 @@ PART 1: USER GUIDE
 - Enter: Confirm action or Save.
 - Arrow Keys: Move selection in lists.
 
-10. SIMPLE TIPS
+10. RIGHT-CLICK COPY FUNCTIONS
+------------------------------
+The system supports **right-click copying** to make quoting and sharing prices faster.
+
+You can right-click in the following places:
+- Product list rows
+- Product cards
+- SRP price in the product details window
+- Transaction history rows (Sale, Restock, Actual)
+
+When you right-click, the item is copied to your clipboard in this format:
+
+Product Name  
+Price per piece  
+
+Example:
+TC 30-47-7 NOK Oil Seal  
+₱250- / pc.
+
+Two blank lines are automatically added after the price so you can paste many items without pressing Shift+Enter every time.
+
+---
+
+SPECIAL COPY RULES:
+
+• Country names (Japan, Korea, China, etc.) are automatically removed when copying.
+
+• If the product starts with "SPL", the "SPL" word is removed when copied.
+
+• This applies to:
+  - Oil Seals
+  - Wiper Seals
+  - Monoseals
+
+---
+
+TRANSACTION COLOR RULES (IMPORTANT):
+
+• RED (Sale):
+  - Copies the actual sale price used in that transaction.
+
+• GREEN (Actual Checking):
+  - Copies the recorded price normally.
+
+• BLUE (Restock):
+  - Price amount is removed.
+  - Only the peso sign (₱) is copied.
+  - The brand is taken from the restock name input.
+
+Example (Restock):
+TC 30-47-7 NQK Oil Seal  
+₱
+
+If the restock name starts with "(" and has no brand:
+TC 30-47-7 (?) Oil Seal  
+₱
+
+---
+
+11. SIMPLE TIPS
 -------------------
 - If you can't find an item, try typing less. For example, instead of "10.5", try just "10".
-- You can right-click on a product in the list to copy its details to your clipboard.
+- Use right-click copy when quoting prices to customers.
+- Pasted items already have spacing between them.
 - Use the "Back" button to navigate, do not close the window unless you want to exit the app.
-
 
 ================================================================
 PART 2: ADMIN GUIDE

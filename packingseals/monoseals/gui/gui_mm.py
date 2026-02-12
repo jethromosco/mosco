@@ -933,8 +933,7 @@ class InventoryApp(ctk.CTkFrame):
             origin = details.get('country_of_origin', '')
             product_type = self._get_product_type_label()
 
-            origin_part = f" {origin}" if origin else ""
-            first_line = f"{type_} {id_}-{od}-{th} {brand} {product_type}{origin_part}"
+            first_line = (f"{id_}-{od}-{th} {brand} {product_type}" if type_.startswith('SPL') else f"{type_} {id_}-{od}-{th} {brand} {product_type}")
 
             # Price line: format as integer with trailing hyphen if no cents, else two decimals
             price = details.get('price', 0.0)
@@ -947,7 +946,7 @@ class InventoryApp(ctk.CTkFrame):
             else:
                 price_line = f"₱{p:.2f} / pc."
 
-            out_text = f"{first_line}\n{price_line}"
+            out_text = f"{first_line}\n{price_line}\n\n"
 
             # Copy to clipboard
             try:
