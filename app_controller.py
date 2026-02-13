@@ -1,8 +1,6 @@
 import customtkinter as ctk
 import importlib
-import sys
 import pkgutil
-import importlib.util
 import os
 from theme import theme
 from home_page import HomePage, CategoryPage, ComingSoonPage
@@ -73,6 +71,10 @@ class AppController:
         self.current_unit = None
         self.current_db_module = None
         self.current_context = INVALID_CONTEXT  # The authoritative context object
+        
+        # Dynamic window title tracking
+        self.current_section = None  # PRODUCTS, TRANSACTIONS, ADMIN, etc.
+        self.current_action = None   # ADD PRODUCT, EDIT PRODUCT, DELETE PRODUCT, etc.
 
         # Create and add home page
         home_page = HomePage(self.container, controller=self)
@@ -87,6 +89,55 @@ class AppController:
         frame.parent_category = self.current_category
         self.frames[name] = frame
         frame.place(x=0, y=0, relwidth=1, relheight=1)
+
+    def _build_window_title(self):
+        """Build dynamic window title based on current navigation context."""
+        parts = ["MOS Inventory"]
+        
+        # Add category if present
+        if self.current_category:
+            parts.append(self.current_category)
+        
+        # Add subcategory if present
+        if self.current_subcategory:
+            parts.append(self.current_subcategory)
+        
+        # Add unit (MM/INCH) if present
+        if self.current_unit:
+            parts.append(self.current_unit)
+        
+        # Add section (PRODUCTS, TRANSACTIONS, ADMIN, etc.) if present
+        if self.current_section:
+            parts.append(self.current_section)
+        
+        # Add action (ADD PRODUCT, EDIT PRODUCT, DELETE PRODUCT, etc.) if present
+        if self.current_action:
+            parts.append(self.current_action)
+        
+        # Build title with " - " separating base from hierarchy, and " | " between hierarchy levels
+        if len(parts) == 1:
+            title = parts[0]
+        else:
+            base = parts[0]
+            hierarchy = " | ".join(parts[1:])
+            title = f"{base} - {hierarchy}"
+        
+        return title
+
+    def set_window_title(self, section=None, action=None):
+        """Update window title, optionally setting section and action first.
+        
+        Args:
+            section: Current section (PRODUCTS, TRANSACTIONS, ADMIN, etc.)
+            action: Current action (ADD PRODUCT, EDIT PRODUCT, etc.)
+        """
+        if section is not None:
+            self.current_section = section
+        if action is not None:
+            self.current_action = action
+        
+        title = self._build_window_title()
+        self.root.title(title)
 
     def show_subcategory(self, name, sub_data):
         current_frame = self.get_current_frame_name()
@@ -213,6 +264,19 @@ class AppController:
             frame.lift()
             # Use after to ensure smooth rendering on the next frame
             self.root.after(1, lambda: frame.update_idletasks())
+        
+        # Update window title based on current frame
+        if page_name == "HomePage":
+            # When returning home, reset all context
+            self.current_category = None
+            self.current_subcategory = None
+            self.current_unit = None
+            self.current_section = None
+            self.current_action = None
+            self.set_window_title()
+        elif page_name and page_name != "HomePage":
+            # For category/inventory pages, just update title (context should be set separately)
+            self.set_window_title()
 
     # --- New centralized inventory context handling ---
     def set_inventory_context(self, category, subcategory=None, unit=None) -> InventoryContext:
@@ -375,6 +439,8 @@ class AppController:
                     return context
             
             self.show_frame(frame_key)
+            # Update window title with current context
+            self.set_window_title()
             return context
         else:
             # FAILURE: No module found → Coming Soon

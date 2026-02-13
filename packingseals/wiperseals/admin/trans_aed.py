@@ -225,7 +225,8 @@ class TransactionLogic:
             id_size = ''.join(c for c in form_data['id_size'].strip() if c in '0123456789./')
             od_size = ''.join(c for c in form_data['od_size'].strip() if c in '0123456789./')
             th_size = ''.join(c for c in form_data['th_size'].strip() if c in '0123456789./')
-            brand = ''.join(c for c in form_data['brand'].strip() if c.isalnum()).upper()
+            # CRITICAL FIX: Preserve periods and other brand name punctuation (e.g., "T.Y.", "E.P.", etc.)
+            brand = ''.join(c for c in form_data['brand'].strip() if c.isalnum() or c in '.-').upper()
             name = form_data['name'].strip().upper()
             
             data = {

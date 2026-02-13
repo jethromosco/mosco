@@ -1,7 +1,11 @@
-import customtkinter as ctk
 import tkinter as tk
 from tkinter import ttk
+
+import customtkinter as ctk
 from PIL import Image
+
+from theme import theme
+from home_page import ICON_PATH
 from ..ui.mm import (
     convert_mm_to_inches_display,
     build_products_display_data,
@@ -12,8 +16,6 @@ from ..ui.mm import (
 )
 from .gui_transaction_window import TransactionWindow
 from .gui_products import AdminPanel
-from theme import theme
-from home_page import ICON_PATH  # Import ICON_PATH for logo images
 
 
 class InventoryApp(ctk.CTkFrame):

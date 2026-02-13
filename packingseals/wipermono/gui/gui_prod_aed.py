@@ -2,6 +2,7 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
 from ..admin.prod_aed import ProductFormLogic
+from ..database import connect_db
 from theme import theme
 
 
@@ -16,10 +17,12 @@ def center_window(win, width, height):
 class ProductFormHandler:
     """Handles product form GUI interactions and delegates logic to ProductFormLogic."""
     
-    def __init__(self, parent_window, treeview, on_refresh_callback=None):
+    def __init__(self, parent_window, treeview, on_refresh_callback=None, main_app=None, controller=None):
         self.parent_window = parent_window
         self.prod_tree = treeview
         self.on_refresh_callback = on_refresh_callback
+        self.main_app = main_app
+        self.controller = controller
         
         # Initialize logic handler
         self.logic = ProductFormLogic()
@@ -80,6 +83,10 @@ class ProductFormHandler:
 
     def _show_delete_confirmation(self, type_, id_str, od_str, th_str, brand, item_str):
         """Show delete confirmation dialog."""
+        # Update window title
+        if self.controller:
+            self.controller.set_window_title(action="DELETE PRODUCT")
+        
         confirm_window = ctk.CTkToplevel(self.parent_window)
         confirm_window.title("MOS Inventory")
         confirm_window.geometry("400x200")
@@ -161,6 +168,13 @@ class ProductFormHandler:
 
     def _product_form(self, title, values=None):
         """Create and show the product form dialog."""
+        # Update window title based on action
+        if self.controller:
+            if title.startswith("Edit"):
+                self.controller.set_window_title(action="EDIT PRODUCT")
+            else:
+                self.controller.set_window_title(action="ADD PRODUCT")
+        
         form = ctk.CTkToplevel(self.parent_window)
         form.title("MOS Inventory")
         form.resizable(False, False)
@@ -286,7 +300,7 @@ class ProductFormHandler:
                 if self.on_refresh_callback:
                     self.on_refresh_callback()
 
-                # Prepare details for optional post-add hook
+                # Prepare details for post-edit/post-add hook (using form input)
                 details = {
                     'Type': vars['TYPE'].get().strip(),
                     'ID': vars['ID'].get().strip(),
@@ -303,7 +317,66 @@ class ProductFormHandler:
                 except Exception:
                     pass
 
-                # If this was an Add operation, schedule the optional post-add hook
+                # CRITICAL FIX: For both Add AND Edit operations, open the transaction window
+                # This allows users to immediately see the updated product with its transactions.
+                # IMPORTANT: Query database to get the actual saved product (with normalized brand)
+                # instead of using form input, which might not have been normalized yet.
+                try:
+                    if self.controller and self.main_app:
+                        # Query database for the actual saved product (which has normalized brand)
+                        saved_product = None
+                        try:
+                            conn = connect_db()
+                            cur = conn.cursor()
+                            cur.execute(
+                                """
+                                SELECT type, id, od, th, brand, part_no, country_of_origin, notes, price
+                                FROM products
+                                WHERE type=? AND id=? AND od=? AND th=?
+                                LIMIT 1
+                                """,
+                                (details['Type'].upper(), details['ID'], details['OD'], details['TH'])
+                            )
+                            row = cur.fetchone()
+                            conn.close()
+                            if row:
+                                saved_product = row
+                        except Exception:
+                            pass
+
+                        # Use saved product data from database (with normalized brand) for transaction window
+                        if saved_product:
+                            product_details = {
+                                'type': saved_product[0],
+                                'id': saved_product[1],
+                                'od': saved_product[2],
+                                'th': saved_product[3],
+                                'brand': saved_product[4],  # This is the NORMALIZED brand from DB
+                                'price': saved_product[8],
+                                'part_no': saved_product[5],
+                                'country_of_origin': saved_product[6],
+                                'notes': saved_product[7]
+                            }
+                        else:
+                            # Fallback if query fails (shouldn't happen, but be safe)
+                            product_details = {
+                                'type': details['Type'].upper(),
+                                'id': details['ID'],
+                                'od': details['OD'],
+                                'th': details['TH'],
+                                'brand': details['Brand'].upper(),
+                                'price': 0.0,
+                                'part_no': details['part_no'],
+                                'country_of_origin': details['country_of_origin'],
+                                'notes': ''
+                            }
+                        # Open transaction window with the correctly-saved (normalized) product
+                        self.controller.show_transaction_window(product_details, self.main_app)
+                except Exception:
+                    # Swallow transaction window errors - product was still saved successfully
+                    pass
+
+                # If this was an Add operation, also call the post-add hook
                 try:
                     if title.startswith("Add") and hasattr(self, 'on_product_added') and callable(self.on_product_added):
                         parent = getattr(self, 'parent_window', None) or form.master or form

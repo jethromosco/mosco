@@ -1,8 +1,9 @@
-from ..database import connect_db
-import os
-from .brand_utils import canonicalize_brand
 import ast
+import os
 import sqlite3
+
+from ..database import connect_db
+from .brand_utils import canonicalize_brand
 
 
 def parse_measurement(value):

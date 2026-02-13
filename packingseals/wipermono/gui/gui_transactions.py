@@ -1,11 +1,13 @@
-import customtkinter as ctk
 import tkinter as tk
-from tkinter import ttk, messagebox
-from tkcalendar import DateEntry
 from datetime import datetime
+from tkinter import ttk
+
+import customtkinter as ctk
+from tkcalendar import DateEntry
+
+from theme import theme
 from .gui_trans_aed import TransactionFormHandler
 from ..admin.transactions import TransactionsLogic, parse_date, parse_date_db, format_currency
-from theme import theme
 
 
 class TransactionTab:
@@ -52,6 +54,7 @@ class TransactionTab:
             parent_frame=self.frame,
             treeview=self.tran_tree,
             on_refresh_callback=self.refresh_transactions,
+            controller=self.controller
         )
         self.form_handler._get_record_by_id = self._get_record_by_id
 

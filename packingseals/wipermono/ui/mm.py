@@ -1,12 +1,14 @@
-from typing import Dict, List, Tuple, Any
-from ..database import connect_db
 import tkinter as tk
+from typing import Dict, List, Tuple, Any
+
+from ..database import connect_db
 
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
 UNKNOWN_STOCK = None  # Special marker for unknown/insufficient stock
 
 BRAND_GROUPS = {
+    # Shared oil seal brands (used across categories)
     "NOK_JAPAN": {
         "LABEL": "NOK",
         "BRANDS": {"NOK", "NTC"},
@@ -64,6 +66,97 @@ BRAND_GROUPS = {
         "LABEL": "ELRING",
         "BRANDS": {"ELRING"},
         "ORIGIN": "Germany",
+    },
+    # Wiper-specific brands
+    "ACE_USA": {
+        "LABEL": "ACE",
+        "BRANDS": {"ACE"},
+        "ORIGIN": "USA",
+    },
+    "ARIZONA_USA": {
+        "LABEL": "ARIZONA",
+        "BRANDS": {"ARIZONA"},
+        "ORIGIN": "USA",
+    },
+    "CHICAGO_USA": {
+        "LABEL": "CHICAGO",
+        "BRANDS": {"CHICAGO"},
+        "ORIGIN": "USA",
+    },
+    "FREUDENBERG_GERMANY": {
+        "LABEL": "FREUDENBERG",
+        "BRANDS": {"FREUDENBERG", "FREUDENBERG SEALING TECHNOLOGIES"},
+        "ORIGIN": "Germany",
+    },
+    "GOODYEAR_USA": {
+        "LABEL": "GOODYEAR",
+        "BRANDS": {"GOODYEAR"},
+        "ORIGIN": "USA",
+    },
+    "KAWASAKI_JAPAN": {
+        "LABEL": "KAWASAKI",
+        "BRANDS": {"KAWASAKI"},
+        "ORIGIN": "Japan",
+    },
+    "SAMSUNG_KOREA": {
+        "LABEL": "SAMSUNG",
+        "BRANDS": {"SAMSUNG"},
+        "ORIGIN": "South Korea",
+    },
+    "CORTLAND_USA": {
+        "LABEL": "CORTLAND",
+        "BRANDS": {"CORTLAND"},
+        "ORIGIN": "USA",
+    },
+    "USIT_USA": {
+        "LABEL": "USIT",
+        "BRANDS": {"USIT"},
+        "ORIGIN": "USA",
+    },
+    "MERKEL_GERMANY": {
+        "LABEL": "MERKEL",
+        "BRANDS": {"MERKEL"},
+        "ORIGIN": "Germany",
+    },
+    "TRELLEBORG_GERMANY": {
+        "LABEL": "TRELLEBORG",
+        "BRANDS": {"TRELLEBORG"},
+        "ORIGIN": "Germany",
+    },
+    "EBRO_GERMANY": {
+        "LABEL": "EBRO",
+        "BRANDS": {"EBRO"},
+        "ORIGIN": "Germany",
+    },
+    "HALLITE_USA": {
+        "LABEL": "HALLITE",
+        "BRANDS": {"HALLITE"},
+        "ORIGIN": "USA",
+    },
+    "IDLER_USA": {
+        "LABEL": "IDLER",
+        "BRANDS": {"IDLER"},
+        "ORIGIN": "USA",
+    },
+    "VULCAN_USA": {
+        "LABEL": "VULCAN",
+        "BRANDS": {"VULCAN"},
+        "ORIGIN": "USA",
+    },
+    "GARLOCK_USA": {
+        "LABEL": "GARLOCK",
+        "BRANDS": {"GARLOCK"},
+        "ORIGIN": "USA",
+    },
+    "HUTCHINSON_FRANCE": {
+        "LABEL": "HUTCHINSON",
+        "BRANDS": {"HUTCHINSON"},
+        "ORIGIN": "France",
+    },
+    "WIPER_TECH_UNKNOWN": {
+        "LABEL": "WIPER TECH",
+        "BRANDS": {"WIPER TECH"},
+        "ORIGIN": "Unknown",
     },
 }
 

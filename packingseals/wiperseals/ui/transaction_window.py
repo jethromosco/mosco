@@ -1,7 +1,9 @@
-from typing import Any, Dict, List, Tuple
-from datetime import datetime
 import os
+from datetime import datetime
+from typing import Any, Dict, List, Tuple
+
 from PIL import Image
+
 from ..database import connect_db
 from ..admin.trans_aed import sanitize_dimension_for_filename
 from .mm import apply_stock_transaction, format_stock_display, is_unknown_stock

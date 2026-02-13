@@ -1,48 +1,166 @@
 BRAND_GROUPS = {
-    "ACE": ("ACE", "USA"),
-    "ARIZONA": ("ARIZONA", "USA"),
-    "CHICAGO": ("CHICAGO", "USA"),
-    "FREUDENBERG": ("FREUDENBERG", "GERMANY"),
-    "GOODYEAR": ("GOODYEAR", "USA"),
-    "KAWASAKI": ("KAWASAKI", "JAPAN"),
-    "NOK": ("NOK", "JAPAN"),
-    "SAMSUNG": ("SAMSUNG", "SOUTH KOREA"),
-    "SKF": ("SKF", "SWEDEN"),
-    "CORTLAND": ("CORTLAND", "USA"),
-    "USIT": ("USIT", "USA"),
-    "MERKEL": ("MERKEL", "GERMANY"),
-    "TRELLEBORG": ("TRELLEBORG", "GERMANY"),
-    "KACO": ("KACO", "GERMANY"),
-    "EBRO": ("EBRO", "GERMANY"),
-    "HALLITE": ("HALLITE", "USA"),
-    "IDLER": ("IDLER", "USA"),
-    "VULCAN": ("VULCAN", "USA"),
-    "GARLOCK": ("GARLOCK", "USA"),
-    "FREUDENBERG SEALING TECHNOLOGIES": ("FREUDENBERG", "GERMANY"),
-    "HUTCHINSON": ("HUTCHINSON", "FRANCE"),
-    "WIPER TECH": ("WIPER TECH", "UNKNOWN"),
+    # Shared oil seal brands (used across categories)
+    "NOK_JAPAN": {
+        "LABEL": "NOK",
+        "BRANDS": {"NOK", "NTC"},
+        "ORIGIN": "Japan",
+    },
+    "TY_TAIWAN": {
+        "LABEL": "T.Y.",
+        "BRANDS": {
+            "NQK", "SOG", "CHO", "NAK", "TTO", "PHLE", "SKF",
+            "N/B", "ERIKS", "FOS", "TAIWAN", "SFK", "KOK", "NTK"
+        },
+        "ORIGIN": "Taiwan",
+    },
+    "MOS_PHILIPPINES": {
+        "LABEL": "MOS",
+        "BRANDS": {"MOS"},
+        "ORIGIN": "(fab.)",
+    },
+    "MX_PHILIPPINES": {
+        "LABEL": "MX",
+        "BRANDS": {"MX"},
+        "ORIGIN": "Local",
+    },
+    "JW_PHILIPPINES": {
+        "LABEL": "JW",
+        "BRANDS": {"JW"},
+        "ORIGIN": "Local",
+    },
+    "MS_PHILIPPINES": {
+        "LABEL": "MS",
+        "BRANDS": {"MS"},
+        "ORIGIN": "Local",
+    },
+    "NAT_USA": {
+        "LABEL": "NAT",
+        "BRANDS": {"NAT"},
+        "ORIGIN": "U.S.",
+    },
+    "CR_USA": {
+        "LABEL": "CR",
+        "BRANDS": {"CR"},
+        "ORIGIN": "U.S.",
+    },
+    "STEFA_SWEDEN": {
+        "LABEL": "STEFA",
+        "BRANDS": {"STEFA"},
+        "ORIGIN": "Sweden",
+    },
+    "KACO_GERMANY": {
+        "LABEL": "KACO",
+        "BRANDS": {"KACO"},
+        "ORIGIN": "Germany",
+    },
+    "ELRING_GERMANY": {
+        "LABEL": "ELRING",
+        "BRANDS": {"ELRING"},
+        "ORIGIN": "Germany",
+    },
+    # Wiper-specific brands
+    "ACE_USA": {
+        "LABEL": "ACE",
+        "BRANDS": {"ACE"},
+        "ORIGIN": "USA",
+    },
+    "ARIZONA_USA": {
+        "LABEL": "ARIZONA",
+        "BRANDS": {"ARIZONA"},
+        "ORIGIN": "USA",
+    },
+    "CHICAGO_USA": {
+        "LABEL": "CHICAGO",
+        "BRANDS": {"CHICAGO"},
+        "ORIGIN": "USA",
+    },
+    "FREUDENBERG_GERMANY": {
+        "LABEL": "FREUDENBERG",
+        "BRANDS": {"FREUDENBERG", "FREUDENBERG SEALING TECHNOLOGIES"},
+        "ORIGIN": "Germany",
+    },
+    "GOODYEAR_USA": {
+        "LABEL": "GOODYEAR",
+        "BRANDS": {"GOODYEAR"},
+        "ORIGIN": "USA",
+    },
+    "KAWASAKI_JAPAN": {
+        "LABEL": "KAWASAKI",
+        "BRANDS": {"KAWASAKI"},
+        "ORIGIN": "Japan",
+    },
+    "SAMSUNG_KOREA": {
+        "LABEL": "SAMSUNG",
+        "BRANDS": {"SAMSUNG"},
+        "ORIGIN": "South Korea",
+    },
+    "CORTLAND_USA": {
+        "LABEL": "CORTLAND",
+        "BRANDS": {"CORTLAND"},
+        "ORIGIN": "USA",
+    },
+    "USIT_USA": {
+        "LABEL": "USIT",
+        "BRANDS": {"USIT"},
+        "ORIGIN": "USA",
+    },
+    "MERKEL_GERMANY": {
+        "LABEL": "MERKEL",
+        "BRANDS": {"MERKEL"},
+        "ORIGIN": "Germany",
+    },
+    "TRELLEBORG_GERMANY": {
+        "LABEL": "TRELLEBORG",
+        "BRANDS": {"TRELLEBORG"},
+        "ORIGIN": "Germany",
+    },
+    "EBRO_GERMANY": {
+        "LABEL": "EBRO",
+        "BRANDS": {"EBRO"},
+        "ORIGIN": "Germany",
+    },
+    "HALLITE_USA": {
+        "LABEL": "HALLITE",
+        "BRANDS": {"HALLITE"},
+        "ORIGIN": "USA",
+    },
+    "IDLER_USA": {
+        "LABEL": "IDLER",
+        "BRANDS": {"IDLER"},
+        "ORIGIN": "USA",
+    },
+    "VULCAN_USA": {
+        "LABEL": "VULCAN",
+        "BRANDS": {"VULCAN"},
+        "ORIGIN": "USA",
+    },
+    "GARLOCK_USA": {
+        "LABEL": "GARLOCK",
+        "BRANDS": {"GARLOCK"},
+        "ORIGIN": "USA",
+    },
+    "HUTCHINSON_FRANCE": {
+        "LABEL": "HUTCHINSON",
+        "BRANDS": {"HUTCHINSON"},
+        "ORIGIN": "France",
+    },
+    "WIPER_TECH_UNKNOWN": {
+        "LABEL": "WIPER TECH",
+        "BRANDS": {"WIPER TECH"},
+        "ORIGIN": "Unknown",
+    },
 }
 
 
 def canonicalize_brand(raw_brand):
-    """
-    Convert raw brand name to canonical label and origin.
-    Returns tuple of (canonical_label, origin)
-    """
-    if not raw_brand:
-        return "", "UNKNOWN"
-    
-    # Normalize to uppercase for lookup
-    normalized = str(raw_brand).strip().upper()
-    
-    # Direct match
-    if normalized in BRAND_GROUPS:
-        return BRAND_GROUPS[normalized]
-    
-    # Check substrings for partial matches
-    for key, (label, origin) in BRAND_GROUPS.items():
-        if key in normalized or normalized in key:
-            return (label, origin)
-    
-    # Default: return the raw brand as canonical with UNKNOWN origin
-    return (normalized, "UNKNOWN")
+	"""Return (canonical_label, origin) for a given brand string.
+	If brand is not recognized, returns (normalized_brand, None).
+	"""
+	try:
+		brand = (raw_brand or "").strip().upper()
+		for group in BRAND_GROUPS.values():
+			if brand in group["BRANDS"]:
+				return group["LABEL"], group["ORIGIN"]
+		return brand, None
+	except Exception:
+		return (raw_brand or "").strip().upper(), None

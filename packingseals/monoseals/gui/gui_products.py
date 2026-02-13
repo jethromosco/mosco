@@ -1,10 +1,12 @@
-import customtkinter as ctk
-import tkinter as tk
-from tkinter import ttk, messagebox
-from ..admin.products import ProductsLogic
 import importlib
+import tkinter as tk
+from tkinter import ttk
+
+import customtkinter as ctk
+
 from theme import theme
 from home_page import categories
+from ..admin.products import ProductsLogic
 from .gui_transactions import TransactionTab
 from .gui_prod_aed import ProductFormHandler
 
@@ -689,7 +691,9 @@ class AdminPanel:
                 self.prod_form_handler = ProductFormHandler(
                     self.win,
                     None,
-                    self.refresh_products
+                    self.refresh_products,
+                    self.main_app,
+                    self.controller
                 )
                 # Re-attach treeview to form handler
                 if hasattr(self, 'prod_tree'):
@@ -901,6 +905,9 @@ class AdminPanel:
                 text_color=theme.get("text")  # normal text color when unselected
             )
             self.products_frame.pack(fill="both", expand=True)
+            # Update window title when switching to products tab
+            if self.controller:
+                self.controller.set_window_title(section="PRODUCTS")
         else:
             self.products_tab_btn.configure(
                 fg_color=theme.get("accent"),
@@ -913,6 +920,9 @@ class AdminPanel:
                 text_color="#FFFFFF"
             )
             self.transactions_frame.pack(fill="both", expand=True)
+            # Update window title when switching to transactions tab
+            if self.controller:
+                self.controller.set_window_title(section="TRANSACTIONS")
 
             # DEFENSIVE: Only call refresh if transaction_tab exists AND is not None
             if hasattr(self, 'transaction_tab') and self.transaction_tab is not None:
@@ -994,7 +1004,9 @@ class AdminPanel:
         self.prod_form_handler = ProductFormHandler(
             self.win,
             None,
-            self.refresh_products
+            self.refresh_products,
+            self.main_app,
+            self.controller
         )
         # Attach a post-add hook so that after adding a product we can
         # switch to the Transactions tab and open the Add Transaction form

@@ -1,21 +1,24 @@
-import customtkinter as ctk
+import re
 import tkinter as tk
-from tkinter import messagebox
-from tkcalendar import DateEntry
 from datetime import datetime
+from tkinter import messagebox
+
+import customtkinter as ctk
+from tkcalendar import DateEntry
+
+from theme import theme
 from ..admin.trans_aed import TransactionLogic, center_window
 from ..database import connect_db
-import re
-from theme import theme
 
 
 class TransactionFormHandler:
     """Handles all GUI-related functionality for transaction forms"""
 
-    def __init__(self, parent_frame, treeview, on_refresh_callback=None):
+    def __init__(self, parent_frame, treeview, on_refresh_callback=None, controller=None):
         self.parent_frame = parent_frame
         self.tran_tree = treeview
         self.on_refresh_callback = on_refresh_callback
+        self.controller = controller
         self.logic = TransactionLogic()
         self.last_transaction_keys = None  # Store keys for prefill
 
@@ -69,6 +72,10 @@ class TransactionFormHandler:
 
     def _show_delete_confirmation(self, items):
         """Show delete confirmation dialog"""
+        # Update main window title to reflect the action being performed
+        if self.controller:
+            self.controller.set_window_title(action="DELETE TRANSACTION")
+        
         parent_window = self.parent_frame.winfo_toplevel()
         confirm_window = ctk.CTkToplevel(parent_window)
         confirm_window.title("MOS Inventory")
@@ -180,6 +187,13 @@ class TransactionFormHandler:
         """Create and display transaction form"""
         form = ctk.CTkToplevel(self.parent_frame.winfo_toplevel())
         form.title("MOS Inventory")
+        
+        # Update main window title to reflect the action being performed
+        if self.controller:
+            if mode == "add":
+                self.controller.set_window_title(action="ADD TRANSACTION")
+            elif mode == "edit":
+                self.controller.set_window_title(action="EDIT TRANSACTION")
 
         form.withdraw()
         form.resizable(False, False)
@@ -861,65 +875,100 @@ class TransactionFormHandler:
                 messagebox.showerror("Product Not Found", "This product does not exist. Please add it first.", parent=form)
                 return
             
-            # Handle Fabrication differently
+            # CRITICAL FIX: Detect if THIS IS A TYPE CONVERSION
+            # If editing and transaction type changed, we need to handle properly
+            is_type_conversion = False
+            was_fabrication = isinstance(rowid, (list, tuple)) and len(rowid) == 2 if mode == "Edit" else False
+            is_becoming_fabrication = trans_type == "Fabrication"
+            
+            # Handle all transaction type scenarios
             if trans_type == "Fabrication":
                 data = self.logic.prepare_transaction_data(trans_type, form_data)
                 if not data:
                     messagebox.showerror("Invalid", "Error preparing data for saving.", parent=form)
                     return
-                # If adding new fabrication, insert two records
+                
                 if mode == "Add":
+                    # Adding new fabrication: create two records
                     success = self.logic.save_fabrication_transaction(data)
-                else:
-                    # Editing existing fabrication: rowid may be a tuple of (restock_rowid, sale_rowid)
+                elif was_fabrication:
+                    # CASE: Staying Fabrication (already a pair) - update both
                     try:
-                        if isinstance(rowid, (list, tuple)) and len(rowid) == 2:
-                            restock_rid, sale_rid = rowid
-                            # Build restock and sale payloads for updating
-                            # normalize date to YYYY-MM-DD like prepare_transaction_data does
-                            try:
-                                norm_date = datetime.strptime(form_data['date'], "%m/%d/%y").strftime("%Y-%m-%d")
-                            except Exception:
-                                norm_date = form_data['date']
-                            restock_payload = {
-                                'date': norm_date,
-                                'item_type': form_data['item_type'],
-                                'id_size': form_data['id_size'],
-                                'od_size': form_data['od_size'],
-                                'th_size': form_data['th_size'],
-                                'brand': form_data['brand'],
-                                'name': form_data['name'],
-                                'quantity': int(form_data['qty_restock']),
-                                'price': None,
-                                'is_restock': 1
-                            }
-                            sale_payload = {
-                                'date': norm_date,
-                                'item_type': form_data['item_type'],
-                                'id_size': form_data['id_size'],
-                                'od_size': form_data['od_size'],
-                                'th_size': form_data['th_size'],
-                                'brand': form_data['brand'],
-                                'name': form_data['name'],
-                                'quantity': -int(form_data['qty_customer']),
-                                'price': float(form_data['price']),
-                                'is_restock': 0
-                            }
-                            ok1 = self.logic.save_transaction("Edit", restock_payload, restock_rid)
-                            ok2 = self.logic.save_transaction("Edit", sale_payload, sale_rid)
-                            success = bool(ok1 and ok2)
-                        else:
-                            # Unexpected: fall back to inserting new pair
-                            success = self.logic.save_fabrication_transaction(data)
+                        restock_rid, sale_rid = rowid
+                        try:
+                            norm_date = datetime.strptime(form_data['date'], "%m/%d/%y").strftime("%Y-%m-%d")
+                        except Exception:
+                            norm_date = form_data['date']
+                        restock_payload = {
+                            'date': norm_date,
+                            'item_type': form_data['item_type'],
+                            'id_size': form_data['id_size'],
+                            'od_size': form_data['od_size'],
+                            'th_size': form_data['th_size'],
+                            'brand': form_data['brand'],
+                            'name': form_data['name'],
+                            'quantity': int(form_data['qty_restock']),
+                            'price': None,
+                            'is_restock': 1
+                        }
+                        sale_payload = {
+                            'date': norm_date,
+                            'item_type': form_data['item_type'],
+                            'id_size': form_data['id_size'],
+                            'od_size': form_data['od_size'],
+                            'th_size': form_data['th_size'],
+                            'brand': form_data['brand'],
+                            'name': form_data['name'],
+                            'quantity': -int(form_data['qty_customer']),
+                            'price': float(form_data['price']),
+                            'is_restock': 0
+                        }
+                        ok1 = self.logic.save_transaction("Edit", restock_payload, restock_rid)
+                        ok2 = self.logic.save_transaction("Edit", sale_payload, sale_rid)
+                        success = bool(ok1 and ok2)
+                    except Exception:
+                        success = False
+                else:
+                    # CASE: Converting FROM non-Fabrication TO Fabrication
+                    # Delete old single record and create new fabrication pair
+                    try:
+                        if isinstance(rowid, int):
+                            # Delete the old non-fabrication record
+                            conn = connect_db()
+                            cur = conn.cursor()
+                            cur.execute("DELETE FROM transactions WHERE rowid=?", (rowid,))
+                            conn.commit()
+                            conn.close()
+                        # Create new fabrication pair
+                        success = self.logic.save_fabrication_transaction(data)
                     except Exception:
                         success = False
             else:
-                # Prepare data for saving
+                # Non-Fabrication type (Sale, Restock, or Actual)
                 data = self.logic.prepare_transaction_data(trans_type, form_data)
                 if not data:
                     messagebox.showerror("Invalid", "Error preparing data for saving.", parent=form)
                     return
-                success = self.logic.save_transaction(mode, data, rowid)
+                
+                if was_fabrication:
+                    # CASE: Converting FROM Fabrication TO non-Fabrication
+                    # Keep the restock record (first in pair), delete the sale record (second)
+                    # Update the kept record with new data
+                    try:
+                        restock_rid, sale_rid = rowid
+                        # Delete the sale record
+                        conn = connect_db()
+                        cur = conn.cursor()
+                        cur.execute("DELETE FROM transactions WHERE rowid=?", (sale_rid,))
+                        conn.commit()
+                        conn.close()
+                        # Update the restock record with new transaction data
+                        success = self.logic.save_transaction("Edit", data, restock_rid)
+                    except Exception:
+                        success = False
+                else:
+                    # CASE: Staying non-Fabrication - just update normally
+                    success = self.logic.save_transaction(mode, data, rowid)
             
             if success:
                 # Save last keys for prefill (only on successful save)
