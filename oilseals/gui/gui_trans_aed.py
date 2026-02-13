@@ -4,7 +4,6 @@ from datetime import datetime
 from tkinter import messagebox
 
 import customtkinter as ctk
-from tkcalendar import DateEntry
 
 from theme import theme
 from ..admin.trans_aed import TransactionLogic, center_window

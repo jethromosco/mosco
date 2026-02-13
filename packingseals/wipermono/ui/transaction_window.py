@@ -6,7 +6,7 @@ from PIL import Image
 
 from ..database import connect_db
 from ..admin.trans_aed import sanitize_dimension_for_filename
-from .mm import apply_stock_transaction, format_stock_display, is_unknown_stock
+from .mm import apply_stock_transaction, is_unknown_stock
 
 
 def get_existing_image_base(details: Dict[str, Any]) -> str:

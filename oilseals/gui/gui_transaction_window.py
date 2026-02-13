@@ -16,7 +16,6 @@ from ..ui.transaction_window import (
     update_price,
     update_notes,
     update_thresholds,
-    summarize_running_stock,
     calculate_current_stock,
     get_stock_color,
     format_price_display,
