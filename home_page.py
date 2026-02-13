@@ -21,7 +21,7 @@ categories = {
     "PACKING SEALS": {
         "MONOSEALS": {"MM": None, "INCH": None},
         "WIPER SEALS": {"MM": None, "INCH": None},
-        "WIPERMONO": {},
+        "WIPERMONO": {"MM": None, "INCH": None},
         "VEE PACKING": {"MM": None, "INCH": None},
         "ZF PACKING": {}
     },

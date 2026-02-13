@@ -578,6 +578,10 @@ class AdminPanel:
                         break
             except Exception:
                 base_folder = None
+        
+        # CRITICAL FIX: Normalize base_folder path - convert / to . for module imports
+        if base_folder:
+            base_folder = base_folder.replace('/', '.')
 
         if not base_folder:
             # Category not available for admin - show Coming Soon
@@ -630,15 +634,30 @@ class AdminPanel:
                 'oilseals.ui.transaction_window',
             ]
         
-        # Also patch monoseals modules if switching from another module
-        if base_folder != 'packingseals':
-            target_modules += [
-                'packingseals.monoseals.admin.products',
-                'packingseals.monoseals.admin.transactions',
-                'packingseals.monoseals.admin.prod_aed',
-                'packingseals.monoseals.admin.trans_aed',
-                'packingseals.monoseals.ui.transaction_window',
-            ]
+        # CRITICAL FIX: Patch ALL packing seals subcategory modules to ensure consistent DB connections
+        # This is essential when switching between WIPERMONO, MONOSEALS, WIPERSEALS, VEE, ZF
+        packing_seals_modules = [
+            'packingseals.monoseals.admin.products',
+            'packingseals.monoseals.admin.transactions',
+            'packingseals.monoseals.admin.prod_aed',
+            'packingseals.monoseals.admin.trans_aed',
+            'packingseals.monoseals.ui.transaction_window',
+            'packingseals.wipermono.admin.products',
+            'packingseals.wipermono.admin.transactions',
+            'packingseals.wipermono.admin.prod_aed',
+            'packingseals.wipermono.admin.trans_aed',
+            'packingseals.wipermono.ui.transaction_window',
+            'packingseals.wiperseals.admin.products',
+            'packingseals.wiperseals.admin.transactions',
+            'packingseals.wiperseals.admin.prod_aed',
+            'packingseals.wiperseals.admin.trans_aed',
+            'packingseals.wiperseals.ui.transaction_window',
+        ]
+        
+        # Always patch packing seals modules if NOT selecting a specific packing seals subcategory
+        # OR if switching between packing seals subcategories
+        if base_folder != 'oilseals':
+            target_modules += packing_seals_modules
 
         for mod_name in target_modules:
             try:
@@ -649,16 +668,21 @@ class AdminPanel:
 
         # Recreate logic objects so they pick up new connect_db, then refresh UI
         try:
-            # Import TransactionsLogic from the SELECTED category, not the current admin panel's module
+            # CRITICAL FIX: Import BOTH ProductsLogic and TransactionsLogic from the SELECTED category
+            # This ensures admin table refreshes correctly when switching categories
             if base_folder == 'packingseals' and sub_norm and sub_norm != '-':
+                prod_module = importlib.import_module(f"{base_folder}.{sub_norm.replace(' ', '').lower()}.admin.products")
                 trans_module = importlib.import_module(f"{base_folder}.{sub_norm.replace(' ', '').lower()}.admin.transactions")
             else:
+                prod_module = importlib.import_module(f"{base_folder}.admin.products")
                 trans_module = importlib.import_module(f"{base_folder}.admin.transactions")
             
+            # Get logic classes from the SELECTED category modules
+            SelectedProductsLogic = getattr(prod_module, 'ProductsLogic', None)
             TransactionsLogic = getattr(trans_module, 'TransactionsLogic', None)
             
             # Recreate products logic with new connection
-            self.products_logic = ProductsLogic()
+            self.products_logic = SelectedProductsLogic() if SelectedProductsLogic else ProductsLogic()
             
             # Recreate form handler with new connection (CRITICAL FIX)
             if hasattr(self, 'prod_form_handler'):
@@ -693,7 +717,8 @@ class AdminPanel:
                         notebook=self.transaction_tab.frame,
                         main_app=self.main_app,
                         controller=self.controller,
-                        on_refresh_callback=self.refresh_all_tabs
+                        on_refresh_callback=self.refresh_all_tabs,
+                        logic=TransactionsLogic() if TransactionsLogic else None
                     )
                 except Exception:
                     # If recreation fails, at least the frame still exists
@@ -705,7 +730,8 @@ class AdminPanel:
                         notebook=self.transactions_frame,
                         main_app=self.main_app,
                         controller=self.controller,
-                        on_refresh_callback=self.refresh_all_tabs
+                        on_refresh_callback=self.refresh_all_tabs,
+                        logic=TransactionsLogic()
                     )
             
             # Refresh both tables

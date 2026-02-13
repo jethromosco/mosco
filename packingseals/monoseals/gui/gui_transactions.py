@@ -13,13 +13,18 @@ class TransactionTab:
 
     FIELDS = ["Type", "ID", "OD", "TH", "Brand", "Name", "Quantity", "Price"]
 
-    def __init__(self, notebook, main_app, controller, on_refresh_callback=None):
+    def __init__(self, notebook, main_app, controller, on_refresh_callback=None, logic=None):
         self.main_app = main_app
         self.controller = controller
         self.on_refresh_callback = on_refresh_callback
 
-        # Initialize logic handler
-        self.logic = TransactionsLogic()
+        # CRITICAL FIX: Allow injecting TransactionsLogic from dynamically selected category
+        # This ensures transactions tab uses correct database when category dropdown changes
+        if logic is not None:
+            self.logic = logic
+        else:
+            # Fallback to default local module import
+            self.logic = TransactionsLogic()
 
         # Support both ttk.Notebook and CTkFrame container
         if hasattr(notebook, "add"):
