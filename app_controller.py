@@ -60,6 +60,9 @@ class AppController:
         except Exception:
             pass
 
+        # Setup global mouse button bindings for back/forward navigation (Windows only)
+        self._setup_global_mouse_bindings()
+
         # Create container frame using CustomTkinter
         self.container = ctk.CTkFrame(root, fg_color=theme.get("bg"))
         self.container.pack(fill="both", expand=True)
@@ -75,6 +78,9 @@ class AppController:
         # Dynamic window title tracking
         self.current_section = None  # PRODUCTS, TRANSACTIONS, ADMIN, etc.
         self.current_action = None   # ADD PRODUCT, EDIT PRODUCT, DELETE PRODUCT, etc.
+        
+        # Admin Panel singleton - only one instance allowed
+        self.admin_panel_instance = None
 
         # Create and add home page
         home_page = HomePage(self.container, controller=self)
@@ -264,6 +270,20 @@ class AppController:
             frame.lift()
             # Use after to ensure smooth rendering on the next frame
             self.root.after(1, lambda: frame.update_idletasks())
+            # Schedule frame's on_frame_show hook ONLY for InventoryApp frames (not TransactionWindow or Coming Soon)
+            # Check: must have on_frame_show method AND be named InventoryApp (not TransactionWindow)
+            if (hasattr(frame, 'on_frame_show') and callable(frame.on_frame_show) and 
+                frame.__class__.__name__ == 'InventoryApp'):
+                def safe_on_frame_show():
+                    try:
+                        if frame.winfo_exists() and hasattr(frame, 'on_frame_show'):
+                            print(f"[FRAME] Calling on_frame_show for {page_name}")
+                            frame.on_frame_show()
+                    except Exception as e:
+                        print(f"[FRAME] Error in on_frame_show for {page_name}: {e}")
+                # Use 150ms delay to ensure full widget initialization and rendering before calling refresh
+                print(f"[FRAME] Scheduling on_frame_show for {page_name} after 150ms")
+                self.root.after(150, safe_on_frame_show)
         
         # Update window title based on current frame
         if page_name == "HomePage":
@@ -420,9 +440,16 @@ class AppController:
             if frame_key not in self.frames:
                 try:
                     frame = loaded_module(self.container, controller=self)
+                    
+                    # CRITICAL: Set return_to to current parent frame
+                    # This ensures back button navigates step-by-step, not directly to HomePage
+                    current_frame_name = self.get_current_frame_name()
+                    if current_frame_name and current_frame_name != "HomePage":
+                        frame.return_to = current_frame_name
+                    
                     self.frames[frame_key] = frame
                     frame.place(x=0, y=0, relwidth=1, relheight=1)
-                    print(f"[CONTEXT] ✓ Created and placed InventoryApp frame")
+                    print(f"[CONTEXT] ✓ Created and placed InventoryApp frame (return_to={frame.return_to})")
                 except Exception as e:
                     print(f"[CONTEXT] ✗ Failed to create InventoryApp: {e}")
                     # Fall through to Coming Soon
@@ -499,6 +526,61 @@ class AppController:
         except Exception:
             pass
 
+    def _setup_global_mouse_bindings(self):
+        """Setup global mouse back button binding for Windows navigation.
+        Button-4 = Windows back button (invokes the visible back button widget).
+        
+        This binding finds the currently visible frame and invokes its back_btn
+        widget directly, simulating a physical click on the back button.
+        """
+        try:
+            self.root.bind_all("<Button-4>", self._handle_global_mouse_back)
+        except Exception:
+            # Side buttons may not be supported on this platform
+            pass
+
+    def _handle_global_mouse_back(self, event=None):
+        """Handle mouse back button (Button-4): invoke the back button of topmost visible frame.
+        
+        This finds the most recently placed/visible frame and invokes its back button widget
+        directly - equivalent to physically clicking the back button. Ensures we only invoke
+        the back button of the topmost (foreground) frame.
+        """
+        try:
+            # Find the topmost visible frame by checking in reverse insertion order
+            # (later frames are on top)
+            topmost_frame = None
+            topmost_name = None
+            
+            # Iterate through frames to find all viewable ones
+            viewable_frames = []
+            for frame_name, frame in self.frames.items():
+                try:
+                    if frame.winfo_viewable():
+                        viewable_frames.append((frame_name, frame))
+                except Exception:
+                    pass
+            
+            # The last one in the list is the topmost (since TransactionWindow, ComingSoon,
+            # and InventoryApp frames are added/placed in order, later ones are on top)
+            if viewable_frames:
+                topmost_name, topmost_frame = viewable_frames[-1]
+            
+            # If we found a viewable frame, invoke its back button
+            if topmost_frame and topmost_name:
+                if hasattr(topmost_frame, 'back_btn'):
+                    back_btn = getattr(topmost_frame, 'back_btn', None)
+                    if back_btn is not None and back_btn.winfo_exists():
+                        # Invoke the button directly - triggers its command callback
+                        back_btn.invoke()
+                        return "break"
+                # If no back button found, try to navigate back to home
+                if topmost_name != "HomePage":
+                    self.go_back("HomePage")
+                return "break"
+        except Exception:
+            pass
+
     def go_back(self, page_name):
         self.show_frame(page_name)
 
@@ -549,22 +631,179 @@ class AppController:
             self.show_coming_soon("Transactions")
             return
 
+        # CRITICAL: Hide current frame before showing transaction window
+        # This ensures only TransactionWindow is winfo_viewable(), preventing mouse button
+        # handler from invoking the wrong frame's back button
+        current_frame = None
+        for frame in self.frames.values():
+            try:
+                if frame.winfo_viewable() and frame != self.frames.get("TransactionWindow"):
+                    current_frame = frame
+                    break
+            except Exception:
+                pass
+        
+        if current_frame:
+            current_frame.place_forget()
+
         frame = TransactionCls(self.container, details, controller=self, return_to=return_to)
         self.frames["TransactionWindow"] = frame
         frame.place(x=0, y=0, relwidth=1, relheight=1)
         frame.lift()
-        # Ensure frame is rendered, then load data
+        
+        # Ensure frame is fully rendered before loading data
+        # Use multiple update cycles to ensure all widgets are created and visible
         try:
             frame.update_idletasks()
-            if hasattr(frame, 'set_details'):
-                frame.set_details(details, main_app)
-        except Exception:
-            pass
+            frame.update_idletasks()  # Double update to ensure full render
+            
+            # Verify the tree widget exists before loading data
+            if hasattr(frame, 'tree') and frame.tree.winfo_exists():
+                # Load data after ensuring widget exists
+                if hasattr(frame, 'set_details'):
+                    frame.set_details(details, main_app)
+            else:
+                # If tree doesn't exist, wait a bit longer and try again
+                self.root.after(50, lambda: self._load_transaction_data_delayed(frame, details, main_app))
+        except Exception as e:
+            print(f"[TRANSACTION] Error loading transaction details: {e}")
+            # Try again with delay
+            self.root.after(100, lambda: self._load_transaction_data_delayed(frame, details, main_app))
 
     def show_coming_soon(self, category_name):
         frame_name = f"{category_name}ComingSoon"
         if frame_name not in self.frames:
-            frame = ComingSoonPage(self.container, self, category_name, return_to="HomePage")
+            # Set return_to to current frame for consistency with other navigation
+            current_frame_name = self.get_current_frame_name()
+            return_target = current_frame_name if current_frame_name else "HomePage"
+            frame = ComingSoonPage(self.container, self, category_name, return_to=return_target)
             self.frames[frame_name] = frame
             frame.place(x=0, y=0, relwidth=1, relheight=1)
         self.show_frame(frame_name)
+
+    def is_admin_panel_open(self):
+        """Check if Admin Panel is currently open and valid.
+        
+        Returns:
+            True if Admin Panel exists and window is valid
+            False otherwise
+        """
+        if self.admin_panel_instance is None:
+            return False
+        
+        try:
+            if self.admin_panel_instance.win.winfo_exists():
+                return True
+            else:
+                # Window was destroyed but reference not cleared
+                self.admin_panel_instance = None
+                return False
+        except Exception:
+            # Invalid reference
+            self.admin_panel_instance = None
+            return False
+
+    def show_admin_panel(self, parent_app, on_close_callback=None):
+        """Show Admin Panel with singleton pattern - only one instance allowed.
+        
+        If Admin Panel already open:
+        - Restore if minimized
+        - Bring to front
+        - Give focus
+        
+        If not open:
+        - Create new AdminPanel instance
+        - Store reference for singleton check
+        
+        Args:
+            parent_app: The calling frame/app (main_app parameter)
+            on_close_callback: Optional callback when Admin Panel closes
+        """
+        # If admin panel is already open, bring it to front
+        if self.admin_panel_instance is not None:
+            try:
+                # Check if window still exists
+                if self.admin_panel_instance.win.winfo_exists():
+                    # Ensure window is normal state (restore if minimized)
+                    try:
+                        if self.admin_panel_instance.win.state() == 'iconic':
+                            self.admin_panel_instance.win.state('normal')
+                    except Exception:
+                        pass
+                    
+                    # Bring to front
+                    self.admin_panel_instance.win.lift()
+                    
+                    # Make topmost briefly to ensure it comes to front over other windows
+                    self.admin_panel_instance.win.attributes('-topmost', True)
+                    self.root.after(200, lambda: self.admin_panel_instance.win.attributes('-topmost', False) if self.admin_panel_instance.win.winfo_exists() else None)
+                    
+                    # Give focus
+                    self.admin_panel_instance.win.focus_force()
+                    return
+                else:
+                    # Window was destroyed but reference not cleared
+                    self.admin_panel_instance = None
+            except Exception as e:
+                # Window or reference is bad, clear it and create new one
+                self.admin_panel_instance = None
+        
+        # Create new AdminPanel instance
+        try:
+            # Import AdminPanel from the current module context
+            # This returns the correct AdminPanel class for the current category
+            AdminPanelClass = None
+            
+            # Try to get AdminPanel from the same module as parent_app
+            if hasattr(parent_app, '__module__'):
+                try:
+                    mod_base = parent_app.__module__.rsplit('.', 1)[0]
+                    products_mod = importlib.import_module(f"{mod_base}.gui_products")
+                    AdminPanelClass = getattr(products_mod, 'AdminPanel', None)
+                except Exception:
+                    pass
+            
+            # Fallback to oilseals AdminPanel
+            if AdminPanelClass is None:
+                try:
+                    products_mod = importlib.import_module('oilseals.gui.gui_products')
+                    AdminPanelClass = getattr(products_mod, 'AdminPanel', None)
+                except Exception:
+                    pass
+            
+            if AdminPanelClass is None:
+                print("[ADMIN] Failed to load AdminPanel class")
+                return
+            
+            # Create the instance and store reference
+            admin_panel = AdminPanelClass(
+                self.root,
+                parent_app,
+                self,
+                on_close_callback=on_close_callback
+            )
+            
+            # Store reference for singleton check
+            self.admin_panel_instance = admin_panel
+            
+        except Exception as e:
+            print(f"[ADMIN] Failed to create AdminPanel: {e}")
+    
+    def _load_transaction_data_delayed(self, frame, details, main_app):
+        """Load transaction data with retry logic if widget not ready"""
+        try:
+            if hasattr(frame, 'tree') and frame.tree.winfo_exists():
+                if hasattr(frame, 'set_details'):
+                    frame.set_details(details, main_app)
+            else:
+                # Still not ready, try one more time
+                self.root.after(50, lambda: self._load_transaction_data_delayed(frame, details, main_app))
+        except Exception as e:
+            print(f"[TRANSACTION] Failed to load transaction data: {e}")
+
+    def _clear_admin_panel(self):
+        """Clear AdminPanel reference when it closes.
+        
+        Called by AdminPanel.on_closing() to allow re-opening.
+        """
+        self.admin_panel_instance = None

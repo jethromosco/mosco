@@ -345,57 +345,81 @@ class ProductFormLogic:
 					except Exception:
 						pass
 					trans_logic.update_transactions_for_product(orig_keys, new_keys, alt_original_brand=alt_brand)
-					# Also attempt to reliably rename associated product photo files so they remain linked after key change
+					
+					# === Image renaming safeguards ===
+					# Only rename images if:
+					# 1. Original product was MOS (has custom uploads)
+					# 2. New product is still MOS (otherwise, images should be deleted via delete_old_images)
+					# 3. Dimensions (type/id/od/th) actually changed (not just brand or other fields)
+					# This prevents: 
+					#   - Renaming predefined images (non-MOS products)
+					#   - Renaming when switching brands (brand changes handled by delete_old_images separately)
 					try:
-						# Import helpers from UI to locate existing photo paths and build safe filenames
-						from ..ui.transaction_window import get_photo_path_by_type, create_safe_filename, get_photos_directory
-						# Build an original details dict and new details dict
-						orig_details = {
-							'type': original_type,
-							'id': original_id,
-							'od': original_od,
-							'th': original_th,
-							'brand': original_brand
-						}
-						new_details = {
-							'type': validated_data[0],
-							'id': validated_data[1],
-							'od': validated_data[2],
-							'th': validated_data[3],
-							'brand': validated_data[4]
-						}
-						photos_dir = get_photos_directory()
-						# Try to find an existing photo for the original details
-						src_path = get_photo_path_by_type(orig_details)
-						if not src_path:
-							# fallback: glob-match any file that begins with the original base
-							old_base = f"{original_type}-{sanitize_dimension_for_filename(original_id)}-{sanitize_dimension_for_filename(original_od)}-{sanitize_dimension_for_filename(original_th)}-{original_brand.replace('/', 'x').replace(' ', '_')}"
+						orig_is_mos = original_brand.upper() == "MOS"
+						new_is_mos = validated_data[4].upper() == "MOS"
+						
+						# Check if dimensions changed (independent of brand change)
+						dimensions_changed = (
+							original_type != validated_data[0] or
+							original_id != validated_data[1] or
+							original_od != validated_data[2] or
+							original_th != validated_data[3]
+						)
+						
+						# Only rename if: originally MOS, still MOS, AND dimensions changed
+						if orig_is_mos and new_is_mos and dimensions_changed:
+							from ..ui.transaction_window import get_photos_directory, create_safe_filename
+							orig_details = {
+								'type': original_type,
+								'id': original_id,
+								'od': original_od,
+								'th': original_th,
+								'brand': original_brand
+							}
+							new_details = {
+								'type': validated_data[0],
+								'id': validated_data[1],
+								'od': validated_data[2],
+								'th': validated_data[3],
+								'brand': validated_data[4]
+							}
+							photos_dir = get_photos_directory()
+							
+							# Build old filename pattern for MOS upload
+							safe_id = sanitize_dimension_for_filename(original_id)
+							safe_od = sanitize_dimension_for_filename(original_od)
+							safe_th = sanitize_dimension_for_filename(original_th)
+							safe_brand = original_brand.replace('/', 'x').replace(' ', '_')
+							old_base = f"{original_type}-{safe_id}-{safe_od}-{safe_th}-{safe_brand}"
+							
+							# Look for old MOS upload file
+							src_path = None
 							for ext in ('.jpg', '.jpeg', '.png'):
 								candidate = os.path.join(photos_dir, old_base + ext)
 								if os.path.exists(candidate):
 									src_path = candidate
 									break
-						# If we found a source, compute a new safe filename and move it
-						if src_path and os.path.exists(src_path):
-							# Determine extension
-							_, ext = os.path.splitext(src_path)
-							new_filename = create_safe_filename(new_details, ext)
-							target_path = os.path.join(photos_dir, new_filename)
-							try:
-								os.replace(src_path, target_path)
-							except Exception:
-								# If replace fails, attempt copy+remove as fallback
+							
+							# If found, rename to new dimensions
+							if src_path:
+								_, ext = os.path.splitext(src_path)
+								new_filename = create_safe_filename(new_details, ext)
+								target_path = os.path.join(photos_dir, new_filename)
 								try:
-									import shutil
-									shutil.copy2(src_path, target_path)
-									os.remove(src_path)
+									os.replace(src_path, target_path)
 								except Exception:
-									pass
+									# If replace fails, try copy+remove as fallback
+									try:
+										import shutil
+										shutil.copy2(src_path, target_path)
+										os.remove(src_path)
+									except Exception:
+										pass
 					except Exception:
-						# non-fatal
-							pass
+						# non-fatal: image renaming issues should not block product update
+						pass
 				except Exception:
-					# non-fatal: continue
+					# non-fatal: continue even if transaction update fails
 					pass
 			
 			conn.close()

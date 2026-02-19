@@ -15,7 +15,6 @@ from ..ui.mm import (
     should_uppercase_field,
 )
 from .gui_transaction_window import TransactionWindow
-from .gui_products import AdminPanel
 
 
 class InventoryApp(ctk.CTkFrame):
@@ -806,17 +805,22 @@ class InventoryApp(ctk.CTkFrame):
             callback(success)
 
     def open_admin_panel(self, return_to=None):
-        """Open admin panel after password validation"""
+        """Open admin panel after password validation.
+        
+        If Admin Panel already open, bring to front without password.
+        Otherwise, show password dialog first.
+        """
+        # Check if Admin Panel is already open
+        if self.controller and self.controller.is_admin_panel_open():
+            # Admin Panel already open - just bring to front without password
+            self.controller.show_admin_panel(self, on_close_callback=self.refresh_product_list)
+            return
+        
+        # Admin Panel not open - require password
         def on_password_result(success):
             if success:
-                current_frame_name = self.controller.get_current_frame_name()
-                current_frame = self.controller.frames[current_frame_name]
-                AdminPanel(
-                    self.controller.root, 
-                    current_frame, 
-                    self.controller, 
-                    on_close_callback=self.refresh_product_list
-                )
+                # Use controller's singleton method instead of direct instantiation
+                self.controller.show_admin_panel(self, on_close_callback=self.refresh_product_list)
         
         self.create_password_window(callback=on_password_result)
 
@@ -830,39 +834,59 @@ class InventoryApp(ctk.CTkFrame):
 
     def refresh_product_list(self, clear_filters=False):
         """Refresh the product display list"""
+        # Safety check: ensure frame and widgets still exist and are visible
+        try:
+            if not self.winfo_exists():
+                print("[MM] Frame no longer exists, skipping refresh")
+                return
+            # Check if frame is actually viewable (placed on screen and not hidden)
+            if not self.winfo_viewable():
+                print("[MM] Frame is hidden or not viewable, skipping refresh")
+                return
+            if not hasattr(self, 'tree') or not self.tree.winfo_exists():
+                print("[MM] Tree widget no longer exists, skipping refresh")
+                return
+        except Exception as e:
+            print(f"[MM] Error checking widget existence: {e}")
+            return
+        
         if clear_filters:
             self.clear_filters()
             return
 
-        # Clear existing items
-        self.tree.delete(*self.tree.get_children())
+        try:
+            # Clear existing items
+            self.tree.delete(*self.tree.get_children())
 
-        # Get filtered data
-        filters = {k: v.get().strip() for k, v in self.search_vars.items()}
-        display_data = build_products_display_data(filters, self.sort_by.get(), self.stock_filter.get())
+            # Get filtered data
+            filters = {k: v.get().strip() for k, v in self.search_vars.items()}
+            display_data = build_products_display_data(filters, self.sort_by.get(), self.stock_filter.get())
 
-        # Populate tree with alternating rows
-        for index, item in enumerate(display_data):
-            qty = item[4]
-            base_tag = get_stock_tag(qty)
-            # Format quantity for display (show ? for unknown stock)
-            from ..ui.mm import format_stock_display
-            qty_display = format_stock_display(qty)
-            # Create display row with formatted quantity
-            display_item = list(item[:6])
-            display_item[4] = qty_display  # Replace qty with formatted version
-            
-            # Always apply alternating background tag
-            alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
-            
-            # Apply both alternating tag and stock tag (stock tag provides text color)
-            if base_tag == "normal":
-                self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, "normal"))
-            else:
-                self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, base_tag))
+            # Populate tree with alternating rows
+            for index, item in enumerate(display_data):
+                qty = item[4]
+                base_tag = get_stock_tag(qty)
+                # Format quantity for display (show ? for unknown stock)
+                from ..ui.mm import format_stock_display
+                qty_display = format_stock_display(qty)
+                # Create display row with formatted quantity
+                display_item = list(item[:6])
+                display_item[4] = qty_display  # Replace qty with formatted version
+                
+                # Always apply alternating background tag
+                alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
+                
+                # Apply both alternating tag and stock tag (stock tag provides text color)
+                if base_tag == "normal":
+                    self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, "normal"))
+                else:
+                    self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, base_tag))
 
-        # Update status
-        self.status_label.configure(text=self._get_status_label_text(len(display_data)))
+            # Update status
+            self.status_label.configure(text=self._get_status_label_text(len(display_data)))
+        except Exception as e:
+            print(f"[MM] Error during refresh: {e}")
+            # Don't crash, just log the error
 
     def _apply_tree_tags_theme(self):
         """Apply tag colors for tree rows based on current theme/mode."""
@@ -908,8 +932,9 @@ class InventoryApp(ctk.CTkFrame):
         if self.controller:
             self.controller.show_transaction_window(details, self)
         else:
+            # Fallback: use self as the return target (close window on back)
             win = tk.Toplevel(self)
-            TransactionWindow(win, details, self)
+            TransactionWindow(win, details, self, "FALLBACK")
 
     def _on_tree_right_click(self, event):
         """Copy formatted product info to clipboard on right-click."""

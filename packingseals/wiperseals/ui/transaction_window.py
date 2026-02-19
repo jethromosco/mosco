@@ -307,13 +307,35 @@ def compress_and_save_image(source_path: str, target_path: str, max_size_mb: int
 
 
 def delete_old_images(details: Dict[str, Any]) -> None:
-    """Delete old image files for a product"""
+    """Delete old image files for a product.
+    
+    CRITICAL FIX: For MOS brand, includes brand in filename pattern.
+    For non-MOS brand, only looks for predefined images (which should NOT be deleted).
+    This ensures:
+    1. Old MOS uploaded images ARE deleted when switching away from MOS
+    2. Predefined non-MOS images are NEVER modified
+    """
     photos_dir = get_photos_directory()
-    base_old = get_existing_image_base(details)
-    for old_ext in [".jpg", ".jpeg", ".png"]:
-        old_path = os.path.join(photos_dir, base_old + old_ext)
-        if os.path.exists(old_path):
-            os.remove(old_path)
+    
+    # For MOS brand, try both with and without brand name (for backwards compatibility)
+    if details["brand"].upper() == "MOS":
+        safe_id = sanitize_dimension_for_filename(details['id'])
+        safe_od = sanitize_dimension_for_filename(details['od'])
+        safe_th = sanitize_dimension_for_filename(details['th'])
+        safe_brand = details['brand'].replace('/', 'x').replace(' ', '_')
+        
+        # Try MOS pattern: TYPE-ID-OD-TH-BRAND.ext
+        mos_base = f"{details['type']}-{safe_id}-{safe_od}-{safe_th}-{safe_brand}"
+        for old_ext in [".jpg", ".jpeg", ".png"]:
+            old_path = os.path.join(photos_dir, mos_base + old_ext)
+            if os.path.exists(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+    
+    # For non-MOS, NEVER delete anything - predefined images should not be touched
+    # This is critical to prevent accidentally modifying predefined images like db.jpg, tc.jpg, etc.
 
 
 def calculate_image_display_size(image_path: str, max_width: int, max_height: int) -> Tuple[int, int]:

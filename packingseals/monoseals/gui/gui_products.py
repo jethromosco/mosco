@@ -945,9 +945,17 @@ class AdminPanel:
     def refresh_all_tabs(self):
         self.refresh_products()
         if self.on_close_callback:
-            self.on_close_callback()
+            print("[ADMIN] Scheduling refresh callback with 250ms delay (refresh_all_tabs)")
+            self.win.after(250, self.on_close_callback)
 
     def on_closing(self):
+        # Clear singleton reference in controller
+        if self.controller:
+            try:
+                self.controller._clear_admin_panel()
+            except Exception:
+                pass
+        
         # Persist current selection to controller before closing
         try:
             if self.controller:
@@ -962,8 +970,10 @@ class AdminPanel:
                     self.controller.current_unit = unit
         except Exception:
             pass
+        # Schedule callback with delay to allow MM frame to become visible again before refresh
         if self.on_close_callback:
-            self.on_close_callback()
+            print("[ADMIN] Scheduling refresh callback with 250ms delay")
+            self.win.after(250, self.on_close_callback)
         self.win.destroy()
 
     def _handle_product_added(self, details):

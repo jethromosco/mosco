@@ -29,7 +29,6 @@ from ..ui.transaction_window import (
     validate_image_file,
     create_safe_filename,
     compress_and_save_image,
-    delete_old_images,
     get_photos_directory,
 )
 from theme import theme
@@ -52,6 +51,15 @@ class TransactionWindow(ctk.CTkFrame):
         self._build_ui()
         self._setup_bindings()
         theme.subscribe(self.apply_theme)
+        
+        # Bind to root window for shortcuts that must work even when entries are focused
+        root = self.winfo_toplevel()
+        root.bind("<Control-Key-1>", self._handle_shortcut_upload_photo)
+        root.bind("<Control-q>", self._handle_shortcut_edit_mode)
+        
+        # Track bindings for cleanup
+        self._root_bindings = ["<Control-Key-1>", "<Control-q>"]
+        self.bind("<Destroy>", self._cleanup_root_bindings)
 
         self.watermark_label = ctk.CTkLabel(
             self,
@@ -84,6 +92,45 @@ class TransactionWindow(ctk.CTkFrame):
         
     def _setup_bindings(self):
         self.bind("<Configure>", self._on_window_resize)
+        # Keyboard shortcuts are bound at root window level in __init__
+
+    def _cleanup_root_bindings(self, event=None):
+        """Clean up root window bindings when frame is destroyed"""
+        try:
+            root = self.winfo_toplevel()
+            # Clean up keyboard shortcuts
+            for binding in self._root_bindings:
+                root.unbind(binding)
+        except (tk.TclError, AttributeError):
+            pass
+
+    def _handle_shortcut_upload_photo(self, event=None):
+        """Keyboard shortcut: Ctrl+1 to upload photo
+        Only opens upload dialog if no photo already exists.
+        If photo exists, user should click thumbnail to manage it.
+        """
+        # Only allow upload if MOS brand AND no photo currently uploaded
+        if is_photo_upload_allowed(self.details):
+            if not os.path.exists(self.image_path):
+                self._upload_photo()
+        return "break"
+
+    def _handle_shortcut_edit_mode(self, event=None):
+        """Keyboard shortcut: Ctrl+Q to toggle edit mode"""
+        if not self.edit_mode:
+            self._toggle_edit_mode()
+        return "break"
+
+    def _validate_numeric_input(self, *args):
+        """Validate price input to contain only valid numeric characters"""
+        current = self.srp_var.get()
+        # Allow: digits, decimal point, and common currency symbols
+        filtered = ''.join(c for c in current if c.isdigit() or c == '.')
+        # Prevent multiple decimal points
+        if filtered.count('.') > 1:
+            filtered = filtered[:filtered.rfind('.')] + filtered[filtered.rfind('.')+1:].replace('.', '')
+        if current != filtered:
+            self.srp_var.set(filtered)
 
     def _on_window_resize(self, event=None):
         if hasattr(self, 'admin_btn') and self.admin_btn.winfo_exists():
@@ -140,11 +187,36 @@ class TransactionWindow(ctk.CTkFrame):
         self._create_logo_section()
 
     def _open_admin_panel(self):
-        # Minimal implementation to avoid AttributeError
-        # Extend as per your existing admin panel code
-        from .gui_products import AdminPanel
-        if self.controller:
-            AdminPanel(self.controller.root, self, self.controller, on_close_callback=lambda: None)
+        """Open admin panel after password validation.
+        
+        If Admin Panel already open, bring to front without password.
+        Otherwise, show password dialog first.
+        """
+        if not self.controller:
+            return
+        
+        # Create refresh callback to update both main_app and transaction window when admin closes
+        def on_admin_close():
+            # Refresh the main app's product list
+            if self.main_app and hasattr(self.main_app, 'refresh_product_list'):
+                self.main_app.refresh_product_list()
+            # Also refresh this transaction window's transaction list
+            if hasattr(self, '_load_transactions'):
+                self._load_transactions()
+        
+        # Check if Admin Panel is already open
+        if self.controller.is_admin_panel_open():
+            # Admin Panel already open - just bring to front without password
+            self.controller.show_admin_panel(self, on_close_callback=on_admin_close)
+            return
+        
+        # Admin Panel not open - require password
+        def on_password_result(success):
+            if success:
+                # Use controller's singleton method instead of direct instantiation
+                if self.controller:
+                    self.controller.show_admin_panel(self, on_close_callback=on_admin_close)
+        self._create_password_window(callback=on_password_result)
 
     def _create_password_window(self, callback=None):
         """Create admin access password modal consistent with InventoryApp style"""
@@ -308,44 +380,6 @@ class TransactionWindow(ctk.CTkFrame):
         window.destroy()
         if callback:
             callback(success)
-
-
-    def _open_admin_panel(self):
-        """Open admin panel after password validation"""
-        def on_password_result(success):
-            if success:
-                from .gui_products import AdminPanel
-                AdminPanel(self.controller.root, self, self.controller, on_close_callback=lambda: None)
-        self._create_password_window(callback=on_password_result)
-
-
-
-    def _check_password(self, entry, err_lbl, window, callback):
-        """Validate admin password, show error or close modal on success"""
-        from ..ui.mm import validate_admin_password
-        pw = entry.get().strip()
-        if validate_admin_password(pw):
-            self._close_password_window(window, callback, True)
-        else:
-            err_lbl.configure(text="❌ Incorrect password. Please try again.")
-            entry.delete(0, tk.END)
-            entry.focus()
-            window.after(3000, lambda: err_lbl.configure(text=""))
-
-
-    def _close_password_window(self, window, callback, success):
-        """Close password modal and notify caller with success boolean"""
-        window.destroy()
-        if callback:
-            callback(success)
-
-    def _open_admin_panel(self):
-        """Open admin panel after password validation"""
-        def on_password_result(success):
-            if success:
-                from .gui_products import AdminPanel
-                AdminPanel(self.controller.root, self, self.controller, on_close_callback=lambda: None)
-        self._create_password_window(callback=on_password_result)
 
     def _create_logo_section(self):
         for widget in self.logo_frame.winfo_children():
@@ -526,6 +560,8 @@ class TransactionWindow(ctk.CTkFrame):
 
     def _display_photo_placeholder(self):
         """Display photo placeholder with camera emoji"""
+        # Clear old image reference to prevent stale PhotoImage errors
+        self.image_thumbnail = None
         self.photo_label.configure(image=None, text="📷")
 
     def _load_photo(self):
@@ -994,171 +1030,201 @@ class TransactionWindow(ctk.CTkFrame):
             pass
 
     def set_details(self, details: Dict[str, Any], main_app):
-        self.details = details
-        self.main_app = main_app
-        self.srp_var.set(format_price_display(details['price']))
-        self.image_path = get_photo_path_by_type(self.details)
+        try:
+            self.details = details
+            self.main_app = main_app
+            self.srp_var.set(format_price_display(details['price']))
+            self.image_path = get_photo_path_by_type(self.details)
 
-        self._load_location()
-        self._load_transactions()
-        self._load_photo()
-        
-        # Schedule a refresh after a brief delay to ensure rendering is complete
-        # This fixes the issue where transaction history appears empty immediately after redirect
-        self.after(100, self._refresh_transaction_display)
+            self._load_location()
+            self._load_transactions()
+            self._load_photo()
+            
+            # Schedule a refresh after a brief delay to ensure rendering is complete
+            # This fixes the issue where transaction history appears empty immediately after redirect
+            self.after(100, self._refresh_transaction_display)
+        except Exception as e:
+            print(f"[TRANSACTION] Error in set_details: {e}")
+            import traceback
+            traceback.print_exc()
+            # Try to at least update the headers
+            try:
+                if hasattr(self, 'header_label'):
+                    self.header_label.configure(text=f"Error loading product: {str(e)}")
+            except Exception:
+                pass
 
     def _refresh_transaction_display(self):
         """Force refresh of transaction display - ensures data is shown after redirect"""
         try:
             if hasattr(self, 'tree') and hasattr(self, 'details'):
-                self._load_transactions()
-        except Exception:
-            pass
+                if self.tree.winfo_exists():
+                    self._load_transactions()
+        except Exception as e:
+            print(f"[TRANSACTION] Error in _refresh_transaction_display: {e}")
 
     def _load_transactions(self):
-        rows = load_transactions_records(self.details)
+        try:
+            # Verify frame and tree exist before loading
+            if not self.winfo_exists():
+                print("[TRANSACTION] Frame no longer exists, skipping _load_transactions")
+                return
+            if not hasattr(self, 'tree') or not self.tree.winfo_exists():
+                print("[TRANSACTION] Tree widget does not exist or is not valid")
+                return
+            
+            # Safety check: ensure details exist
+            if not hasattr(self, 'details') or not self.details:
+                print("[TRANSACTION] No product details, skipping _load_transactions")
+                return
+                
+            rows = load_transactions_records(self.details)
 
-        self.header_label.configure(text=create_header_text(self.details))
-        self.sub_header_label.configure(text=create_subtitle_text(self.details))
+            self.header_label.configure(text=create_header_text(self.details))
+            self.sub_header_label.configure(text=create_subtitle_text(self.details))
 
-        self.tree.delete(*self.tree.get_children())
+            self.tree.delete(*self.tree.get_children())
 
-        # Build running stock map (per-row) using new unknown stock logic
-        from ..ui.mm import apply_stock_transaction, format_stock_display
-        running_stock = 0
-        running_map = {}
-        for idx, row in enumerate(rows):
-            date, name, qty, cost, is_restock, brand = row
-            if is_restock == 2:
-                # Reset to actual count
-                running_stock = int(qty)
-            else:
-                # Apply transaction using the new unknown stock logic
-                is_restock_tx = (is_restock == 1)  # 1 = restock, 0 = sale
-                running_stock = apply_stock_transaction(running_stock, int(qty), is_restock_tx)
-            running_map[idx] = running_stock
-
-        # Identify fabrication pairs (same date and name: one restock + one sale)
-        groups = {}
-        for idx, row in enumerate(rows):
-            date, name, qty, cost, is_restock, brand = row
-            key = (date, name)
-            groups.setdefault(key, {'restocks': [], 'sales': []})
-            if is_restock == 1:
-                groups[key]['restocks'].append(idx)
-            elif is_restock == 0:
-                groups[key]['sales'].append(idx)
-
-        pairs = {}
-        for key, lists in groups.items():
-            rlist = lists['restocks']
-            slist = lists['sales']
-            # Pair greedily by order
-            count = min(len(rlist), len(slist))
-            for i in range(count):
-                r_idx = rlist[i]
-                s_idx = slist[i]
-                pairs[r_idx] = (r_idx, s_idx)
-                pairs[s_idx] = (r_idx, s_idx)
-
-        displayed = []
-        emitted = set()
-
-        def format_date(d):
-            try:
-                dt = datetime.strptime(d, "%Y-%m-%d")
-            except ValueError:
-                dt = datetime.strptime(d, "%m/%d/%y")
-            return dt.strftime("%m/%d/%y")
-
-        for idx, row in enumerate(rows):
-            if idx in emitted:
-                continue
-
-            if idx in pairs:
-                r_idx, s_idx = pairs[idx]
-                # Only emit once, pick the earlier index to preserve order
-                first_idx = min(r_idx, s_idx)
-                if idx != first_idx:
-                    continue
-                rrow = rows[r_idx]
-                srow = rows[s_idx]
-                # build merged display
-                date_str = format_date(rrow[0])
-                # qty_restock from the restock record
-                qty_restock = rrow[2] if rrow[4] == 1 else ""
-                cost_str = ""  # leave cost empty for merged fabrication rows
-                name = rrow[1]
-                qty_sold = abs(int(srow[2])) if srow[4] == 0 else ""
-                # prefer sale price if available
-                price_val = None
-                try:
-                    if srow[3] is not None:
-                        price_val = float(srow[3])
-                except (ValueError, TypeError):
-                    price_val = None
-                price_str = f"₱{price_val:.2f}" if price_val is not None else ""
-                later_idx = max(r_idx, s_idx)
-                stock_after = running_map.get(later_idx, "")
-                stock_after_display = format_stock_display(stock_after)  # Format for display
-                displayed.append(((date_str, qty_restock, cost_str, name, qty_sold, price_str, stock_after_display), 'gray'))
-                emitted.add(r_idx)
-                emitted.add(s_idx)
-            else:
-                # Unpaired row: format like summarize_running_stock
+            # Build running stock map (per-row) using new unknown stock logic
+            from ..ui.mm import apply_stock_transaction, format_stock_display
+            running_stock = 0
+            running_map = {}
+            for idx, row in enumerate(rows):
                 date, name, qty, cost, is_restock, brand = row
-                date_str = format_date(date)
-                qty_restock = ""
-                cost_str = ""
-                price_str = ""
-                display_qty = ""
-                if is_restock == 1:
-                    qty_restock = qty
-                    try:
-                        cost_value = float(cost) if cost is not None else 0.0
-                    except (ValueError, TypeError):
-                        cost_value = 0.0
-                    # Display cost as integer centavos for reference (e.g., 99.00 -> 9900)
-                    cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
-                elif is_restock == 0:
-                    display_qty = abs(int(qty))
-                    try:
-                        price_val = float(cost) if cost is not None else 0.0
-                    except (ValueError, TypeError):
-                        price_val = 0.0
-                    price_str = format_price_display(price_val) if price_val is not None else ""
-                elif is_restock == 2:
-                    # Actual transaction: optional cost shown in cost column as centavos integer
-                    try:
-                        cost_value = float(cost) if cost is not None else 0.0
-                    except (ValueError, TypeError):
-                        cost_value = 0.0
-                    cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
-                stock_after = running_map.get(idx, "")
-                stock_after_display = format_stock_display(stock_after)  # Format for display
-                tag = get_transaction_tag(qty_restock, price_str)
                 if is_restock == 2:
-                    tag = 'green'
-                displayed.append(((date_str, qty_restock, cost_str, name, display_qty, price_str, stock_after_display), tag))
+                    # Reset to actual count
+                    running_stock = int(qty)
+                else:
+                    # Apply transaction using the new unknown stock logic
+                    is_restock_tx = (is_restock == 1)  # 1 = restock, 0 = sale
+                    running_stock = apply_stock_transaction(running_stock, int(qty), is_restock_tx)
+                running_map[idx] = running_stock
 
-        def custom_sort_key(item):
-            vals, tag = item
-            dt = datetime.strptime(vals[0], "%m/%d/%y")
-            tag_priority = {'blue': 0, 'gray': 0, 'red': 1, 'green': 2}
-            return (dt, tag_priority.get(tag, 99))
+            # Identify fabrication pairs (same date and name: one restock + one sale)
+            groups = {}
+            for idx, row in enumerate(rows):
+                date, name, qty, cost, is_restock, brand = row
+                key = (date, name)
+                groups.setdefault(key, {'restocks': [], 'sales': []})
+                if is_restock == 1:
+                    groups[key]['restocks'].append(idx)
+                elif is_restock == 0:
+                    groups[key]['sales'].append(idx)
 
-        displayed.sort(key=custom_sort_key)
+            pairs = {}
+            for key, lists in groups.items():
+                rlist = lists['restocks']
+                slist = lists['sales']
+                # Pair greedily by order
+                count = min(len(rlist), len(slist))
+                for i in range(count):
+                    r_idx = rlist[i]
+                    s_idx = slist[i]
+                    pairs[r_idx] = (r_idx, s_idx)
+                    pairs[s_idx] = (r_idx, s_idx)
 
-        for index, (vals, tag) in enumerate(displayed):
-            alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
-            self.tree.insert("", "end", values=vals, tags=(alt_tag, tag))
+            displayed = []
+            emitted = set()
 
-        # Add auto-scroll to bottom to show latest date
-        if self.tree.get_children():
-            last_item = self.tree.get_children()[-1]
-            self.tree.see(last_item)
+            def format_date(d):
+                try:
+                    dt = datetime.strptime(d, "%Y-%m-%d")
+                except ValueError:
+                    dt = datetime.strptime(d, "%m/%d/%y")
+                return dt.strftime("%m/%d/%y")
 
-        self._update_stock_display(rows)
+            for idx, row in enumerate(rows):
+                if idx in emitted:
+                    continue
+
+                if idx in pairs:
+                    r_idx, s_idx = pairs[idx]
+                    # Only emit once, pick the earlier index to preserve order
+                    first_idx = min(r_idx, s_idx)
+                    if idx != first_idx:
+                        continue
+                    rrow = rows[r_idx]
+                    srow = rows[s_idx]
+                    # build merged display
+                    date_str = format_date(rrow[0])
+                    # qty_restock from the restock record
+                    qty_restock = rrow[2] if rrow[4] == 1 else ""
+                    cost_str = ""  # leave cost empty for merged fabrication rows
+                    name = rrow[1]
+                    qty_sold = abs(int(srow[2])) if srow[4] == 0 else ""
+                    # prefer sale price if available
+                    price_val = None
+                    try:
+                        if srow[3] is not None:
+                            price_val = float(srow[3])
+                    except (ValueError, TypeError):
+                        price_val = None
+                    price_str = f"₱{price_val:.2f}" if price_val is not None else ""
+                    later_idx = max(r_idx, s_idx)
+                    stock_after = running_map.get(later_idx, "")
+                    stock_after_display = format_stock_display(stock_after)  # Format for display
+                    displayed.append(((date_str, qty_restock, cost_str, name, qty_sold, price_str, stock_after_display), 'gray'))
+                    emitted.add(r_idx)
+                    emitted.add(s_idx)
+                else:
+                    # Unpaired row: format like summarize_running_stock
+                    date, name, qty, cost, is_restock, brand = row
+                    date_str = format_date(date)
+                    qty_restock = ""
+                    cost_str = ""
+                    price_str = ""
+                    display_qty = ""
+                    if is_restock == 1:
+                        qty_restock = qty
+                        try:
+                            cost_value = float(cost) if cost is not None else 0.0
+                        except (ValueError, TypeError):
+                            cost_value = 0.0
+                        # Display cost as integer centavos for reference (e.g., 99.00 -> 9900)
+                        cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
+                    elif is_restock == 0:
+                        display_qty = abs(int(qty))
+                        try:
+                            price_val = float(cost) if cost is not None else 0.0
+                        except (ValueError, TypeError):
+                            price_val = 0.0
+                        price_str = format_price_display(price_val) if price_val is not None else ""
+                    elif is_restock == 2:
+                        # Actual transaction: optional cost shown in cost column as centavos integer
+                        try:
+                            cost_value = float(cost) if cost is not None else 0.0
+                        except (ValueError, TypeError):
+                            cost_value = 0.0
+                        cost_str = f"₱{int(cost_value * 100)}" if cost_value > 0 else ""
+                    stock_after = running_map.get(idx, "")
+                    stock_after_display = format_stock_display(stock_after)  # Format for display
+                    tag = get_transaction_tag(qty_restock, price_str)
+                    if is_restock == 2:
+                        tag = 'green'
+                    displayed.append(((date_str, qty_restock, cost_str, name, display_qty, price_str, stock_after_display), tag))
+
+            def custom_sort_key(item):
+                vals, tag = item
+                dt = datetime.strptime(vals[0], "%m/%d/%y")
+                tag_priority = {'blue': 0, 'gray': 0, 'red': 1, 'green': 2}
+                return (dt, tag_priority.get(tag, 99))
+
+            displayed.sort(key=custom_sort_key)
+
+            for index, (vals, tag) in enumerate(displayed):
+                alt_tag = "alt_even" if (index % 2 == 0) else "alt_odd"
+                self.tree.insert("", "end", values=vals, tags=(alt_tag, tag))
+
+            # Add auto-scroll to bottom to show latest date
+            if self.tree.get_children():
+                last_item = self.tree.get_children()[-1]
+                self.tree.see(last_item)
+
+            self._update_stock_display(rows)
+        except Exception as e:
+            print(f"[TRANSACTION] Error in _load_transactions: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _update_stock_display(self, rows):
         low, warn = get_thresholds(self.details)
@@ -1174,6 +1240,54 @@ class TransactionWindow(ctk.CTkFrame):
         self.notes_var.set(notes)
 
     # ==================== EDIT MODE ====================
+    def _on_location_change(self, *args):
+        """Convert location text to uppercase in real-time"""
+        current = self.location_var.get()
+        if current != current.upper():
+            self.location_var.set(current.upper())
+
+    def _on_notes_change(self, *args):
+        """Convert notes text to uppercase in real-time"""
+        current = self.notes_var.get()
+        if current != current.upper():
+            self.notes_var.set(current.upper())
+
+    def _handle_edit_enter_key(self, event=None):
+        """Save and exit edit mode when Enter is pressed"""
+        if self.edit_mode:
+            self._exit_edit_mode()
+            self.edit_mode = False
+        return "break"  # Prevent default Tkinter behavior
+
+    def _handle_edit_esc_key(self, event=None):
+        """Cancel edit mode without saving when Esc is pressed"""
+        if self.edit_mode:
+            # Restore original values before exiting
+            self._restore_original_values()
+            self._disable_edit_fields()
+            self.edit_mode = False
+            # Update button appearance back to Edit
+            self.edit_btn.configure(
+                text="Edit",
+                fg_color="#4B5563",
+                hover_color="#6B7280"
+            )
+            # Switch back to price display
+            self.srp_entry.pack_forget()
+            self.srp_display.pack(pady=(10, 0), anchor="center")
+        return "break"  # Prevent default Tkinter behavior
+
+    def _restore_original_values(self):
+        """Restore original values from database"""
+        location, notes = get_location_and_notes(self.details)
+        self.location_var.set(location or "")
+        self.notes_var.set(notes or "")
+
+    def _disable_edit_fields(self):
+        """Disable edit fields"""
+        self.location_entry.configure(state="readonly")
+        self.notes_entry.configure(state="readonly")
+
     def _toggle_edit_mode(self):
         """Toggle between edit and view modes"""
         if not self.edit_mode:
@@ -1187,6 +1301,33 @@ class TransactionWindow(ctk.CTkFrame):
         self.location_entry.configure(state="normal")
         self.notes_entry.configure(state="normal")
 
+        # Setup auto-capitalize for location and notes fields
+        self._location_trace_id = self.location_var.trace("w", self._on_location_change)
+        self._notes_trace_id = self.notes_var.trace("w", self._on_notes_change)
+        
+        # Setup numeric validation for price field
+        self._srp_trace_id = self.srp_var.trace("w", self._validate_numeric_input)
+
+        # Bind Enter key to save (for all editable fields)
+        self.location_entry.bind("<Return>", self._handle_edit_enter_key)
+        self.notes_entry.bind("<Return>", self._handle_edit_enter_key)
+        self.srp_entry.bind("<Return>", self._handle_edit_enter_key)
+
+        # Bind Esc key to cancel (for all editable fields)
+        self.location_entry.bind("<Escape>", self._handle_edit_esc_key)
+        self.notes_entry.bind("<Escape>", self._handle_edit_esc_key)
+        self.srp_entry.bind("<Escape>", self._handle_edit_esc_key)
+        
+        # Setup Tab navigation: NOTES → PRICE → LOCATION
+        self.notes_entry.bind("<Tab>", lambda e: self._focus_next_field("price"))
+        self.srp_entry.bind("<Tab>", lambda e: self._focus_next_field("location"))
+        self.location_entry.bind("<Tab>", lambda e: self._focus_next_field("notes"))
+        
+        # Setup Shift+Tab for reverse navigation: LOCATION → PRICE → NOTES
+        self.notes_entry.bind("<Shift-Tab>", lambda e: self._focus_prev_field("location"))
+        self.srp_entry.bind("<Shift-Tab>", lambda e: self._focus_prev_field("notes"))
+        self.location_entry.bind("<Shift-Tab>", lambda e: self._focus_prev_field("price"))
+
         # Switch to price entry
         self.srp_display.pack_forget()
         self.srp_entry.pack(anchor="center")
@@ -1194,6 +1335,10 @@ class TransactionWindow(ctk.CTkFrame):
         # Remove currency symbol for editing
         current_price = self.srp_var.get().replace("₱", "").strip()
         self.srp_var.set(current_price)
+
+        # Set focus to NOTES field first (as per requirements)
+        self.notes_entry.focus_set()
+        self.notes_entry.select_range(0, tk.END)
 
         # Update button appearance
         self.edit_btn.configure(
@@ -1204,6 +1349,37 @@ class TransactionWindow(ctk.CTkFrame):
 
     def _exit_edit_mode(self):
         """Exit edit mode and save changes"""
+        # Remove trace callbacks before exiting to avoid re-triggering
+        try:
+            self.location_var.trace_remove("write", self._location_trace_id)
+        except (tk.TclError, AttributeError):
+            pass
+        try:
+            self.notes_var.trace_remove("write", self._notes_trace_id)
+        except (tk.TclError, AttributeError):
+            pass
+        try:
+            self.srp_var.trace_remove("write", self._srp_trace_id)
+        except (tk.TclError, AttributeError):
+            pass
+
+        # Unbind keys
+        try:
+            self.location_entry.unbind("<Return>")
+            self.location_entry.unbind("<Escape>")
+            self.location_entry.unbind("<Tab>")
+            self.location_entry.unbind("<Shift-Tab>")
+            self.notes_entry.unbind("<Return>")
+            self.notes_entry.unbind("<Escape>")
+            self.notes_entry.unbind("<Tab>")
+            self.notes_entry.unbind("<Shift-Tab>")
+            self.srp_entry.unbind("<Return>")
+            self.srp_entry.unbind("<Escape>")
+            self.srp_entry.unbind("<Tab>")
+            self.srp_entry.unbind("<Shift-Tab>")
+        except tk.TclError:
+            pass
+
         self._save_all_changes()
 
         self.location_entry.configure(state="readonly")
@@ -1219,6 +1395,26 @@ class TransactionWindow(ctk.CTkFrame):
             fg_color="#4B5563",
             hover_color="#6B7280"
         )
+
+    def _focus_next_field(self, current_field):
+        """Move focus to next field in Tab order"""
+        if current_field == "notes":
+            self.srp_entry.focus_set()
+        elif current_field == "price":
+            self.location_entry.focus_set()
+        elif current_field == "location":
+            self.notes_entry.focus_set()
+        return "break"
+
+    def _focus_prev_field(self, current_field):
+        """Move focus to previous field in Shift+Tab order"""
+        if current_field == "notes":
+            self.location_entry.focus_set()
+        elif current_field == "price":
+            self.notes_entry.focus_set()
+        elif current_field == "location":
+            self.srp_entry.focus_set()
+        return "break"
 
     def _save_all_changes(self):
         """Save all changes made in edit mode"""
@@ -1400,8 +1596,9 @@ class TransactionWindow(ctk.CTkFrame):
                 messagebox.showerror("Error", "Failed to process image. Please try again.")
                 return
 
-            # Clean up old images before setting new one
-            delete_old_images(self.details)
+            # Image saved successfully - no need to call delete_old_images() here
+            # delete_old_images() should only be called when filename pattern changes
+            # (dimensions/brand change), which is handled in prod_aed.py update_product()
 
             self.image_path = save_path
             self._load_photo()
@@ -1448,23 +1645,11 @@ class TransactionWindow(ctk.CTkFrame):
                 try:
                     os.remove(self.image_path)
                     self.image_path = ""  # reset internally
+                    # Clear image thumbnail reference before recreating widget
+                    self.image_thumbnail = None
                     # Directly show placeholder forcing update
                     self.photo_label.configure(image=None, text="📷")
                     self.photo_label.image = None
-                    # Optionally destroy and recreate the label
-                    self.photo_label.destroy()
-                    # Recreate photo label widget
-                    photo_frame = self.photo_label.master
-                    self.photo_label = ctk.CTkLabel(
-                        photo_frame,
-                        text="📷",
-                        font=("Poppins", 48),
-                        text_color=theme.get("muted"),
-                        cursor="hand2",
-                        anchor="center"
-                    )
-                    self.photo_label.pack(fill="both", expand=True)
-                    self.photo_label.bind("<Button-1>", self._photo_label_clicked)
                 except Exception as e:
                     messagebox.showerror("Error", f"Failed to delete photo: {str(e)}")
 

@@ -134,8 +134,28 @@ class TransactionFormHandler:
                     except Exception:
                         pass
             if self.logic.delete_transactions(list(expanded)):
+                # Refresh admin panel's own transaction tab
                 if self.on_refresh_callback:
                     self.on_refresh_callback()
+                # CRITICAL: Schedule refresh of the calling app (TransactionWindow) if it's open
+                # Use scheduled callback to ensure window is fully visible and widgets properly initialized
+                try:
+                    parent_tab = getattr(self.parent_frame, '_transaction_tab_ref', None)
+                    if parent_tab is not None:
+                        main_app = getattr(parent_tab, 'main_app', None)
+                        if main_app and hasattr(main_app, '_load_transactions') and hasattr(main_app, 'after'):
+                            # Schedule refresh on main event loop to ensure proper timing
+                            def refresh_transaction_window():
+                                try:
+                                    if main_app.winfo_exists():
+                                        print("[DELETE] Refreshing TransactionWindow after transaction delete")
+                                        main_app._load_transactions()
+                                except Exception as e:
+                                    print(f"[DELETE] Error refreshing TransactionWindow: {e}")
+                            # Use 100ms delay to let widgets settle
+                            main_app.after(100, refresh_transaction_window)
+                except Exception as e:
+                    print(f"[TRANSACTION DELETE] Error setting up TransactionWindow refresh: {e}")
             confirm_window.destroy()
 
         def cancel_delete():
