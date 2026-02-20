@@ -26,6 +26,9 @@ class InventoryApp(ctk.CTkFrame):
         # Default return target for back button
         self.return_to = "HomePage"
         
+        # CRITICAL: Flag to defer refresh until frame is visible
+        self._needs_refresh_on_show = False
+        
         # Detect category from module path for consistency
         self._category_name = self._detect_category()
 
@@ -809,18 +812,53 @@ class InventoryApp(ctk.CTkFrame):
         
         If Admin Panel already open, bring to front without password.
         Otherwise, show password dialog first.
+        
+        CRITICAL: Uses SAME callback pattern as TransactionWindow:
+        - Creates defensive closure that checks frame state
+        - Wraps all refresh logic in try/except
+        - Safely handles frame existence/destruction
         """
+        if not self.controller:
+            return
+        
+        # Create refresh callback with DEFENSIVE checks (TransactionWindow pattern)
+        def on_admin_close():
+            print(f"[MM-ADMIN-CALLBACK] Executing admin close callback")
+            # DEFENSIVE: Check if MM frame still exists before executing
+            try:
+                mm_exists = self.winfo_exists()
+                print(f"[MM-ADMIN-CALLBACK] MM exists: {mm_exists}")
+                if not mm_exists:
+                    print("[MM] MM frame destroyed, skipping callback")
+                    return
+            except Exception:
+                print("[MM] MM frame in invalid state, skipping callback")
+                return
+            
+            try:
+                # CRITICAL FIX: Don't refresh immediately. Instead, set flag for on_frame_show().
+                # Reason: MM might be hidden under TransactionWindow right now.
+                # Tree widget updates in hidden frames don't render properly.
+                # When MM becomes visible again, on_frame_show() will check this flag and refresh.
+                print("[MM-ADMIN-CALLBACK] Setting _needs_refresh_on_show flag")
+                self._needs_refresh_on_show = True
+            except Exception as e:
+                print(f"[MM-ADMIN-CALLBACK] Error in callback: {e}")
+        
         # Check if Admin Panel is already open
-        if self.controller and self.controller.is_admin_panel_open():
+        if self.controller.is_admin_panel_open():
             # Admin Panel already open - just bring to front without password
-            self.controller.show_admin_panel(self, on_close_callback=self.refresh_product_list)
+            # CRITICAL: Pass self (MM frame), on_close_callback that refreshes MM
+            self.controller.show_admin_panel(self, on_close_callback=on_admin_close)
             return
         
         # Admin Panel not open - require password
         def on_password_result(success):
             if success:
                 # Use controller's singleton method instead of direct instantiation
-                self.controller.show_admin_panel(self, on_close_callback=self.refresh_product_list)
+                if self.controller:
+                    # CRITICAL: Pass self (MM frame) with defensive callback
+                    self.controller.show_admin_panel(self, on_close_callback=on_admin_close)
         
         self.create_password_window(callback=on_password_result)
 
@@ -834,15 +872,12 @@ class InventoryApp(ctk.CTkFrame):
 
     def refresh_product_list(self, clear_filters=False):
         """Refresh the product display list"""
-        # Safety check: ensure frame and widgets still exist and are visible
+        # Safety check: ensure frame and widgets still exist
         try:
             if not self.winfo_exists():
                 print("[MM] Frame no longer exists, skipping refresh")
                 return
-            # Check if frame is actually viewable (placed on screen and not hidden)
-            if not self.winfo_viewable():
-                print("[MM] Frame is hidden or not viewable, skipping refresh")
-                return
+            # Check if tree widget exists - this is the critical check
             if not hasattr(self, 'tree') or not self.tree.winfo_exists():
                 print("[MM] Tree widget no longer exists, skipping refresh")
                 return
@@ -886,6 +921,8 @@ class InventoryApp(ctk.CTkFrame):
             self.status_label.configure(text=self._get_status_label_text(len(display_data)))
         except Exception as e:
             print(f"[MM] Error during refresh: {e}")
+            import traceback
+            traceback.print_exc()
             # Don't crash, just log the error
 
     def _apply_tree_tags_theme(self):
@@ -1090,6 +1127,38 @@ class InventoryApp(ctk.CTkFrame):
             print(f"Error applying theme: {e}")
 
     def on_frame_show(self):
-        """Called when this frame is shown - refresh theme-dependent styles"""
+        """Called when this frame is shown - refresh theme-dependent styles and validate state"""
+        print(f"[MM-LIFECYCLE] on_frame_show() CALLED - MM is now ACTIVE")
+        
+        # Ensure main_content is properly packed and visible
+        try:
+            if hasattr(self, 'main_content') and self.main_content.winfo_exists():
+                print(f"[MM-LIFECYCLE] main_content exists")
+                # Force main_content to be packed if it somehow got off-screen
+                if not self.main_content.winfo_viewable():
+                    print(f"[MM-LIFECYCLE] WARNING: main_content NOT viewable, attempting fix...")
+                    # Try to re-pack it or lift it
+                    try:
+                        self.main_content.lift()
+                        self.main_content.pack(fill="both", expand=True, pady=(170, 20), padx=20)
+                        print(f"[MM-LIFECYCLE] main_content fixed")
+                    except Exception:
+                        # Widget might already be packed, that's OK
+                        pass
+        except Exception as e:
+            print(f"[MM] Error validating main_content state: {e}")
+        
+        print(f"[MM-LIFECYCLE] Calling _setup_treeview_style()")
         self._setup_treeview_style()
-        self.refresh_product_list()
+        
+        # CRITICAL FIX: Check if Admin panel made changes while MM was hidden.
+        # Deferred refresh pattern: set in admin callback, execute here when frame is visible.
+        if getattr(self, '_needs_refresh_on_show', False):
+            print(f"[MM-LIFECYCLE] DEFERRED REFRESH: Admin made changes, refreshing now that MM is visible")
+            self._needs_refresh_on_show = False
+            self.refresh_product_list()
+        else:
+            print(f"[MM-LIFECYCLE] No deferred refresh needed, calling refresh_product_list()")
+            self.refresh_product_list()
+        
+        print(f"[MM-LIFECYCLE] on_frame_show() COMPLETE")

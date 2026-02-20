@@ -248,42 +248,59 @@ class AppController:
 
     def show_frame(self, page_name):
         """Show a frame with smooth transition animation"""
-        # Get currently visible frame
-        current_frame = None
-        for frame in self.frames.values():
+        # Get ALL currently visible frames and find the topmost one
+        # The topmost frame is the last one in iteration (most recently placed)
+        viewable_frames = []
+        for frame_name, frame in self.frames.items():
             try:
                 if frame.winfo_viewable():
-                    current_frame = frame
-                    break
+                    viewable_frames.append((frame_name, frame))
             except Exception:
                 pass
         
-        # Hide current frame with fade-out
-        if current_frame:
-            current_frame.place_forget()
+        # Hide current frame (the topmost/most recent one)
+        if viewable_frames:
+            current_frame_name, current_frame = viewable_frames[-1]
+            try:
+                current_frame.place_forget()
+            except Exception as e:
+                print(f"[FRAME] Error hiding frame {current_frame_name}: {e}")
+        else:
+            current_frame = None
         
         # Show the requested frame with fade-in
         if page_name in self.frames:
             frame = self.frames[page_name]
-            # Ensure frame is placed before updating
-            frame.place(x=0, y=0, relwidth=1, relheight=1)
-            frame.lift()
-            # Use after to ensure smooth rendering on the next frame
-            self.root.after(1, lambda: frame.update_idletasks())
-            # Schedule frame's on_frame_show hook ONLY for InventoryApp frames (not TransactionWindow or Coming Soon)
-            # Check: must have on_frame_show method AND be named InventoryApp (not TransactionWindow)
-            if (hasattr(frame, 'on_frame_show') and callable(frame.on_frame_show) and 
-                frame.__class__.__name__ == 'InventoryApp'):
-                def safe_on_frame_show():
+            try:
+                # Ensure frame is placed before updating
+                frame.place(x=0, y=0, relwidth=1, relheight=1)
+                frame.lift()
+                
+                # CRITICAL: Call update_idletasks TWICE to ensure all widgets are realized
+                # First call ensures widgets exist, second ensures they're properly laid out
+                frame.update_idletasks()
+                frame.update_idletasks()
+                
+                # Schedule frame's on_frame_show hook ONLY for InventoryApp frames
+                # Call immediately (not delayed) to refresh content right away
+                # Check: must have on_frame_show method AND be named InventoryApp
+                if (hasattr(frame, 'on_frame_show') and callable(frame.on_frame_show) and 
+                    frame.__class__.__name__ == 'InventoryApp'):
                     try:
-                        if frame.winfo_exists() and hasattr(frame, 'on_frame_show'):
-                            print(f"[FRAME] Calling on_frame_show for {page_name}")
+                        if frame.winfo_exists():
+                            print(f"[FRAME] Calling on_frame_show immediately for {page_name}")
                             frame.on_frame_show()
                     except Exception as e:
                         print(f"[FRAME] Error in on_frame_show for {page_name}: {e}")
-                # Use 150ms delay to ensure full widget initialization and rendering before calling refresh
-                print(f"[FRAME] Scheduling on_frame_show for {page_name} after 150ms")
-                self.root.after(150, safe_on_frame_show)
+                        # If on_frame_show failed, try refresh_product_list directly as fallback
+                        try:
+                            if hasattr(frame, 'refresh_product_list'):
+                                print(f"[FRAME] Fallback: calling refresh_product_list directly")
+                                frame.refresh_product_list()
+                        except Exception as e2:
+                            print(f"[FRAME] Fallback refresh also failed: {e2}")
+            except Exception as e:
+                print(f"[FRAME] Error placing/showing frame {page_name}: {e}")
         
         # Update window title based on current frame
         if page_name == "HomePage":
@@ -377,12 +394,12 @@ class AppController:
                     loaded = True
                     loaded_module = InventoryClass
                     loaded_path = mod_path
-                    print(f"[CONTEXT] ✓ Found InventoryApp in {mod_path}")
+                    print(f"[CONTEXT] Found InventoryApp in {mod_path}")
                     break
                 else:
-                    print(f"[CONTEXT] ✗ No InventoryApp in {mod_path}")
+                    print(f"[CONTEXT] No InventoryApp in {mod_path}")
             except Exception as e:
-                print(f"[CONTEXT] ✗ Failed to import {mod_path}: {type(e).__name__}")
+                print(f"[CONTEXT] Failed to import {mod_path}: {type(e).__name__}")
                 continue
 
         # Try fallbacks if primary candidates failed
@@ -413,10 +430,10 @@ class AppController:
                         loaded = True
                         loaded_module = InventoryClass
                         loaded_path = mod_path
-                        print(f"[CONTEXT] ✓ Found InventoryApp in fallback {mod_path}")
+                        print(f"[CONTEXT] Found InventoryApp in fallback {mod_path}")
                         break
                 except Exception as e:
-                    print(f"[CONTEXT] ✗ Fallback failed {mod_path}: {type(e).__name__}")
+                    print(f"[CONTEXT] Fallback failed {mod_path}: {type(e).__name__}")
                     continue
 
         # Create context object (this is authoritative)
@@ -432,7 +449,7 @@ class AppController:
                 reason="Module loaded successfully",
                 module_path=loaded_path
             )
-            print(f"[CONTEXT] ✓ {context}")
+            print(f"[CONTEXT] {context}")
             self.current_context = context
             
             # Load and show the InventoryApp
@@ -449,9 +466,9 @@ class AppController:
                     
                     self.frames[frame_key] = frame
                     frame.place(x=0, y=0, relwidth=1, relheight=1)
-                    print(f"[CONTEXT] ✓ Created and placed InventoryApp frame (return_to={frame.return_to})")
+                    print(f"[CONTEXT] Created and placed InventoryApp frame (return_to={frame.return_to})")
                 except Exception as e:
-                    print(f"[CONTEXT] ✗ Failed to create InventoryApp: {e}")
+                    print(f"[CONTEXT] Failed to create InventoryApp: {e}")
                     # Fall through to Coming Soon
                     context = create_context(
                         category=category,
@@ -478,7 +495,7 @@ class AppController:
                 coming_soon=True,
                 reason="No implementation found"
             )
-            print(f"[CONTEXT] ✗ {context}")
+            print(f"[CONTEXT] {context}")
             self.current_context = context
             self.show_coming_soon(f"{category} {subcategory or ''} {unit or ''}".strip())
             return context
@@ -599,7 +616,16 @@ class AppController:
     def show_transaction_window(self, details, main_app, return_to=None):
         if "TransactionWindow" in self.frames:
             try:
-                self.frames["TransactionWindow"].destroy()
+                old_frame = self.frames["TransactionWindow"]
+                # CRITICAL: Cancel any pending admin close callback before destroying frame
+                if hasattr(old_frame, '_admin_close_callback_id') and old_frame._admin_close_callback_id is not None:
+                    try:
+                        old_frame.after_cancel(old_frame._admin_close_callback_id)
+                        print("[FRAME] Cancelled pending callback in old TransactionWindow")
+                        old_frame._admin_close_callback_id = None
+                    except Exception:
+                        pass
+                old_frame.destroy()
             except Exception:
                 pass
         if not return_to:

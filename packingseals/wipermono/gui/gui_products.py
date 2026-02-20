@@ -945,8 +945,22 @@ class AdminPanel:
     def refresh_all_tabs(self):
         self.refresh_products()
         if self.on_close_callback:
-            print("[ADMIN] Scheduling refresh callback with 250ms delay (refresh_all_tabs)")
-            self.win.after(250, self.on_close_callback)
+            # Execute callback immediately (synchronous) instead of with delay
+            # This prevents race condition where frame is destroyed before callback runs
+            self._safe_execute_callback()
+
+    def _safe_execute_callback(self):
+        """Execute callback safely with frame existence checks"""
+        if self.on_close_callback:
+            try:
+                # Verify AdminPanel window still exists before executing
+                if not self.win.winfo_exists():
+                    print("[ADMIN] AdminPanel window destroyed, skipping callback")
+                    return
+                print("[ADMIN] Executing admin close callback (synchronous)")
+                self.on_close_callback()
+            except Exception as e:
+                print(f"[ADMIN] Error executing callback: {e}")
 
     def on_closing(self):
         # Clear singleton reference in controller
@@ -970,10 +984,13 @@ class AdminPanel:
                     self.controller.current_unit = unit
         except Exception:
             pass
-        # Schedule callback with delay to allow MM frame to become visible again before refresh
+        
+        # CRITICAL FIX: Execute callback BEFORE destroying window
+        # This ensures frame still exists when callback tries to refresh it
         if self.on_close_callback:
-            print("[ADMIN] Scheduling refresh callback with 250ms delay")
-            self.win.after(250, self.on_close_callback)
+            print("[ADMIN] Executing refresh callback before window destruction")
+            self._safe_execute_callback()
+        
         self.win.destroy()
 
     def _handle_product_added(self, details):

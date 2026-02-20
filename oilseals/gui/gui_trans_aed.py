@@ -143,19 +143,32 @@ class TransactionFormHandler:
                     parent_tab = getattr(self.parent_frame, '_transaction_tab_ref', None)
                     if parent_tab is not None:
                         main_app = getattr(parent_tab, 'main_app', None)
-                        if main_app and hasattr(main_app, '_load_transactions') and hasattr(main_app, 'after'):
-                            # Schedule refresh on main event loop to ensure proper timing
-                            def refresh_transaction_window():
-                                try:
-                                    if main_app.winfo_exists():
-                                        print("[DELETE] Refreshing TransactionWindow after transaction delete")
-                                        main_app._load_transactions()
-                                except Exception as e:
-                                    print(f"[DELETE] Error refreshing TransactionWindow: {e}")
-                            # Use 100ms delay to let widgets settle
-                            main_app.after(100, refresh_transaction_window)
+                        if main_app and hasattr(main_app, 'winfo_exists'):
+                            # TransactionWindow has _load_transactions method
+                            if hasattr(main_app, '_load_transactions') and callable(getattr(main_app, '_load_transactions')):
+                                def refresh_transaction_window():
+                                    try:
+                                        if main_app.winfo_exists():
+                                            print("[DELETE] Refreshing TransactionWindow after transaction delete")
+                                            main_app._load_transactions()
+                                    except Exception as e:
+                                        print(f"[DELETE] Error refreshing TransactionWindow: {e}")
+                                # Use 50ms delay to let widgets settle - shorter delay for responsiveness
+                                if hasattr(main_app, 'after'):
+                                    main_app.after(50, refresh_transaction_window)
+                            # InventoryApp has refresh_product_list method - refresh product counts
+                            elif hasattr(main_app, 'refresh_product_list') and callable(getattr(main_app, 'refresh_product_list')):
+                                def refresh_inventory_app():
+                                    try:
+                                        if main_app.winfo_exists():
+                                            print("[DELETE] Refreshing InventoryApp after transaction delete")
+                                            main_app.refresh_product_list()
+                                    except Exception as e:
+                                        print(f"[DELETE] Error refreshing InventoryApp: {e}")
+                                if hasattr(main_app, 'after'):
+                                    main_app.after(50, refresh_inventory_app)
                 except Exception as e:
-                    print(f"[TRANSACTION DELETE] Error setting up TransactionWindow refresh: {e}")
+                    print(f"[TRANSACTION DELETE] Error setting up refresh after delete: {e}")
             confirm_window.destroy()
 
         def cancel_delete():

@@ -47,6 +47,9 @@ class TransactionWindow(ctk.CTkFrame):
         self.edit_mode = False
         self.image_path = ""
         self.image_thumbnail = None
+        
+        # Track scheduled admin close callback ID to prevent race condition
+        self._admin_close_callback_id = None
 
         self._build_ui()
         self._setup_bindings()
@@ -95,7 +98,16 @@ class TransactionWindow(ctk.CTkFrame):
         # Keyboard shortcuts are bound at root window level in __init__
 
     def _cleanup_root_bindings(self, event=None):
-        """Clean up root window bindings when frame is destroyed"""
+        """Clean up root window bindings and cancel any pending callbacks when frame is destroyed"""
+        # CRITICAL: Cancel pending admin close callback to prevent it from running on destroyed frame
+        if self._admin_close_callback_id is not None:
+            try:
+                self.after_cancel(self._admin_close_callback_id)
+                print("[TRANSACTION] Cancelled pending admin close callback")
+                self._admin_close_callback_id = None
+            except Exception as e:
+                print(f"[TRANSACTION] Error cancelling callback: {e}")
+        
         try:
             root = self.winfo_toplevel()
             # Clean up keyboard shortcuts
@@ -191,23 +203,61 @@ class TransactionWindow(ctk.CTkFrame):
         
         If Admin Panel already open, bring to front without password.
         Otherwise, show password dialog first.
+        
+        CRITICAL: Pass self.main_app (the MM frame) not self (TransactionWindow)
+        so AdminPanel can properly refresh the product list when done.
         """
         if not self.controller:
             return
         
         # Create refresh callback to update both main_app and transaction window when admin closes
+        # CRITICAL: Store transaction window reference to cancel callback if this window is destroyed
         def on_admin_close():
-            # Refresh the main app's product list
-            if self.main_app and hasattr(self.main_app, 'refresh_product_list'):
-                self.main_app.refresh_product_list()
-            # Also refresh this transaction window's transaction list
-            if hasattr(self, '_load_transactions'):
-                self._load_transactions()
+            print(f"[ADMIN-CALLBACK] Executing admin close callback")
+            # DEFENSIVE: Check if this TransactionWindow still exists before executing
+            try:
+                tw_exists = self.winfo_exists()
+                print(f"[ADMIN-CALLBACK] TransactionWindow exists: {tw_exists}")
+                if not tw_exists:
+                    print("[TRANSACTION] TransactionWindow destroyed, skipping callback")
+                    return
+            except Exception:
+                print("[TRANSACTION] TransactionWindow in invalid state, skipping callback")
+                return
+            
+            try:
+                # Refresh the main app's product list (safely)
+                if self.main_app and hasattr(self.main_app, 'winfo_exists'):
+                    try:
+                        mm_exists = self.main_app.winfo_exists()
+                        mm_viewable = self.main_app.winfo_viewable()
+                        print(f"[ADMIN-CALLBACK] MM state: exists={mm_exists}, viewable={mm_viewable}")
+                        if mm_exists and hasattr(self.main_app, 'refresh_product_list'):
+                            print("[ADMIN-CALLBACK] Refreshing MM after admin close")
+                            self.main_app.refresh_product_list()
+                            print(f"[ADMIN-CALLBACK] MM refresh completed")
+                    except Exception as e:
+                        print(f"[TRANSACTION] Error refreshing MM: {e}")
+            except Exception:
+                pass
+            
+            try:
+                # Also refresh this transaction window's transaction list (safely)
+                if hasattr(self, '_load_transactions'):
+                    try:
+                        if self.winfo_exists():
+                            print("[TRANSACTION] Refreshing TransactionWindow after admin close")
+                            self._load_transactions()
+                    except Exception as e:
+                        print(f"[TRANSACTION] Error refreshing TransactionWindow: {e}")
+            except Exception as e:
+                print(f"[TRANSACTION] Error in callback: {e}")
         
         # Check if Admin Panel is already open
         if self.controller.is_admin_panel_open():
             # Admin Panel already open - just bring to front without password
-            self.controller.show_admin_panel(self, on_close_callback=on_admin_close)
+            # CRITICAL FIX: Pass self.main_app (MM frame), not self (TransactionWindow)
+            self.controller.show_admin_panel(self.main_app, on_close_callback=on_admin_close)
             return
         
         # Admin Panel not open - require password
@@ -215,7 +265,8 @@ class TransactionWindow(ctk.CTkFrame):
             if success:
                 # Use controller's singleton method instead of direct instantiation
                 if self.controller:
-                    self.controller.show_admin_panel(self, on_close_callback=on_admin_close)
+                    # CRITICAL FIX: Pass self.main_app (MM frame), not self (TransactionWindow)
+                    self.controller.show_admin_panel(self.main_app, on_close_callback=on_admin_close)
         self._create_password_window(callback=on_password_result)
 
     def _create_password_window(self, callback=None):
@@ -407,8 +458,29 @@ class TransactionWindow(ctk.CTkFrame):
             title_label.pack()
 
     def _handle_back_button(self):
+        """Handle back button - ensure MM frame is properly restored"""
+        print(f"[TRANSACTION-LIFECYCLE] Back button pressed, return_to={self.return_to}")
+        
         if self.controller and self.return_to:
+            # Before going back, ensure main_app (MM) is in a valid state
+            if self.main_app and hasattr(self.main_app, 'winfo_exists'):
+                try:
+                    mm_exists = self.main_app.winfo_exists()
+                    print(f"[TRANSACTION-LIFECYCLE] MM exists: {mm_exists}")
+                    if mm_exists:
+                        # Ensure MM's tree widget exists before showing frame
+                        if not (hasattr(self.main_app, 'tree') and self.main_app.tree.winfo_exists()):
+                            print("[TRANSACTION] MM tree missing, forcing refresh...")
+                            # Force a refresh in case tree was destroyed
+                            if hasattr(self.main_app, 'refresh_product_list'):
+                                self.main_app.refresh_product_list()
+                except Exception as e:
+                    print(f"[TRANSACTION] Error checking MM state: {e}")
+            
+            # Now go back
+            print(f"[TRANSACTION-LIFECYCLE] Calling controller.show_frame({self.return_to})")
             self.controller.show_frame(self.return_to)
+            print(f"[TRANSACTION-LIFECYCLE] show_frame completed, back navigation finished")
         else:
             self.master.destroy()
 
