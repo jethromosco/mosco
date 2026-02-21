@@ -1,840 +1,923 @@
-MOSCO INVENTORY SYSTEM - USER MANUAL
+MOSCO INVENTORY SYSTEM - USER & ADMIN MANUAL
 ================================================================
 
-Welcome to the MOSCO Inventory Application. This guide will help you use the system to manage stock, view products, and handle transactions.
+Welcome to MOSCO Inventory! This guide helps you manage stock and view products.
 
-This file is divided into two parts:
-1. USER GUIDE (For daily use)
-2. ADMIN GUIDE (For managers and stock controllers)
+This manual is for:
+- Regular staff (finding products, viewing details)
+- Admin users (adding/editing products, recording sales & restocks)
+- New employees (step-by-step learning)
 
 
 ================================================================
-PART 1: USER GUIDE
+PART 1: QUICK START
 ================================================================
 
-1. GETTING STARTED
-------------------
-- To open the app, double-click the application icon or run the main script.
-- The app will start in a maximized window.
+Getting Started:
+1. Double-click the MOSCO.bat file (or ask your supervisor how to run it)
+2. Wait 5-10 seconds for the app to open
+3. You will see a grid of category buttons (Oil Seals, Monoseals, etc.)
 
-2. THE HOME SCREEN
-------------------
-- You will see a grid of buttons representing different categories (like OIL SEALS, O-RINGS, etc.).
-- Click on any category button to open it.
-- Some categories have sub-categories (e.g., clicking O-RINGS might ask for material type).
-- To go back, click the "Back" button at the top left corner.
+Main Screen:
+- Click any category button to see products
+- The window title shows where you are (helps you stay oriented)
+- Click "Back" button (top left) to return to the main screen
 
-2A. WINDOW TITLE NAVIGATION (Know Where You Are)
---------------------------------------------------
-The window title at the very top shows exactly which part of the system you are in.
 
-Examples of what you might see:
-- "MOS Inventory - HOMEPAGE" = At the main screen
-- "MOS Inventory - OIL SEALS" = Inside Oil Seals category
-- "MOS Inventory - PACKING SEALS | MONOSEALS | MM" = In Monoseals → MM subcategory
-- "MOS Inventory - PACKING SEALS | MONOSEALS | MM | PRODUCTS" = Viewing product list
-- "MOS Inventory - PACKING SEALS | MONOSEALS | MM | TRANSACTIONS" = Viewing transaction history
-- "MOS Inventory - PACKING SEALS | MONOSEALS | MM | ADMIN" = In Admin panel for that module
+================================================================
+PART 2: FINDING & VIEWING PRODUCTS
+================================================================
 
-This helps you know exactly which category and module you are working with at all times.
-
-3. FINDING PRODUCTS (SEARCH)
-----------------------------
-- Once inside a category list, you will see search boxes at the top.
-- You can type in:
-  * TYPE (e.g., TC, SC)
-  * ID (Inner Diameter)
-  * OD (Outer Diameter)
-  * TH (Thickness)
-  * BRAND
-  * PART NO.
-- The list updates automatically as you type. You do not need to press Enter.
-- To clear all filters and see everything again, press the "Esc" key on your keyboard.
-
-4. VIEWING PRODUCT DETAILS
---------------------------
-- The main list shows products with their size, brand, and current stock.
-- Double-click on any row in the list to open the "Product Details" window.
-- This window shows:
-  * Big Stock Number (Green/Red/Orange)
-  * Price (SRP)
-  * Location
-  * Notes
-  * Transaction History (a list of all sales and restocks)
-
-5. EDITING INFO (LOCATION, NOTES, PRICE)
-----------------------------------------
-- In the Product Details window, there is an "Edit" button on the right side.
-- Click "Edit" to unlock the fields.
-- You can change:
-  * Location (Where the item is kept)
-  * Notes (Any remarks)
-  * Price (SRP)
-- Click "Save" when you are done.
-
-IMPROVEMENT: After you edit and save, the changes take effect immediately. A transaction window will
-automatically open to confirm your update. You do not need to exit the admin panel or restart anything
-to see the changes reflected in the product list.
-
-6. STOCK ALERTS & COLORS
-------------------------
-- The stock number changes color to warn you:
-  * Green: Good stock level
-  * Orange: Low stock
-  * Red: Out of stock or critical
-- To change when these colors appear:
-  1. Click directly on the big "STOCK: XX" text.
-  2. A small window will pop up.
-  3. Enter the number for "Restock Needed" (Red) and "Low on Stock" (Orange).
-  4. Click Save.
-
-7. PHOTOS
-------------------------
-- If a product has a photo, you will see it on the right side of the details window.
-- Click the photo to view it in full screen.
-- If the product is "MOS" brand and has no photo, clicking the camera icon allows you to upload one.
-
-8. LIGHT MODE & DARK MODE
+SEARCHING FOR A PRODUCT
 -------------------------
-- Look for the Sun/Moon button in the top right corner.
-- Click it to switch between a light theme (white/grey) and a dark theme (black/grey).
-- This setting is saved while the app is running.
+1. Click a category button to open it
+2. You will see search boxes at the top of the product list
+3. Type what you're looking for in any search box:
+   * Type (e.g., TC, SC)
+   * ID (Inner Diameter)
+   * OD (Outer Diameter)
+   * TH (Thickness)
+   * Brand (e.g., NOK, T.Y.)
+   * Part Number
+4. Results update automatically as you type
+5. To see all products again, press ESC
 
-9. KEYBOARD SHORTCUTS
+Helpful Tips:
+- Search for less = Find more. "10" finds more than "10.5"
+- Searches are not case-sensitive
+- You can search by any part of the name
+
+VIEWING PRODUCT DETAILS
+-----------------------
+Double-click any product row to open the full details window.
+
+You will see:
+- Stock number (colored: Green = Good, Orange = Low, Red = Out of stock)
+- Price per piece (SRP)
+- Location (where it's stored)
+- Notes (any remarks about the product)
+- Product photo (if available)
+- Transaction history (all sales, restocks, and counts)
+
+STOCK COLOR MEANINGS
 ---------------------
-- F11: Toggle Fullscreen mode (removes window borders).
-- Esc: Clear search filters or Close pop-up windows.
-- Ctrl + 2: Open the Admin Panel (requires password).
-- Tab: Move to the next box or button.
-- Shift + Tab: Move to the previous box or button.
-- Enter: Confirm action or Save.
-- Arrow Keys: Move selection in lists.
+GREEN   = Good stock level, no action needed
+ORANGE  = Running low, consider restocking soon
+RED     = Out of stock or critical, restock immediately
 
-10. RIGHT-CLICK COPY FUNCTIONS
-------------------------------
-The system supports **right-click copying** to make quoting and sharing prices faster.
+To change when colors appear:
+1. Click directly on the big colored STOCK number
+2. A popup appears
+3. Enter the quantity that triggers RED (restock needed)
+4. Enter the quantity that triggers ORANGE (low stock)
+5. Click Save
 
-You can right-click in the following places:
+
+================================================================
+PART 3: EDITING PRODUCT INFO
+================================================================
+
+You can edit: Location, Notes, and Price
+
+How to Edit:
+1. Open a product (double-click it)
+2. Click the "Edit" button on the right side
+3. You can now change:
+   * Location (where the item is stored)
+   * Notes (any remarks)
+   * Price (selling price per piece)
+4. Click "Save" when done
+5. Changes take effect immediately
+
+
+UPLOADING A PRODUCT PHOTO
+---------------------------
+If the product is "MOS" brand and has no photo:
+1. Click the camera icon on the photo area
+2. OR press Ctrl + 1
+3. Select a photo from your computer
+4. Click Save
+5. The photo appears immediately
+
+
+================================================================
+PART 4: THEME & APPEARANCE
+================================================================
+
+Light Mode / Dark Mode:
+1. Look for the Sun/Moon button in the top-right corner
+2. Click it to switch between light (white) and dark (black) themes
+3. Your preference stays while the app is running
+
+Fullscreen Mode:
+- Press F11 to remove window borders (fullscreen)
+- Press F11 again to return to normal
+- Useful if buttons or text look cut off
+
+
+================================================================
+PART 5: RIGHT-CLICK COPY (Fast Quoting)
+================================================================
+
+You can right-click in these places to copy product info:
 - Product list rows
-- Product cards
-- SRP price in the product details window
-- Transaction history rows (Sale, Restock, Actual)
+- Product cards/details
+- Price display (SRP)
+- Transaction history rows
 
-When you right-click, the item is copied to your clipboard in this format:
+What Gets Copied:
+When you right-click, the product info is copied to your clipboard in this format:
 
-Product Name  
-Price per piece  
+    Type ID-OD-TH Brand Category
+    ₱Price / pc.
 
 Example:
-TC 30-47-7 NOK Oil Seal  
-₱250- / pc.
+    TC 30-47-7 NOK Oil Seal
+    ₱250- / pc.
 
-Two blank lines are automatically added after the price so you can paste many items without pressing Shift+Enter every time.
+You can then paste this into:
+- Emails (Ctrl + V)
+- Word documents
+- Google Sheets
+- Quotes
 
----
+IMPORTANT COPY RULES
+---------------------
+For SALES (Red transactions):
+- Shows the actual price charged in that sale
 
-SPECIAL COPY RULES (Applied Across All Modules):
+For RESTOCKS (Blue transactions):
+- Shows only the peso sign (₱)
+- You can type the quantity right after
 
-These rules work consistently across all product types:
-- Oil Seals
-- Monoseals
-- Wiper Seals
-- Wipermono
+For ACTUAL COUNTS (Green transactions):
+- Shows the recorded price normally
 
-Automatic formatting:
-• Country names (Japan, Korea, China, etc.) are automatically removed when copying.
-• If the product starts with "SPL", the "SPL" word is removed when copied.
-• Brand extraction: The brand is automatically taken from the product information.
-• Spacing: Two blank lines are added between items for easy pasting into quotes.
-• All formatting is consistent across all modules.
+Automatic Features:
+- Country names are removed (Japan, Korea, etc.)
+- Brand is taken from restock information
+- Two blank lines appear after each item for easy pasting
 
----
-
-TRANSACTION COLOR RULES (IMPORTANT):
-
-• RED (Sale):
-  - Copies the actual sale price used in that transaction.
-
-• GREEN (Actual Checking):
-  - Copies the recorded price normally.
-
-• BLUE (Restock):
-  - Price amount is removed.
-  - Only the peso sign (₱) is copied.
-  - The brand is taken from the restock name input.
-
-Example (Restock):
-TC 30-47-7 NQK Oil Seal  
-₱
-
-If the restock name starts with "(" and has no brand:
-TC 30-47-7 (?) Oil Seal  
-₱
-
----
-
-11. SIMPLE TIPS FOR DAILY USE
--------------------
-- If you can't find an item, try typing less. For example, instead of "10.5", try just "10".
-- Use right-click copy when quoting prices to customers.
-- Pasted items already have spacing between them.
-- Use the "Back" button to navigate, do not close the window unless you want to exit the app.
-- Always double-check brand spelling before saving new products.
-- Always confirm that you are in the correct category before editing.
-- Keep consistent naming when adding new products (e.g., use "MOS" always, not "M.O.S.").
-- Back up your database files regularly (copy the .db files to a safe location).
-- Use the window title to verify you are in the right module before making changes.
 
 ================================================================
-PART 2: ADMIN GUIDE
+PART 6: RECORDING SALES & RESTOCKS (ADMIN ONLY)
 ================================================================
 
-This section is for users with Admin access only.
+ENTERING ADMIN MODE
+---------------------
+1. Click the "Admin" button (top-right corner)
+   OR press Ctrl + 2
+2. Enter the password: 1
+3. The Admin Panel opens
 
-1. ENTERING ADMIN MODE
-----------------------
-- Click the "Admin" button at the top right of the screen (or press Ctrl + 2).
-- Enter the admin password "1".
-- If correct, the Admin Panel window will open.
+RECORDING A SALE
+-----------------
+A sale reduces stock (stock goes down).
 
-2. THE ADMIN PANEL
-------------------
-- The Admin Panel has two main tabs at the top:
-  * Products: For adding/editing items.
-  * Transactions: For adding sales, restocks, or adjustments.
-- Below the tabs, there is a selector bar. Use this to switch between different inventories (e.g., Oil Seals -> MM).
+1. Go to Transactions tab (click "Transactions")
+2. Click "Add" button
+3. Make sure the RED button is selected (SALE)
+4. Fill in:
+   * Date (when the sale happened)
+   * Product (search and select)
+   * Unit (MM or INCH if available)
+   * Quantity (how many pieces sold)
+   * Price (how much was charged)
+5. Click "Save"
+6. Stock number decreases automatically
 
-2A. CATEGORY DROPDOWN STABILITY
--------------------------------
-The category dropdown in the Admin Panel now works reliably and consistently:
+RECORDING A RESTOCK
+--------------------
+A restock increases stock (stock goes up).
 
-✓ Switching between Oil Seals, Monoseals, Wiper Seals, and Wipermono updates both the GUI and Admin tables correctly.
-✓ The Products tab updates when you switch categories.
-✓ The Transactions tab updates when you switch categories.
-✓ No longer need to restart the Admin window after switching categories.
-✓ All data displayed is accurate for the selected category.
+1. Go to Transactions tab (click "Transactions")
+2. Click "Add" button
+3. Click the BLUE button to select (RESTOCK)
+4. Fill in:
+   * Date (when you received it)
+   * Product (search and select)
+   * Unit (MM or INCH if available)
+   * Quantity (how many pieces received)
+5. Click "Save"
+6. Stock number increases automatically
 
-How to use: Simply click the category dropdown and select the module you want to work with.
-The window will update immediately with the correct products and transactions for that category.
-
-3. ADDING NEW PRODUCTS
-----------------------
-1. Go to the "Products" tab.
-2. Click the green "Add" button.
-3. Fill in the details:
-   * Type, ID, OD, Thickness
-   * Brand, Name
-   * Initial Stock and Price
-4. Click Save.
-5. The new product will appear in the list immediately.
-
-4. EDITING OR DELETING PRODUCTS
--------------------------------
-- To Edit: Select a product in the list and click "Edit". Change values and Save.
-- To Delete: Select a product and click "Delete". Confirm the warning.
-  * WARNING: Deleting a product removes it permanently.
-
-5. MANAGING TRANSACTIONS (STOCK IN/OUT)
----------------------------------------
-To record a sale or restock:
-1. Go to the "Transactions" tab in the Admin Panel.
-2. Click "Add".
-3. Select the Transaction Type (press Ctrl+Tab to cycle):
-   * Sale: Reduces stock (Red button).
-   * Restock: Adds stock (Blue button).
-   * Actual: Sets the stock to an exact number (Green button).
-   * Fabrication: Special mode for made-to-order items.
-4. Fill in the Date, Product details, and Quantity.
-5. Click Save.
-
-6. FABRICATION TRANSACTIONS
----------------------------
-- Fabrication is special because it involves two steps:
-  1. Taking raw materials (Stock Out).
-  2. Creating the finished product (Stock In).
-- When you select "Fabrication", the form will ask for "Qty Restock" (total items made) and "Qty Sold" (total items sold).
-- This keeps your inventory balanced.
-
-IMPROVEMENT - Editing Fabrication Transactions:
-Before: Editing a fabrication transaction sometimes created duplicate records.
-Now: Editing a fabrication transaction properly replaces the original record.
-
-You can safely edit fabrication and convert it to:
-  • Sale (Red transaction)
-  • Restock (Blue transaction)
-  • Actual Checking (Green transaction)
-
-This makes fabrication transactions fully editable and reliable. No more duplicates when making corrections.
-
-7. ADMIN KEYBOARD SHORTCUTS
----------------------------
-- Ctrl + Tab: Switch between "Products" and "Transactions" tabs.
-- Ctrl + Shift + Tab: Switch tabs in reverse.
-- Ctrl + 1: Add a new Transaction (only in Transactions tab).
-- Ctrl + 2: Add a new Product (only in Products tab).
-- Delete: Delete the selected Transaction (only in Transactions tab).
-- Ctrl + Tab (Inside Transaction Form): Change Transaction Type (Sale -> Restock -> Actual -> Fabrication).
-
-8. BRAND NORMALIZATION (AUTOMATIC CORRECTIONS)
-----------------------------------------------
-The system automatically corrects common brand spelling inconsistencies to keep your database clean:
-
-Automatic Brand Corrections:
-  NAK → T.Y.         (Corrects common misspelling)
-  NQK → T.Y.         (Corrects common misspelling)
-  NTC → NOK          (Corrects common misspelling)
-
-Automatic Country Fill-in:
-  If a product's country of origin is missing, the system will auto-fill it based on the brand.
-  This keeps naming consistent across the entire database.
-
-Why This Matters:
-  Consistent brand names make searching easier and prevent duplicate product entries.
-  The system automatically applies these rules when you add or edit a product.
-  You do not need to do anything special — the corrections happen automatically.
-
-
-9. IMPORTANT ADMIN NOTES
+PHYSICAL COUNT (ACTUAL)
 ------------------------
-- Data is saved automatically to the database file.
-- Do not rename or move the database files manually while the app is running.
-- When adding a product, make sure the "Type" and "Brand" are consistent (e.g., don't use "MOS" one time and "M.O.S." another time).
-  The system will auto-correct some common brand name variations (see "Brand Normalization" section above).
-- If you change a product's size (ID/OD) in Edit mode, it updates that specific product record. It does not change past transaction history text, but the link remains valid.
+This sets the stock to an exact number (useful for inventory audits).
+
+1. Go to Transactions tab
+2. Click "Add" button
+3. Click the GREEN button to select (ACTUAL)
+4. Fill in:
+   * Date (today's date usually)
+   * Product (search and select)
+   * Unit (MM or INCH if available)
+   * Stock Amount (the exact count you verified)
+5. Click "Save"
+6. Stock changes to that exact number
+
+FABRICATION (Special Mode)
+----------------------------
+For items that are made in-house (not purchased).
+
+1. Go to Transactions tab
+2. Click "Add" button
+3. Click the purple/accent button to select (FABRICATION)
+4. Fill in:
+   * Date (when items were made)
+   * Product (the item being made)
+   * Unit (MM or INCH if available)
+   * Qty Made (total items produced)
+   * Qty Sold (items sold from that batch)
+5. Click "Save"
+6. Stock updates correctly (accounts for both production and sales)
 
 
-10. ADMIN CONSISTENCY IMPROVEMENTS
-----------------------------------
-The admin panel behavior is now consistent across all modules:
+ADDING A NEW PRODUCT (ADMIN ONLY)
+-----------------------------------
+1. Click the "Admin" button (top-right)
+2. Go to "Products" tab
+3. Click the green "Add" button
+4. Fill in all fields:
+   * Type (e.g., TC, SC)
+   * ID, OD, TH (size dimensions)
+   * Brand (e.g., NOK, T.Y.)
+   * Initial Stock (starting quantity)
+   * Price (selling price)
+5. Click "Save"
+6. The product appears in the list immediately
 
-✓ Category switching works the same way in Oil Seals as in Packing Seals modules.
-✓ Transaction window behavior is unified across Monoseals, Wiper Seals, and Wipermono.
-✓ Product editing logic uses the same rules in all modules.
-✓ Right-click copy formatting is consistent across all product categories.
-✓ Brand normalization applies uniformly to all brands in all modules.
+EDITING OR DELETING PRODUCTS (ADMIN ONLY)
+-------------------------------------------
+Edit a Product:
+1. Find the product in the Products list
+2. Click to select it
+3. Click "Edit" button
+4. Change the values you want to update
+5. Click "Save"
 
-This makes administration faster and more predictable.
+Delete a Product:
+1. Find the product in the list
+2. Click to select it
+3. Click "Delete" button
+4. Confirm the warning
+5. Product is removed permanently
+
+WARNING: Deleted products cannot be recovered!
+
 
 ================================================================
-FINAL REMINDERS
+PART 7: KEYBOARD SHORTCUTS - COMPLETE LIST
 ================================================================
 
-Daily Best Practices:
-- Always check the "Stock Filter" if you think items are missing. You might be viewing only "Out of Stock" items.
-- Remember to back up your database files regularly (copy the .db files to a safe place).
-- If the app looks strange or buttons are missing, try resizing the window or pressing F11.
-- Double-check your entries before saving, especially for Prices and Stock adjustments.
-- Contact the system developer if you see "Database Error" messages.
+GLOBAL SHORTCUTS (Work Everywhere)
+-----------------------------------
+F11                 → Toggle fullscreen mode (expand to full screen)
+Ctrl + 2            → Open Admin Panel (password required)
+Esc                 → Clear all search filters and show everything
+Tab                 → Move to the next field or button
+Shift + Tab         → Move to the previous field or button
+Enter               → Confirm/Save (in forms)
+Mouse Button-4      → Windows mouse back button (goes back one level)
 
-MULTI-PC DATABASE SAFETY (IMPORTANT):
-- If you are using Google Drive or cloud storage to share the database across multiple PCs:
-  * Upload from ONE PC at a time.
-  * Avoid simultaneous uploads from different computers.
-  * This prevents the database from being overwritten with conflicting changes.
-  * Wait for one person to finish and save before another person uploads.
-  * Daily backups are recommended (keep a backup copy of the .db file in a separate location).
 
-Database Integrity:
-- Never open the database file with external tools (like SQLite Browser) while the app is running.
-- Always use the MOSCO app to make changes to keep data consistent.
-- If the database becomes corrupted, restore from your backup.
+IN PRODUCT LIST / SEARCH
+-------------------------
+Esc                 → Clear all search filters at once
+BackSpace           → Delete text from current search field (clears one letter)
+Arrow Keys          → Move up/down in product list
+Enter               → Move focus away from search box
 
-================================================================
-COMMON USER MISTAKES & HOW TO AVOID THEM
-================================================================
 
-1. WRONG BRAND SPELLING
-Problem: Product branded as "MOS" one time, then "M.O.S." another time creates two separate entries.
-Solution: 
-  - Always check the brand spelling before saving.
-  - Use the same spelling every time (e.g., always "MOS", never "M.O.S.").
-  - The system helps with auto-correction for some brands, but consistency is best.
+IN PRODUCT DETAILS WINDOW
+---------------------------
+Esc                 → Cancel edit mode or close window
+Tab                 → Move to next editable field (Location → Notes → Price)
+Shift + Tab         → Move to previous editable field
 
-2. EDITING THE WRONG PRODUCT
-Problem: Accidentally editing a similar product and losing correct data.
-Solution:
-  - Always verify the product size and brand BEFORE clicking Edit.
-  - Read the product header carefully (Type, ID, OD, Thickness, Brand).
-  - Double-check the gray text at the top of the edit window.
 
-3. WRONG TRANSACTION TYPE
-Problem: Recording a sales as a restock, or a restock as a sale.
-Solution:
-  - Understand the three transaction types BEFORE recording:
-    * SALE (Red): Stock goes OUT. Stock number decreases.
-    * RESTOCK (Blue): Stock goes IN. Stock number increases.
-    * ACTUAL (Green): Manually set the exact stock count.
-  - Confirm the transaction type by looking at the button color.
-  - If you make a mistake, you can edit the transaction to fix it.
+IN TRANSACTION WINDOW (Product Details)
+-----------------------------------------
+Ctrl + 1            → Upload a product photo
+Ctrl + Q            → Toggle Edit Mode (edit Location, Notes, Price)
+Return              → Save changes (when in edit mode)
+Esc                 → Cancel editing (when in edit mode)
 
-4. INCORRECT QUANTITY
-Problem: Entering wrong quantity for sale or restock, causing stock mismatch.
-Solution:
-  - Always double-check the number before clicking Save.
-  - If you made an error, go back to that transaction and edit it.
-  - Check the running balance to catch mistakes quickly.
 
-5. FORGETTING TO SELECT CORRECT CATEGORY
-Problem: Adding products to the wrong product type (e.g., Oil Seals instead of Monoseals).
-Solution:
-  - Always look at the window title to confirm which category you are in.
-  - Window title shows: "MOS Inventory - CATEGORY NAME"
-  - Switch category BEFORE adding or editing products.
+IN ADMIN PANEL TABS
+--------------------
+Ctrl + Tab          → Switch to next tab (Products ↔ Transactions)
+Ctrl + Shift + Tab  → Switch to previous tab (reverse direction)
 
-6. INCONSISTENT LOCATION NAMING
-Problem: Storing item info as "Shelf A", "Shelf A2", "Shelf-A", making search confusing.
-Solution:
-  - Decide on a naming standard for all locations (e.g., "Shelf A", "Room B", "Cabinet 1").
-  - Write it down and follow it always.
-  - Train all staff to use the same system.
 
-================================================================
-QUICK TROUBLESHOOTING GUIDE
-================================================================
+IN PRODUCTS ADMIN TAB
+----------------------
+Ctrl + 2            → Add a new product
 
-PROBLEM: App won't open / Shows "Python Error"
-SOLUTION:
-  1. Check that Python 3.9+ is installed on your computer.
-  2. Open Command Prompt and type: python --version
-  3. If Python is not found, install it from python.org
-  4. Ensure you have these libraries installed (see Setup Guide section below).
 
-PROBLEM: Missing Products in the list
-SOLUTION:
-  1. Check the "Stock Filter" dropdown at the top.
-  2. If set to "Out of Stock" or "Low Stock", you may not see everything.
-  3. Change filter to "All" to see all products.
-  4. Try pressing Esc to clear all search filters.
-  5. Type less in search boxes if nothing appears (e.g., search "10" instead of "10.5").
+IN TRANSACTIONS ADMIN TAB
+---------------------------
+Ctrl + 1            → Add a new transaction
+Delete              → Delete selected transaction
 
-PROBLEM: Stock Numbers Don't Match My Records
-SOLUTION:
-  1. Go to the product details window.
-  2. Check the "Transaction History" tab to see all sales and restocks.
-  3. Add up all transactions to verify the final stock number is correct.
-  4. If you find an error, edit that specific transaction to fix it.
-  5. The stock will recalculate automatically.
 
-PROBLEM: App looks strange / Buttons missing / Text cut off
-SOLUTION:
-  1. Try resizing the window to see if elements appear.
-  2. Press F11 to exit fullscreen mode, then try again.
-  3. Restart the app.
-  4. If it still looks wrong, the screen resolution might be too low.
+IN TRANSACTION ADD/EDIT FORM
+-------------------------------
+Ctrl + Tab          → Cycle through transaction types:
+                        Red (Sale) →
+                        Blue (Restock) →
+                        Green (Actual) →
+                        Purple (Fabrication)
+Ctrl + Shift + Tab  → Cycle backwards through transaction types
+Return              → Save the transaction
+Esc                 → Cancel and close the form
 
-PROBLEM: Can't save a product or transaction
-SOLUTION:
-  1. Check that all required fields are filled in (marked with *).
-  2. Make sure numbers only contain digits (no extra spaces or letters).
-  3. Check that prices are entered correctly (use periods for decimals: 10.50 not 10,50).
-  4. Click Save again.
-  5. If still failing, contact the system administrator.
 
-PROBLEM: Database Error when opening the app
-SOLUTION:
-  1. This usually means the database file is corrupted or locked.
-  2. Check that nobody else has the app open on another PC.
-  3. Restore from your latest backup copy of the .db file.
-  4. If no backup exists, contact the system administrator.
+IN STOCK SETTINGS POPUP
+------------------------
+Return              → Save the new thresholds
+Esc                 → Cancel without saving
+
+
+IN PASSWORD DIALOG
+-------------------
+Return              → Submit password
+Esc                 → Cancel and close
+
 
 ================================================================
-PERFORMANCE TIPS & BEST PRACTICES
+PART 7B: MOUSE ACTIONS - COMPLETE LIST
 ================================================================
 
-1. AVOID MULTIPLE ADMIN WINDOWS
-  - Do not open the Admin Panel twice on the same PC.
-  - Do not open Admin from one PC while another PC is using the database.
-  - Close the Admin window when finished to free up system resources.
+GENERAL CLICKS
+---------------
+Left-click Button   → Click any button to activate it
+Left-click Field    → Click text fields to select them
+Left-click Dropdown → Click to open dropdown menu
+Double-click        → Open details (on product rows, product cards)
+Right-click         → Copy information to clipboard
 
-2. CLOSE UNUSED WINDOWS
-  - Only keep the window you need open.
-  - Close product details windows when done viewing.
-  - Close admin panel when not in use.
-  - Multiple open windows slow down the system.
 
-3. DON'T EDIT DATABASE MANUALLY
-  - Never open .db files with external tools (like SQLite).
-  - Never edit data files in Google Drive or cloud storage directly.
-  - Only use the MOSCO app to make changes.
-  - External edits can corrupt the database.
+IN PRODUCT LIST
+----------------
+Left-click Row      → Select a product row
+Double-click Row    → Open full product details window
+Right-click Row     → Copy product info to clipboard
+Mouse Button-4      → Go back one level (Windows mouse back button)
 
-4. KEEP SEARCH FILTERS CLEAR
-  - Remember to press Esc after searching to clear all filters.
-  - Clearing filters helps you see all products.
-  - This prevents confusion of missing items.
 
-5. BACKUP REGULARLY
-  - Copy the .db files to a backup location once a day.
-  - Better: Use dedicated backup software or cloud backup (not the same as working copy).
-  - Test your backup by opening it to make sure it works.
+IN PRODUCT DETAILS WINDOW
+---------------------------
+Left-click Stock #  → Open stock threshold settings popup
+Left-click Photo    → View photo in fullscreen viewer
+Left-click X on Photo → Close fullscreen viewer
+Left-click Camera   → Upload a new product photo
 
-================================================================
-INSTALLER & SETUP GUIDE
-================================================================
 
-IMPORTANT: No requirements.txt file is included. You must install libraries manually.
+IN PRICE DISPLAY
+-----------------
+Right-click Price   → Copy product info to clipboard
 
-STEP 1: INSTALL PYTHON
-  - Go to python.org
-  - Download Python 3.9 or newer (NOT Python 2)
-  - Run the installer
-  - IMPORTANT: Check the box that says "Add Python to PATH"
-  - Finish installation
 
-STEP 2: INSTALL REQUIRED LIBRARIES
-  Open Command Prompt (on Windows: Win+R, type "cmd", press Enter)
-  
-  Copy and paste these commands one by one:
-    pip install customtkinter
-    pip install pillow
-    pip install tkcalendar
-  
-  Wait for each one to finish before running the next.
+IN TRANSACTION HISTORY LIST
+-----------------------------
+Left-click Row      → Select a transaction
+Double-click Row    → Open transaction details
+Right-click Row     → Copy product/price info to clipboard (based on type)
 
-STEP 3: DOWNLOAD AND EXTRACT THE APP
-  - Download the MOSCO Inventory APP folder
-  - Extract it to a location (e.g., C:\My Drive\MOS INVENTORY APP\mosco)
-  - Do NOT rename the main "mosco" folder
 
-STEP 4: RUN THE APP
-  Option A (Easiest): Double-click MOSCO.bat file
-  Option B (Manual): 
-    - Open Command Prompt
-    - Navigate to the mosco folder: cd C:\My Drive\MOS INVENTORY APP\mosco
-    - Type: python main.py
-    - Press Enter
+IN ADMIN PANEL
+-----------------
+Left-click Tab      → Switch between Products/Transactions tabs
+Left-click Dropdown → Change module (Oil Seals, Monoseals, etc.)
+Left-click Add      → Add new product or transaction
+Left-click Edit     → Edit selected product or transaction
+Left-click Delete   → Delete selected item (with confirmation)
 
-STEP 5: VERIFY DATABASE FOLDERS EXIST
-  The app creates these folders automatically:
-    - oilseals/data/            (stores Oil Seals database)
-    - packingseals/monoseals/data/     (stores Monoseals database)
-    - packingseals/wiperseals/data/    (stores Wiper Seals database)
-    - packingseals/wipermono/data/     (stores Wipermono database)
-    - oilseals/photos/          (stores product photos)
-    - packingseals/*/photos/    (stores photos for other modules)
-  
-  Do not delete or rename these folders.
 
-STEP 6: CREATE ADMIN PASSWORD
-  The default password is "1"
-  You can discuss changing this with the system administrator.
+IN FORMS
+---------
+Left-click Button   → Click to submit, save, or cancel
+Left-click Checkbox → Toggle checkbox on/off
+Left-click Dropdown → Select option from dropdown
+Double-click Field  → Select all text in field
 
-========================================
-DATABASE FILES EXPLAINED
-========================================
 
-Each module stores its data in a separate database:
+SPECIAL MOUSE ACTIONS
+----------------------
+Mouse Button-4      → Windows mouse back button
+                       (invokes the back button of current screen)
+                       Works: Home → Categories, Lists → Details, etc.
 
-File: oilseals_mm_inventory.db
-Location: oilseals/data/
-Purpose: Stores all Oil Seals products and transactions
-
-File: monoseals_mm_inventory.db
-Location: packingseals/monoseals/data/
-Purpose: Stores all Monoseals products and transactions
-
-File: wiperseals_mm_inventory.db
-Location: packingseals/wiperseals/data/
-Purpose: Stores all Wiper Seals products and transactions
-
-File: wipermono_mm_inventory.db
-Location: packingseals/wipermono/data/
-Purpose: Stores all Wipermono products and transactions
-
-IMPORTANT:
-  - Never move or rename these files while the app is running.
-  - Always backup these .db files daily.
-  - If sharing via Google Drive, upload only after closing the app.
 
 ================================================================
-SHARED DATABASE BEST-PRACTICE GUIDE
+PART 8: TROUBLESHOOTING
 ================================================================
 
-If your company uses ONE DATABASE shared across multiple PCs:
+PRODUCTS NOT SHOWING IN SEARCH
+-------------------------------
+Check the filter at the top:
+1. Look for a "Filter" or "Stock" dropdown
+2. If it says "Low Stock" or "Out of Stock", change it to "All"
+3. Try pressing Esc to clear all filters
+4. If still nothing, search for less text (e.g., "10" instead of "10.5")
+
+STOCK NUMBER DOESN'T MATCH RECORDS
+-------------------------------------
+1. Open the product details
+2. Click "Transactions" tab to see all sales and restocks
+3. Add up all transactions to check the math
+4. If you find an error, edit that transaction to fix it
+5. Stock recalculates automatically
+
+CAN'T SAVE A PRODUCT OR TRANSACTION
+------------------------------------
+1. Check that all required fields (*) are filled in
+2. Make sure numbers only contain digits (no letters or extra spaces)
+3. Check that prices use periods for decimals (10.50, not 10,50)
+4. Make sure the date is valid
+5. Click Save again
+
+APP LOOKS STRANGE / BUTTONS MISSING / TEXT CUT OFF
+----------------------------------------------------
+1. Try resizing the window (drag the edges)
+2. Press F11 to toggle fullscreen off, then on again
+3. Press F11 again to return to normal view
+4. Restart the app if it still looks wrong
+
+DATABASE ERROR WHEN OPENING
+-----------------------------
+1. This usually means the database is corrupted or locked
+2. Check that no one else is using the app on another computer
+3. Close all other instances of the app
+4. Restart the app
+
+CAN'T OPEN ADMIN PANEL
+------------------------
+1. Make sure the password is correct (default is: 1)
+2. Make sure the keyboard layout is correct (numbers only)
+3. If you forgot the password, ask your system administrator
+
+
+================================================================
+PART 9: COMMON MISTAKES & HOW TO AVOID THEM
+================================================================
+
+MISTAKE 1: Recording a Sale as a Restock (or vice versa)
+----------------------------------------------------------
+Problem: Stock number is wrong because you picked the wrong transaction type.
+
+How to Prevent:
+- RED button = Sale (stock goes DOWN)
+- BLUE button = Restock (stock goes UP)
+- GREEN button = Exact count (set stock to exact number)
+- Check the color before saving!
+
+How to Fix:
+1. Find the wrong transaction in history
+2. Click "Edit"
+3. Select the correct color
+4. Click "Save"
+5. Stock recalculates automatically
+
+MISTAKE 2: Wrong Quantity Entered
+-----------------------------------
+Problem: You entered 5 instead of 50, so stock is wrong.
+
+How to Prevent:
+- Always double-check the number before clicking Save
+- If you have a calculator, use it
+
+How to Fix:
+1. Find the transaction in history
+2. Click "Edit"
+3. Change the quantity to the correct number
+4. Click "Save"
+5. Stock updates immediately
+
+MISTAKE 3: Added Product with Wrong Brand Spelling
+-----------------------------------------------------
+Problem: You typed "MOS" one time and "M.O.S." another time, creating two separate products.
+
+How to Prevent:
+- Always use the same spelling for brand names
+- Example: Always use "MOS", never "M.O.S."
+- The system has auto-corrections for common mistakes
+
+How to Fix:
+1. Delete the duplicate product
+2. Make sure the remaining product has correct spelling
+
+MISTAKE 4: Edited the Wrong Product
+--------------------------------------
+Problem: You edited a similar product and lost important info.
+
+How to Prevent:
+- Always read the product name carefully BEFORE clicking Edit
+- Check the size (ID-OD-TH) and brand
+- Window title shows the module you're in - verify it's correct
+
+MISTAKE 5: Forgot Which Category You're In
+---------------------------------------------
+Problem: Added products to the wrong category.
+
+How to Prevent:
+- Always look at the window title at the very top
+- Example: "MOS Inventory - PACKING SEALS | MONOSEALS | MM"
+- This tells you exactly which category and module you're using
+- Switch category BEFORE adding or editing
+
+
+================================================================
+PART 10: DAILY BEST PRACTICES
+================================================================
+
+Starting Your Shift:
+1. Open the app
+2. Check the window title to know which module you're in
+3. Search for items you need to work with
+
+During Your Shift:
+1. Use right-click copy for quick price quoting
+2. Don't leave search filters on (press Esc when done)
+3. If stock looks wrong, check the transaction history
+4. Save only when you're sure the info is correct
+
+Quoting to Customers:
+1. Search for the product
+2. Right-click the product row
+3. Paste into email (Ctrl + V)
+4. Done! No need to type manually
+
+Recording Sales:
+1. Go to Admin > Transactions
+2. Click Add
+3. Select RED (Sale)
+4. Enter the product, quantity, and price
+5. Click Save
+
+Restocking:
+1. Go to Admin > Transactions
+2. Click Add
+3. Select BLUE (Restock)
+4. Enter the product and quantity received
+5. Click Save
+
+Backing Up Your Data:
+1. Copy the .db files from the data/ folders
+2. Save them in a safe location (USB drive or backup folder)
+3. Do this once per day
+4. Keep backups for at least 7 days
+
+
+================================================================
+PART 11: MULTI-PC DATABASE SAFETY
+================================================================
+
+If your company shares ONE database file across multiple computers:
 
 SAFE WORKFLOW:
 
 1. START OF SHIFT
-  - Download latest database copy from cloud storage (Google Drive, etc.)
-  - Place it in the correct data/ folder
-  - Open the app and verify the database loads
+   - Download the latest database from shared storage (Google Drive, etc.)
+   - Open the app
+   - Verify the data looks correct
 
 2. DURING WORK
-  - Make all your entries and transactions
-  - Do NOT upload while someone else is working
-  - Keep the app open — DO NOT close and reopen during the day
+   - Make all your entries and transactions
+   - Keep the app open all day
+   - Do NOT upload while someone else is working
 
-3. END OF WORK
-  - Finish all your work
-  - Close the MOSCO app completely
-  - Wait 30 seconds for system to save everything
-  - Upload the database file to cloud storage
+3. END OF SHIFT
+   - Finish all work
+   - Close the app completely
+   - Wait 30 seconds
+   - Upload the database file back to shared storage
 
 4. NEXT PERSON'S SHIFT
-  - Download the latest file before opening the app
-  - Repeat from Step 1
+   - Download the latest file before opening the app
+   - Repeat from step 1
 
 WHAT NOT TO DO:
 
-✗ DO NOT upload database while another PC is using the app
-✗ DO NOT open the app while uploading to cloud
-✗ DO NOT edit database files in cloud storage directly  
-✗ DO NOT skip the backup step
-✗ DO NOT share the exact same database from cloud without downloading first
+X Do NOT upload database while another computer is using the app
+X Do NOT open the app while someone is uploading
+X Do NOT edit database files in cloud storage directly
+X Do NOT skip the backup step
+X Do NOT share the database without downloading first
+
 
 WHY THIS MATTERS:
 
-Changes made on PC A might be OVERWRITTEN by PC B if both upload at the same time.
+Changes on PC A get OVERWRITTEN by PC B if both upload at the same time.
 This causes lost transactions and data corruption.
+
 
 DAILY BACKUP PROCEDURE:
 
-1. Keep a backup folder on USB drive or separate hard drive
+1. Keep a backup folder (USB drive or separate hard drive)
 2. Once per day, copy the .db files to your backup folder
-3. Date your backups (e.g., "oilseals_backup_Feb13.db")
+3. Name the backups with dates (e.g., oilseals_backup_Feb13.db)
 4. Keep at least 7 days of backups
-5. If something goes wrong, you can restore from backup
+5. If something goes wrong, restore from backup
 
-CONFLICT RESOLUTION:
-
-If the database becomes corrupted:
-1. Close the app immediately
+If Database Becomes Corrupted:
+1. Stop using the app immediately
 2. Do NOT open it again
-3. Restore the latest backup to the data/ folder
-4. Verify it works by opening a few products
-5. Notify the system administrator
+3. Restore the latest backup
+4. Test it by opening a few products
+5. Tell the system administrator
+
 
 ================================================================
-KNOWN LIMITATIONS & RECOMMENDATIONS
+PART 12: SETTING UP THE APP (For Installation)
 ================================================================
 
-1. CLOUD SYNC RISK
-   The system does not have built-in cloud sync.
-   Simultaneous uploads = data loss risk.
-   Recommendation: Follow the "Shared Database Best-Practice Guide" above.
+REQUIREMENTS
 
-2. MANUAL DATABASE HANDLING REQUIRED
-   The app does not automatically sync with cloud storage.
-   You must manually upload and download files.
-   Recommendation: Create a daily upload checklist for staff.
+Python 3.9 or Newer:
+- Go to python.org
+- Download Python 3.9+ (NOT Python 2)
+- Run the installer
+- CHECK: "Add Python to PATH"
+- Finish
 
-3. NO AUTOMATIC BACKUPS
-   The app does not create automatic backups.
-   Backups are your responsibility.
-   Recommendation: Assign one person per shift to handle backups.
+Required Programs (Install in Order):
+1. Open Command Prompt (Windows: Press Win+R, type cmd, press Enter)
+2. Copy and paste these commands one at a time:
+   
+   pip install customtkinter
+   pip install pillow
+   pip install tkcalendar
 
-4. PASSWORD SECURITY
-   Default admin password is "1" (simple for learning).
-   Recommendation: Change this to a strong password for production use.
+3. Wait for each to finish before running the next
 
-5. NO USER ACCESS CONTROL
-   All admin users have equal power (can see all data, delete products).
-   Recommendation: Control who has admin access.
+EXTRACTING THE APP:
 
-6. NO CHANGE LOG
-   The system does not track who made what changes.
-   Recommendation: Train staff to double-check before saving.
+1. Download the MOSCO Inventory APP folder
+2. Extract it to a location (e.g., C:\My Drive\MOS INVENTORY APP\mosco)
+3. Do NOT rename the main "mosco" folder
 
-These are not bugs — they are design choices to keep the system simple and fast.
+RUNNING THE APP:
 
-================================================================
-VERSION & IMPROVEMENTS LOG
-================================================================
+Option A (Easy):
+- Double-click the MOSCO.bat file
 
-SYSTEM VERSION: Production (Multiple Module Support)
+Option B (Manual):
+1. Open Command Prompt
+2. Navigate: cd C:\My Drive\MOS INVENTORY APP\mosco
+3. Type: python main.py
+4. Press Enter
 
-RECENT IMPROVEMENTS (Latest Session):
+DATABASE FOLDERS (Created Automatically):
+- mosco/oilseals/data/                    (Oil Seals database)
+- mosco/packingseals/monoseals/data/      (Monoseals database)
+- mosco/packingseals/wiperseals/data/     (Wiper Seals database)
+- mosco/packingseals/wipermono/data/      (Wipermono database)
+- mosco/oilseals/photos/                  (Oil Seals photos)
+- mosco/packingseals/*/photos/            (Other photos)
 
-✓ Window Title Navigation
-  - Window title now shows exactly which module you are working in
-  - Helps prevent editing wrong products
-  - Examples: "MOS Inventory - OIL SEALS | MM | PRODUCTS"
+Do NOT delete or rename these folders.
 
-✓ Category Dropdown Stability  
-  - Switching between Oil Seals, Monoseals, Wiper Seals, Wipermono now works reliably
-  - Both Products and Transactions tabs update correctly
-  - No need to restart Admin window
 
-✓ Product Editing Improvements
-  - Edit changes take effect immediately
-  - Transaction confirmation shows after edit
-  - No need to exit and re-enter
+ADMIN PASSWORD:
 
-✓ Fabrication Transaction Fix
-  - Editing fabrication no longer creates duplicates
-  - Can convert fabrication to Sale/Restock/Actual safely
+Default password: 1
 
-✓ Brand Normalization
-  - Automatic corrections: NAK→T.Y., NQK→T.Y., NTC→NOK
-  - Country auto-fill based on brand
-  - Keeps database clean and consistent
+You can discuss changing this to a stronger password with the system administrator.
 
-✓ Import Cleanup
-  - Removed unused imports
-  - Code is more efficient
-  - Faster startup time
-
-MODULES SUPPORTED:
-  ✓ Oil Seals (Oilseals)
-  ✓ Monoseals
-  ✓ Wiper Seals
-  ✓ Wipermono
-  ✓ (More modules planned for future expansion)
 
 ================================================================
-INTERNAL EMPLOYEE TRAINING GUIDE
+PART 13: DATABASE FILES EXPLAINED
 ================================================================
 
-FOR NEW STAFF:
+Each product category has its own database file:
 
-FIRST DAY - BASIC NAVIGATION
+Oil Seals:
+- File: oilseals_mm_inventory.db
+- Location: oilseals/data/
+- Stores: All oil seal products and transactions
 
-1. Opening the App
-   - Double-click MOSCO.bat (or ask supervisotr how to run on your system)
-   - Wait for window to appear (takes 5-10 seconds)
-   - You should see a grid of category buttons
+Monoseals:
+- File: monoseals_mm_inventory.db
+- Location: packingseals/monoseals/data/
+- Stores: All monoseal products and transactions
 
-2. Finding the Right Category
-   - Look at the main screen
-   - Click on the category you need (e.g., "PACKING SEALS")
-   - If it asks for sub-category, click to select (e.g., "MONOSEALS")
-   - If it asks for unit type, click to select (e.g., "MM")
+Wiper Seals:
+- File: wiperseals_mm_inventory.db
+- Location: packingseals/wiperseals/data/
+- Stores: All wiper seal products and transactions
 
-3. Finding a Product
-   - Use the search boxes at the top
-   - You can type TYPE, ID, OD, THICKNESS, or BRAND
-   - Results filter automatically as you type
-   - Press Esc to clear all filters and see everything
+Wipermono:
+- File: wipermono_mm_inventory.db
+- Location: packingseals/wipermono/data/
+- Stores: All wipermono products and transactions
 
-4. Using Right-Click Copy
-   - Right-click on any product in the list
-   - Product info is COPIED to clipboard
-   - Paste into your email/quote (Ctrl+V)
-   - Two blank lines are added between items
-   - Perfect for quoting multiple items to customers
+IMPORTANT:
 
-SECOND DAY - PRODUCT DETAILS
+- Never move or rename these files while the app is running
+- Always back up these .db files daily
+- If sharing via cloud, upload AFTER closing the app
+- These files contain all your product and transaction data
+- Losing these files means losing all your data
 
-1. Opening Product Details
-   - Double-click on any product row
-   - A new window opens with complete info
-   - You see stock, price, location, and notes
-
-2. Reading the Stock Color
-   - GREEN stock number = Good level
-   - ORANGE stock number = Low, restock soon
-   - RED stock number = Out of stock or critical
-
-3. Understanding Transaction History
-   - Scroll down to see all past sales and restocks
-   - RED = Sold
-   - BLUE = Restocked (added stock)
-   - GREEN = Physical count (inventory adjustment)
-   - Each row shows DATE, QUANTITY, PRICE, and more
-
-4. Checking Location
-   - Look for "Location: " in the details window
-   - This tells you where the item is stored
-   - Useful for finding inventory quickly
-
-THIRD DAY - SIMPLE EDITING
-
-1. Editing Location or Notes
-   - Click the "Edit" button in the details window
-   - Change the location or notes
-   - Click "Save"
-   - Changes take effect immediately
-
-2. Understanding Price and Stock
-   - "Price (SRP)" = Selling price per piece
-   - "Current Stock" = How many pieces we have now
-   - Both are calculated automatically based on transactions
-
-3. Adjusting Stock Thresholds
-   - Click on the big green/orange/red STOCK number
-   - A popup appears
-   - Set "Restock Needed" = when color turns RED
-   - Set "Low on Stock" = when color turns ORANGE
-   - Click Save
-
-COMMON DAILY TASKS:
-
-TASK: Customer asks for a quote
-  1. Search for the product using Type or Brand
-  2. Right-click on product row
-  3. Paste into email (Ctrl+V)
-  4. Easy!
-
-TASK: Record a sale
-  1. Go to Admin > Transactions tab
-  2. Click "Add"
-  3. Make sure button is RED (SALE)
-  4. Select product, enter quantity, price
-  5. Click Save
-  6. Stock number updates automatically
-
-TASK: Record a restock (purchased new items)
-  1. Go to Admin > Transactions tab
-  2. Click "Add"
-  3. Make sure button is BLUE (RESTOCK)
-  4. Select product, enter quantity
-  5. Click Save
-  6. Stock number updates automatically
-
-TASK: Physical count (inventory verification)
-  1. Go to Admin > Transactions tab
-  2. Click "Add"
-  3. Make sure button is GREEN (ACTUAL)
-  4. Select product, enter exact stock count
-  5. Click Save
-  6. Stock updates to that number
-
-MISTAKES TO AVOID:
-
-X Do not edit the same product twice by accident
-X Do not record a sale as a restock (stock will be wrong)
-X Do not forget to specify if it's a SALE vs RESTOCK
-X Do not close app without saving
-X Do not edit database files manually
-
-THINGS TO REMEMBER:
-
-✓ Always verify product details before editing
-✓ Double-check the category in the window title
-✓ Use Esc to clear filters if you can't find a product
-✓ Right-click copy is faster than typing
-✓ Ask supervisors if unsure — better to ask than make a mistake
 
 ================================================================
-SUPPORT & FEEDBACK
+PART 14: BRAND NORMALIZATION (Automatic Corrections)
 ================================================================
 
-PRIMARY CONTACT:
-If you encounter errors or problems, contact the system administrator.
+The system automatically corrects common brand name mistakes to keep your database clean:
 
-WHAT TO REPORT:
-- Error messages (copy the exact text)
-- What you were trying to do
-- Which category/product you were working with
-- Whether the issue is repeatable
+Automatic Corrections:
+- NAK → T.Y.
+- NQK → T.Y.
+- NTC → NOK
 
-ENCOURAGE EARLY REPORTING:
-- Small problems found early are easier to fix
-- Do not wait until end of day to report
-- Report immediately if database looks corrupted
+Automatic Country Fill-in:
+- If a product's country of origin is blank, it gets filled in automatically based on the brand
+- This keeps names consistent across the database
 
-FEEDBACK & IMPROVEMENT SUGGESTIONS:
-- If you have ideas to make the system better, let us know
-- User feedback helps improve the app
-- Common mistakes by staff guide future improvements
+Why This Matters:
+- Consistent brand names make searching easier
+- Prevents duplicate product entries
+- The system applies these rules automatically when you add/edit products
+- You don't need to do anything special — it just works
+
+Example:
+If you type "NAK" as the brand:
+- It automatically saves as "T.Y."
+- All searches work correctly
+- No duplicate products
+
 
 ================================================================
-FUTURE EXPANSION / PLANNED FEATURES
+PART 15: CATEGORY DROPDOWN (Switching Modules in Admin)
 ================================================================
 
-The system is designed for expansion.
+If your admin panel has a category dropdown:
 
-MODULES IN PLANNING STAGE:
+How to Use:
+1. Open Admin Panel (Ctrl + 2)
+2. Find the category dropdown (usually near the top)
+3. Click it and select a different category (e.g., Oil Seals → Monoseals)
+4. Both Products and Transactions tabs update immediately
+5. All data shown is for that selected category
+
+No need to:
+- Restart the Admin window
+- Close and reopen the app
+- It just works!
+
+This lets you manage products in multiple categories without closing the Admin panel.
+
+
+================================================================
+PART 16: KNOWING WHERE YOU ARE (Window Title Help)
+================================================================
+
+The window title at the very top tells you exactly where you are:
+
+Examples:
+
+"MOS Inventory"
+= At the main home screen (see category buttons)
+
+"MOS Inventory - OIL SEALS"
+= Inside Oil Seals category list
+
+"MOS Inventory - PACKING SEALS | MONOSEALS | MM"
+= In Monoseals, MM unit, viewing product list
+
+"MOS Inventory - PACKING SEALS | MONOSEALS | MM | PRODUCTS"
+= Same location, but specifically showing Products tab
+
+"MOS Inventory - PACKING SEALS | MONOSEALS | MM | TRANSACTIONS"
+= Same location, but showing Transaction history
+
+"MOS Inventory - PACKING SEALS | MONOSEALS | MM | ADMIN"
+= In Admin panel for that specific module
+
+WHY THIS MATTERS:
+
+- Know exactly which category you're working with
+- Prevent editing products in the wrong category
+- Understand if changes apply to Oil Seals or Monoseals
+- Always check the title before editing or adding products
+
+
+================================================================
+PART 17: NEW EMPLOYEE TRAINING CHECKLIST
+================================================================
+
+FIRST DAY - BASICS
+
+Things to Learn:
+☐ How to open the app
+☐ Find a product using search
+☐ Open product details (double-click)
+☐ Understand stock colors (Green/Orange/Red)
+☐ Use right-click to copy prices
+☐ Clear filters with Esc key
+☐ Use window title to know where you are
+☐ Exit the app properly
+
+SECOND DAY - DETAILS
+
+Things to Learn:
+☐ Edit location and notes
+☐ Change stock thresholds (click stock number)
+☐ Upload a product photo
+☐ Check transaction history
+☐ Understand Light/Dark mode
+
+THIRD DAY - ADMIN (If Authorized)
+
+Things to Learn:
+☐ Open Admin panel (Ctrl + 2, password: 1)
+☐ Record a sale (Red button)
+☐ Record a restock (Blue button)
+☐ Record a physical count (Green button)
+☐ Switch between Products and Transactions tabs (Ctrl + Tab)
+☐ Edit a transaction
+☐ Add a new product
+
+FOURTH DAY - ADVANCED
+
+Things to Learn:
+☐ Fabrication mode (purple button)
+☐ Category switching (dropdown in Admin)
+☐ Understanding right-click copy rules (Red/Blue/Green differences)
+☐ Backup procedures
+☐ Multi-PC database safety
+
+Common Daily Tasks by Role:
+
+REGULAR STAFF:
+- Search for products
+- Copy prices using right-click
+- Check stock levels
+- Report low stock to supervisor
+
+ADMIN USERS:
+- Record sales and restocks
+- Add new products
+- Edit product information
+- Fix transaction mistakes
+- Back up database files
+
+
+================================================================
+PART 18: KNOWN LIMITATIONS & RECOMMENDATIONS
+================================================================
+
+CLOUD STORAGE SYNC:
+Limitation: The app cannot sync with cloud storage automatically.
+Recommendation: Follow the "Multi-PC Database Safety" section for safe sharing.
+
+NO AUTOMATIC BACKUPS:
+Limitation: The app does not back up your data automatically.
+Recommendation: Assign one person per shift to handle backups. Do it every day.
+
+MANUAL DATABASE HANDLING:
+Limitation: You must manually upload/download database files from cloud storage.
+Recommendation: Create a daily checklist for this task.
+
+PASSWORD SECURITY:
+Limitation: Default password is "1" (simple for learning).
+Recommendation: Change to a strong password for production use.
+
+NO USER ACCESS CONTROL:
+Limitation: All admin users have equal power (can delete anything).
+Recommendation: Train staff to double-check before saving. Control who has admin access.
+
+NO CHANGE LOG:
+Limitation: The system doesn't track who made what changes.
+Recommendation: Keep a separate log if you need to know who changed what.
+
+
+================================================================
+PART 19: AVAILABLE CATEGORIES & MODULES
+================================================================
+
+Current Modules:
+
+✓ OIL SEALS
+  - Size Units: MM
+  - Database: oilseals_mm_inventory.db
+
+✓ PACKING SEALS - MONOSEALS
+  - Size Units: MM
+  - Database: monoseals_mm_inventory.db
+
+✓ PACKING SEALS - WIPER SEALS
+  - Size Units: MM
+  - Database: wiperseals_mm_inventory.db
+
+✓ PACKING SEALS - WIPERMONO
+  - Size Units: MM
+  - Database: wipermono_mm_inventory.db
+
+Future Modules (Planned):
 - Mechanical Shaft Seals
 - Oil Caps
 - Rubber Diaphragms
@@ -843,12 +926,108 @@ MODULES IN PLANNING STAGE:
 - Ball Bearings
 - Bushings (Flat Rings)
 - Grease & Sealants
-- ETC (Special items)
 
-Each new module will:
-  ✓ Have its own database
-  ✓ Work like Oil Seals and Monoseals
-  ✓ Support same features (search, right-click copy, admin panel)
-  ✓ Integrate seamlessly with the main system
+Each new module will work the same way as these current modules.
 
-No special training will be needed for new modules — same workflow as current modules.
+
+================================================================
+PART 20: SUPPORT & FEEDBACK
+================================================================
+
+ENCOUNTERING ERRORS?
+
+Contact the system administrator with:
+1. The exact error message (copy the text)
+2. What you were trying to do
+3. Which category/product you were working with
+4. Whether the problem happens every time
+
+SUGGESTIONS FOR IMPROVEMENT?
+
+The system developers welcome feedback!
+- If something is confusing, let them know
+- If you have ideas to make it better, share them
+- Common user mistakes help guide future improvements
+
+REPORT ISSUES EARLY
+
+Small problems found early are easier to fix.
+Don't wait until end of day to report.
+Report immediately if:
+- Data looks corrupted
+- Stock numbers seem wrong
+- Database error appears
+- App won't open
+
+
+================================================================
+PART 21: SYSTEM IMPROVEMENTS & VERSION HISTORY
+================================================================
+
+Latest Improvements:
+
+✓ Window Title Navigation
+  Shows exactly which module and category you're in
+
+✓ Category Dropdown Stability
+  Switching between modules works reliably
+  No need to restart Admin window
+
+✓ Product Editing Improvements
+  Changes take effect immediately
+  No need to close and reopen
+
+✓ Fabrication Transaction Fix
+  Can edit fabrication transactions without creating duplicates
+  Can convert fabrication to Sale/Restock/Actual safely
+
+✓ Brand Normalization
+  Automatic corrections: NAK→T.Y., NQK→T.Y., NTC→NOK
+  Keeps database clean and searchable
+
+✓ Right-Click Copy
+  Consistent formatting across all modules
+  Special rules for different transaction types
+
+✓ Import Cleanup
+  More efficient code
+  Faster startup time
+
+
+================================================================
+FINAL REMINDERS
+================================================================
+
+REMEMBER:
+
+1. Window title shows where you are — always check it
+2. Press Esc to clear filters when you can't find something
+3. Double-check before saving (especially for prices and quantities)
+4. Backup your database files every day
+5. Don't close the window unless you want to exit
+6. Back button goes ONE level up, not directly to home
+7. Stock colors: Green = OK, Orange = Low, Red = Out
+8. Red = Sale, Blue = Restock, Green = Count
+9. Right-click to copy prices for faster quoting
+10. Ask supervisors if unsure — better to ask than make a mistake
+
+IF IN DOUBT:
+
+- Check the window title
+- Use Esc to clear filters
+- Try pressing F11 if something looks wrong
+- Restart the app
+- Contact the system administrator
+
+================================================================
+END OF MANUAL
+================================================================
+
+Thank you for using MOSCO Inventory!
+
+Questions? Contact your system administrator.
+
+Version: Production (Multi-Module Support)
+Last Updated: February 21, 2026
+
+===================================================================

@@ -33,8 +33,14 @@ from ..ui.transaction_window import (
 )
 from theme import theme
 
+from debug import DEBUG_MODE
+
 class TransactionWindow(ctk.CTkFrame):
     def __init__(self, parent, details: Dict[str, Any], controller, return_to):
+        if DEBUG_MODE:
+            print(f"[TRANS-INIT] TransactionWindow initializing (id={id(self)})")
+            print(f"[TRANS-INIT] details={details.get('type_name', 'unknown')} {details.get('id', 'unknown')}, return_to={return_to}")
+        
         super().__init__(parent, fg_color=theme.get("bg"))
         self.controller = controller
         self.return_to = return_to
@@ -51,6 +57,9 @@ class TransactionWindow(ctk.CTkFrame):
         # Track scheduled admin close callback ID to prevent race condition
         self._admin_close_callback_id = None
 
+        if DEBUG_MODE:
+            print(f"[TRANS-INIT] Building UI...")
+        
         self._build_ui()
         self._setup_bindings()
         theme.subscribe(self.apply_theme)
@@ -73,6 +82,9 @@ class TransactionWindow(ctk.CTkFrame):
         )
         self.watermark_label.place(relx=1.0, rely=0.0, anchor="ne", x=-20, y=10)
         
+        if DEBUG_MODE:
+            print(f"[TRANS-INIT] TransactionWindow initialization complete")
+        
     def _detect_category(self) -> str:
         """Detect category name from module path."""
         module_name = self.__class__.__module__
@@ -83,6 +95,24 @@ class TransactionWindow(ctk.CTkFrame):
         elif 'wiperseals' in module_name or 'wiper_seals' in module_name:
             return 'WIPER SEALS'
         return 'PRODUCTS'
+
+    def _get_category_folder_path(self) -> str:
+        """
+        Get the category folder path for this TransactionWindow instance.
+        Used to determine the correct photos directory when saving images.
+        This ensures images are saved to the correct category folder even when
+        switching categories in AdminPanel.
+        """
+        module_name = self.__class__.__module__
+        if 'oilseals' in module_name:
+            return 'oilseals'
+        elif 'monoseals' in module_name:
+            return 'packingseals/monoseals'
+        elif 'wipermono' in module_name:
+            return 'packingseals/wipermono'
+        elif 'wiperseals' in module_name or 'wiper_seals' in module_name:
+            return 'packingseals/wiperseals'
+        return None
 
     def _get_product_type_label(self) -> str:
         """Get category-specific product type label for display."""
@@ -213,16 +243,21 @@ class TransactionWindow(ctk.CTkFrame):
         # Create refresh callback to update both main_app and transaction window when admin closes
         # CRITICAL: Store transaction window reference to cancel callback if this window is destroyed
         def on_admin_close():
-            print(f"[ADMIN-CALLBACK] Executing admin close callback")
+            if DEBUG_MODE:
+                print(f"[ADMIN-CALLBACK] Executing admin close callback")
+            
             # DEFENSIVE: Check if this TransactionWindow still exists before executing
             try:
                 tw_exists = self.winfo_exists()
-                print(f"[ADMIN-CALLBACK] TransactionWindow exists: {tw_exists}")
+                if DEBUG_MODE:
+                    print(f"[ADMIN-CALLBACK] TransactionWindow exists: {tw_exists}")
                 if not tw_exists:
-                    print("[TRANSACTION] TransactionWindow destroyed, skipping callback")
+                    if DEBUG_MODE:
+                        print("[ADMIN-CALLBACK] TransactionWindow destroyed, skipping callback")
                     return
             except Exception:
-                print("[TRANSACTION] TransactionWindow in invalid state, skipping callback")
+                if DEBUG_MODE:
+                    print("[ADMIN-CALLBACK] TransactionWindow in invalid state, skipping callback")
                 return
             
             try:
@@ -231,13 +266,30 @@ class TransactionWindow(ctk.CTkFrame):
                     try:
                         mm_exists = self.main_app.winfo_exists()
                         mm_viewable = self.main_app.winfo_viewable()
-                        print(f"[ADMIN-CALLBACK] MM state: exists={mm_exists}, viewable={mm_viewable}")
+                        if DEBUG_MODE:
+                            print(f"[ADMIN-CALLBACK] MM state: exists={mm_exists}, viewable={mm_viewable}")
+                            print(f"[ADMIN-CALLBACK] root children: {len(self.main_app.root.winfo_children())}")
+                        
                         if mm_exists and hasattr(self.main_app, 'refresh_product_list'):
-                            print("[ADMIN-CALLBACK] Refreshing MM after admin close")
-                            self.main_app.refresh_product_list()
-                            print(f"[ADMIN-CALLBACK] MM refresh completed")
+                            if DEBUG_MODE:
+                                print("[ADMIN-CALLBACK] Calling MM refresh_product_list()")
+                            
+                            if not mm_viewable:
+                                if DEBUG_MODE:
+                                    print("[ADMIN-CALLBACK] MM not viewable, deferring refresh")
+                                self.main_app._needs_refresh_on_show = True
+                            else:
+                                if DEBUG_MODE:
+                                    print("[ADMIN-CALLBACK] MM is viewable, refreshing now")
+                                self.main_app.refresh_product_list()
+                                if DEBUG_MODE:
+                                    print(f"[ADMIN-CALLBACK] MM refresh completed")
+                        elif mm_exists:
+                            if DEBUG_MODE:
+                                print("[ADMIN-CALLBACK]MM exists but no refresh_product_list method")
                     except Exception as e:
-                        print(f"[TRANSACTION] Error refreshing MM: {e}")
+                        if DEBUG_MODE:
+                            print(f"[ADMIN-CALLBACK] Error refreshing MM: {e}")
             except Exception:
                 pass
             
@@ -246,12 +298,15 @@ class TransactionWindow(ctk.CTkFrame):
                 if hasattr(self, '_load_transactions'):
                     try:
                         if self.winfo_exists():
-                            print("[TRANSACTION] Refreshing TransactionWindow after admin close")
+                            if DEBUG_MODE:
+                                print("[ADMIN-CALLBACK] Refreshing TransactionWindow after admin close")
                             self._load_transactions()
                     except Exception as e:
-                        print(f"[TRANSACTION] Error refreshing TransactionWindow: {e}")
+                        if DEBUG_MODE:
+                            print(f"[ADMIN-CALLBACK] Error refreshing TransactionWindow: {e}")
             except Exception as e:
-                print(f"[TRANSACTION] Error in callback: {e}")
+                if DEBUG_MODE:
+                    print(f"[ADMIN-CALLBACK] Error in callback: {e}")
         
         # Check if Admin Panel is already open
         if self.controller.is_admin_panel_open():
@@ -461,6 +516,11 @@ class TransactionWindow(ctk.CTkFrame):
         """Handle back button - ensure MM frame is properly restored"""
         print(f"[TRANSACTION-LIFECYCLE] Back button pressed, return_to={self.return_to}")
         
+        # DEFENSIVE: Never destroy master if return_to is set
+        if not self.return_to:
+            print(f"[TRANSACTION-LIFECYCLE] ERROR: return_to is None/empty! Using HomePage as fallback")
+            self.return_to = "HomePage"
+        
         if self.controller and self.return_to:
             # Before going back, ensure main_app (MM) is in a valid state
             if self.main_app and hasattr(self.main_app, 'winfo_exists'):
@@ -482,6 +542,7 @@ class TransactionWindow(ctk.CTkFrame):
             self.controller.show_frame(self.return_to)
             print(f"[TRANSACTION-LIFECYCLE] show_frame completed, back navigation finished")
         else:
+            print(f"[TRANSACTION-LIFECYCLE] ERROR: No controller or return_to! Destroying frame")
             self.master.destroy()
 
     def _create_main_content(self):
@@ -1034,7 +1095,11 @@ class TransactionWindow(ctk.CTkFrame):
                 else:
                     price_line = f"₱{p_num:.2f} / pc."
 
-            out_text = f"{first_line}\n{price_line}\n\n"
+            # For restock (blue), remove trailing newlines; for sales/actual, keep them
+            if is_restock:
+                out_text = f"{first_line}\n{price_line}"
+            else:
+                out_text = f"{first_line}\n{price_line}\n\n"
 
             try:
                 # Use the widget's clipboard
@@ -1661,7 +1726,16 @@ class TransactionWindow(ctk.CTkFrame):
         try:
             ext = os.path.splitext(file_path)[1].lower()
             filename = create_safe_filename(self.details, ext)
-            photos_dir = get_photos_directory()
+            # CRITICAL FIX: Get photos directory using category folder path
+            # This ensures images save to correct folder even when switching categories
+            category_folder = self._get_category_folder_path()
+            photos_dir = get_photos_directory(category_folder=category_folder)
+            
+            if DEBUG_MODE:
+                print(f"[IMAGE-UPLOAD] category_folder={category_folder}")
+                print(f"[IMAGE-UPLOAD] photos_dir={photos_dir}")
+                print(f"[IMAGE-UPLOAD] filename={filename}")
+            
             save_path = os.path.join(photos_dir, filename)
 
             if not compress_and_save_image(file_path, save_path):

@@ -238,8 +238,26 @@ def is_photo_upload_allowed(details: Dict[str, Any]) -> bool:
     return details["brand"].upper() == "MOS"
 
 
-def get_photos_directory() -> str:
-    """Get the photos directory path"""
+def get_photos_directory(category_folder: str = None) -> str:
+    """
+    Get the photos directory path.
+    
+    Args:
+        category_folder: Optional category folder path (e.g., 'packingseals/monoseals').
+                        If provided, returns photos path for that category.
+                        If None, uses current module's location.
+    
+    Returns:
+        Path to the photos directory.
+    """
+    if category_folder:
+        # Category folder provided - construct path from that
+        # Ensure proper path handling
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        photos_path = os.path.join(base_path, category_folder.replace('.', os.sep), 'photos')
+        if os.path.exists(photos_path):
+            return photos_path
+    # Fallback to current module's location
     return os.path.join(os.path.dirname(__file__), "..", "photos")
 
 

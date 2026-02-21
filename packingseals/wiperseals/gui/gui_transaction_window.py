@@ -32,6 +32,7 @@ from ..ui.transaction_window import (
     get_photos_directory,
 )
 from theme import theme
+from debug import DEBUG_MODE
 
 class TransactionWindow(ctk.CTkFrame):
     def __init__(self, parent, details: Dict[str, Any], controller, return_to):
@@ -83,6 +84,24 @@ class TransactionWindow(ctk.CTkFrame):
         elif 'wiperseals' in module_name or 'wiper_seals' in module_name:
             return 'WIPER SEALS'
         return 'PRODUCTS'
+
+    def _get_category_folder_path(self) -> str:
+        """
+        Get the category folder path for this TransactionWindow instance.
+        Used to determine the correct photos directory when saving images.
+        This ensures images are saved to the correct category folder even when
+        switching categories in AdminPanel.
+        """
+        module_name = self.__class__.__module__
+        if 'wiperseals' in module_name or 'wiper_seals' in module_name:
+            return 'packingseals/wiperseals'
+        elif 'wipermono' in module_name or 'wiper_mono' in module_name:
+            return 'packingseals/wipermono'
+        elif 'monoseals' in module_name:
+            return 'packingseals/monoseals'
+        elif 'oilseals' in module_name:
+            return 'oilseals'
+        return None
 
     def _get_product_type_label(self) -> str:
         """Get category-specific product type label for display."""
@@ -1021,7 +1040,11 @@ class TransactionWindow(ctk.CTkFrame):
                 else:
                     price_line = f"₱{p_num:.2f} / pc."
 
-            out_text = f"{first_line}\n{price_line}\n\n"
+            # For restock (blue), remove trailing newlines; for sales/actual, keep them
+            if is_restock:
+                out_text = f"{first_line}\n{price_line}"
+            else:
+                out_text = f"{first_line}\n{price_line}\n\n"
 
             try:
                 # Use the widget's clipboard
@@ -1648,7 +1671,16 @@ class TransactionWindow(ctk.CTkFrame):
         try:
             ext = os.path.splitext(file_path)[1].lower()
             filename = create_safe_filename(self.details, ext)
-            photos_dir = get_photos_directory()
+            # CRITICAL FIX: Get photos directory using category folder path
+            # This ensures images save to correct folder even when switching categories
+            category_folder = self._get_category_folder_path()
+            photos_dir = get_photos_directory(category_folder=category_folder)
+            
+            if DEBUG_MODE:
+                print(f"[IMAGE-UPLOAD] category_folder={category_folder}")
+                print(f"[IMAGE-UPLOAD] photos_dir={photos_dir}")
+                print(f"[IMAGE-UPLOAD] filename={filename}")
+            
             save_path = os.path.join(photos_dir, filename)
 
             if not compress_and_save_image(file_path, save_path):

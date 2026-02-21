@@ -8,7 +8,8 @@ from theme import theme
 from home_page import categories
 from ..admin.products import ProductsLogic
 from .gui_transactions import TransactionTab
-from .gui_prod_aed import ProductFormHandler
+# NOTE: ProductFormHandler import moved to dynamic import in _apply_selection()
+# to support switching between different category modules
 
 
 class AdminPanel:
@@ -686,9 +687,13 @@ class AdminPanel:
             # Recreate products logic with new connection
             self.products_logic = SelectedProductsLogic() if SelectedProductsLogic else ProductsLogic()
             
+            # CRITICAL FIX: Dynamically import ProductFormHandler from the SELECTED category
+            # This ensures the correct form handler is used when switching categories
+            ProductFormHandlerClass = self._get_product_form_handler_class(base_folder)
+            
             # Recreate form handler with new connection (CRITICAL FIX)
-            if hasattr(self, 'prod_form_handler'):
-                self.prod_form_handler = ProductFormHandler(
+            if hasattr(self, 'prod_form_handler') and ProductFormHandlerClass:
+                self.prod_form_handler = ProductFormHandlerClass(
                     self.win,
                     None,
                     self.refresh_products,
@@ -1027,8 +1032,50 @@ class AdminPanel:
         except Exception as e:
             print(f"[WARNING] Product add hook failed: {type(e).__name__}")
 
+    def _get_product_form_handler_class(self, base_folder=None):
+        """
+        Get the ProductFormHandler class from the specified category folder.
+        Falls back to oilseals if not specified or import fails.
+        
+        Args:
+            base_folder: Category folder name (e.g., 'packingseals.monoseals', 'oilseals')
+                        Can be None for fallback to oilseals.
+        
+        Returns:
+            ProductFormHandler class from the correct category module
+        """
+        if not base_folder:
+            base_folder = 'packingseals.monoseals'
+        
+        try:
+            # Try to import ProductFormHandler from the specified category
+            if base_folder.startswith('packingseals'):
+                # Handle packing seals subcategories
+                prod_aed_module = importlib.import_module(f"{base_folder}.gui.gui_prod_aed")
+            else:
+                # Handle single-level categories like oilseals
+                prod_aed_module = importlib.import_module(f"{base_folder}.gui.gui_prod_aed")
+            
+            ProductFormHandlerClass = getattr(prod_aed_module, 'ProductFormHandler', None)
+            if ProductFormHandlerClass:
+                return ProductFormHandlerClass
+        except Exception:
+            pass
+        
+        # Fallback to monoseals if anything fails
+        try:
+            fallback_module = importlib.import_module('packingseals.monoseals.gui.gui_prod_aed')
+            return getattr(fallback_module, 'ProductFormHandler', None)
+        except Exception:
+            return None
+
     def create_products_tab(self):
-        self.prod_form_handler = ProductFormHandler(
+        # CRITICAL FIX: Dynamically get ProductFormHandler from correct category
+        ProductFormHandlerClass = self._get_product_form_handler_class('packingseals.monoseals')
+        if not ProductFormHandlerClass:
+            return
+        
+        self.prod_form_handler = ProductFormHandlerClass(
             self.win,
             None,
             self.refresh_products,

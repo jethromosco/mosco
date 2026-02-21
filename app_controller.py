@@ -5,6 +5,7 @@ import os
 from theme import theme
 from home_page import HomePage, CategoryPage, ComingSoonPage
 from inventory_context import InventoryContext, create_context, INVALID_CONTEXT
+from debug import DEBUG_MODE
 
 
 CATEGORY_FOLDER_MAP = {
@@ -47,6 +48,10 @@ CATEGORY_FOLDER_MAP = {
 
 class AppController:
     def __init__(self, root):
+        if DEBUG_MODE:
+            print(f"[CONTROLLER-INIT] AppController initializing with root id={id(root)}")
+            print(f"[CONTROLLER-INIT] root type={type(root).__name__}, exists={root.winfo_exists()}")
+        
         self.root = root
         # Do not force any window state here; respect user's window sizing.
         self.root.configure(bg=theme.get("bg"))
@@ -73,6 +78,9 @@ class AppController:
         self.current_subcategory = None
         self.current_unit = None
         self.current_db_module = None
+        
+        if DEBUG_MODE:
+            print(f"[CONTROLLER-INIT] AppController initialization complete")
         self.current_context = INVALID_CONTEXT  # The authoritative context object
         
         # Dynamic window title tracking
@@ -248,6 +256,10 @@ class AppController:
 
     def show_frame(self, page_name):
         """Show a frame with smooth transition animation"""
+        if DEBUG_MODE:
+            print(f"[FRAME-SHOW] show_frame({page_name}) called")
+            print(f"[FRAME-SHOW] root children: {len(self.root.winfo_children())}")
+        
         # Get ALL currently visible frames and find the topmost one
         # The topmost frame is the last one in iteration (most recently placed)
         viewable_frames = []
@@ -258,20 +270,31 @@ class AppController:
             except Exception:
                 pass
         
+        if DEBUG_MODE:
+            print(f"[FRAME-SHOW] Current visible frames: {[name for name, _ in viewable_frames]}")
+        
         # Hide current frame (the topmost/most recent one)
         if viewable_frames:
             current_frame_name, current_frame = viewable_frames[-1]
             try:
+                if DEBUG_MODE:
+                    print(f"[FRAME-SHOW] Hiding current frame: {current_frame_name}")
                 current_frame.place_forget()
             except Exception as e:
-                print(f"[FRAME] Error hiding frame {current_frame_name}: {e}")
+                if DEBUG_MODE:
+                    print(f"[FRAME-SHOW] Error hiding frame {current_frame_name}: {e}")
         else:
             current_frame = None
+            if DEBUG_MODE:
+                print(f"[FRAME-SHOW] No visible frame to hide")
         
         # Show the requested frame with fade-in
         if page_name in self.frames:
             frame = self.frames[page_name]
             try:
+                if DEBUG_MODE:
+                    print(f"[FRAME-SHOW] Placing frame {page_name}")
+                
                 # Ensure frame is placed before updating
                 frame.place(x=0, y=0, relwidth=1, relheight=1)
                 frame.lift()
@@ -281,6 +304,9 @@ class AppController:
                 frame.update_idletasks()
                 frame.update_idletasks()
                 
+                if DEBUG_MODE:
+                    print(f"[FRAME-SHOW] Frame {page_name} placed, checking for on_frame_show")
+                
                 # Schedule frame's on_frame_show hook ONLY for InventoryApp frames
                 # Call immediately (not delayed) to refresh content right away
                 # Check: must have on_frame_show method AND be named InventoryApp
@@ -288,10 +314,12 @@ class AppController:
                     frame.__class__.__name__ == 'InventoryApp'):
                     try:
                         if frame.winfo_exists():
-                            print(f"[FRAME] Calling on_frame_show immediately for {page_name}")
+                            if DEBUG_MODE:
+                                print(f"[FRAME-SHOW] Calling on_frame_show for {page_name}")
                             frame.on_frame_show()
                     except Exception as e:
-                        print(f"[FRAME] Error in on_frame_show for {page_name}: {e}")
+                        if DEBUG_MODE:
+                            print(f"[FRAME-SHOW] Error in on_frame_show for {page_name}: {e}")
                         # If on_frame_show failed, try refresh_product_list directly as fallback
                         try:
                             if hasattr(frame, 'refresh_product_list'):
@@ -599,6 +627,9 @@ class AppController:
             pass
 
     def go_back(self, page_name):
+        if DEBUG_MODE:
+            print(f"[FRAME-BACK] go_back({page_name}) called")
+            print(f"[FRAME-BACK] root children: {len(self.root.winfo_children())}")
         self.show_frame(page_name)
 
     def get_current_frame_name(self):
@@ -614,22 +645,57 @@ class AppController:
         self.show_frame("HomePage")
 
     def show_transaction_window(self, details, main_app, return_to=None):
+        if DEBUG_MODE:
+            print(f"[TRANS-SHOW] show_transaction_window() called")
+            print(f"[TRANS-SHOW] product={details.get('type_name', 'unknown')} {details.get('id', 'unknown')}")
+            print(f"[TRANS-SHOW] return_to={return_to}")
+        
+        # CRITICAL FIX: Preserve return_to from old TransactionWindow before destroying it
+        old_return_to = None
         if "TransactionWindow" in self.frames:
             try:
                 old_frame = self.frames["TransactionWindow"]
+                # PRESERVE the return_to value before destroying
+                if hasattr(old_frame, 'return_to') and old_frame.return_to:
+                    old_return_to = old_frame.return_to
+                    if DEBUG_MODE:
+                        print(f"[TRANS-SHOW] Preserving old return_to={old_return_to}")
+                
+                if DEBUG_MODE:
+                    print(f"[TRANS-SHOW] Destroying old TransactionWindow")
                 # CRITICAL: Cancel any pending admin close callback before destroying frame
                 if hasattr(old_frame, '_admin_close_callback_id') and old_frame._admin_close_callback_id is not None:
                     try:
                         old_frame.after_cancel(old_frame._admin_close_callback_id)
-                        print("[FRAME] Cancelled pending callback in old TransactionWindow")
+                        if DEBUG_MODE:
+                            print("[TRANS-SHOW] Cancelled pending callback in old TransactionWindow")
                         old_frame._admin_close_callback_id = None
                     except Exception:
                         pass
                 old_frame.destroy()
-            except Exception:
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"[TRANS-SHOW] Error destroying old TransactionWindow: {e}")
                 pass
+        
+        # CRITICAL FIX: Never allow return_to to be None
         if not return_to:
-            return_to = self.get_current_frame_name()
+            # Try to use preserved return_to from old window first
+            if old_return_to:
+                return_to = old_return_to
+                if DEBUG_MODE:
+                    print(f"[TRANS-SHOW] Using preserved return_to={return_to}")
+            else:
+                # Fall back to current frame
+                return_to = self.get_current_frame_name()
+                if DEBUG_MODE:
+                    print(f"[TRANS-SHOW] Using current frame return_to={return_to}")
+        
+        # SAFETY CHECK: Ensure return_to is valid
+        if not return_to or return_to == "TransactionWindow":
+            return_to = "HomePage"
+            if DEBUG_MODE:
+                print(f"[TRANS-SHOW] WARNING: return_to was invalid, using HomePage as fallback")
 
         # Determine TransactionWindow class dynamically from the caller's module
         TransactionCls = None

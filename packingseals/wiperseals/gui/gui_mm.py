@@ -5,6 +5,7 @@ import customtkinter as ctk
 from PIL import Image
 
 from theme import theme
+from debug import DEBUG_MODE
 from home_page import ICON_PATH
 from ..ui.mm import (
     convert_mm_to_inches_display,
@@ -967,7 +968,11 @@ class InventoryApp(ctk.CTkFrame):
 
         # Open transaction window
         if self.controller:
-            self.controller.show_transaction_window(details, self)
+            # CRITICAL: Pass return_to so transaction window knows where to go back to
+            current_frame = self.controller.get_current_frame_name()
+            if DEBUG_MODE:
+                print(f"[MM-TREE] Product clicked, current frame={current_frame}")
+            self.controller.show_transaction_window(details, self, return_to=current_frame)
         else:
             # Fallback: use self as the return target (close window on back)
             win = tk.Toplevel(self)

@@ -16,12 +16,23 @@ from ..ui.mm import (
 )
 from .gui_transaction_window import TransactionWindow
 
+from debug import DEBUG_MODE
+
 
 class InventoryApp(ctk.CTkFrame):
     def __init__(self, master, controller=None):
+        if DEBUG_MODE:
+            print(f"[MM-INIT] Initializing InventoryApp (id={id(self)})")
+            print(f"[MM-INIT] master={type(master).__name__}, controller={type(controller).__name__ if controller else 'None'}")
+        
         super().__init__(master, fg_color=theme.get("bg"))
         self.controller = controller
         self.root = controller.root if controller else self.winfo_toplevel()
+        
+        if DEBUG_MODE:
+            print(f"[MM-INIT] root={type(self.root).__name__} (id={id(self.root)})")
+            print(f"[MM-INIT] root.winfo_exists()={self.root.winfo_exists()}")
+            print(f"[MM-INIT] root children count={len(self.root.winfo_children())}")
 
         # Default return target for back button
         self.return_to = "HomePage"
@@ -57,11 +68,18 @@ class InventoryApp(ctk.CTkFrame):
         self.combo_widgets = []
         self.entry_fields = []  # For Backspace navigation
 
+        if DEBUG_MODE:
+            print(f"[MM-INIT] About to create_widgets()")
+        
         # Setup UI and bindings
         self.create_widgets()
         self.refresh_product_list()
         self._setup_bindings()
         theme.subscribe(self.apply_theme)
+        
+        if DEBUG_MODE:
+            print(f"[MM-INIT] InventoryApp initialization complete")
+            print(f"[MM-INIT] self.winfo_exists()={self.winfo_exists()}, self.winfo_viewable()={self.winfo_viewable()}")
 
     def _setup_bindings(self):
         """Setup keyboard bindings"""
@@ -152,12 +170,26 @@ class InventoryApp(ctk.CTkFrame):
 
     def create_widgets(self):
         """Create all UI widgets"""
+        if DEBUG_MODE:
+            print(f"[MM-WIDGETS] create_widgets() called")
+        
         self.bind("<Button-1>", self.remove_focus)
         
         # Create main sections
+        if DEBUG_MODE:
+            print(f"[MM-WIDGETS] Creating header section")
         self._create_header_section()
+        
+        if DEBUG_MODE:
+            print(f"[MM-WIDGETS] Creating search section")
         self._create_search_section()
+        
+        if DEBUG_MODE:
+            print(f"[MM-WIDGETS] Creating table section")
         self._create_table_section()
+        
+        if DEBUG_MODE:
+            print(f"[MM-WIDGETS] create_widgets() complete")
 
     def _create_header_section(self):
         """Create header with back button, logo, and admin button"""
@@ -255,9 +287,20 @@ class InventoryApp(ctk.CTkFrame):
 
     def _handle_back_button(self):
         """Handle back button click"""
+        if DEBUG_MODE:
+            print(f"[MM-BACK] Back button pressed, return_to={self.return_to}")
+            print(f"[MM-BACK] MM exists: {self.winfo_exists()}")
+            print(f"[MM-BACK] MM viewable: {self.winfo_viewable()}")
+            print(f"[MM-BACK] root exists: {self.root.winfo_exists()}")
+            print(f"[MM-BACK] root children: {len(self.root.winfo_children())}")
+        
         if self.controller:
+            if DEBUG_MODE:
+                print(f"[MM-BACK] Calling controller.go_back({self.return_to})")
             self.controller.go_back(self.return_to)
         else:
+            if DEBUG_MODE:
+                print(f"[MM-BACK] No controller, destroying master")
             self.master.destroy()
 
     def _create_search_section(self):
@@ -873,24 +916,40 @@ class InventoryApp(ctk.CTkFrame):
     def refresh_product_list(self, clear_filters=False):
         """Refresh the product display list"""
         # Deep lifecycle debugging
-        print(f"[MM-LIFECYCLE] refresh_product_list() called")
-        print(f"[MM-LIFECYCLE] MM exists: {self.winfo_exists()}")
-        print(f"[MM-LIFECYCLE] MM viewable: {self.winfo_viewable()}")
-        print(f"[MM-LIFECYCLE] Has tree: {hasattr(self, 'tree')}")
-        if hasattr(self, 'tree'):
-            print(f"[MM-LIFECYCLE] Tree exists: {self.tree.winfo_exists()}")
+        if DEBUG_MODE:
+            print(f"[MM-REFRESH] refresh_product_list() called")
+            print(f"[MM-REFRESH] MM exists: {self.winfo_exists()}")
+            print(f"[MM-REFRESH] MM viewable: {self.winfo_viewable()}")
+            print(f"[MM-REFRESH] MM geometry: {self.winfo_geometry()}")
+            print(f"[MM-REFRESH] root exists: {self.root.winfo_exists()}")
+            print(f"[MM-REFRESH] root children count: {len(self.root.winfo_children())}")
+            print(f"[MM-REFRESH] Has tree: {hasattr(self, 'tree')}")
+            if hasattr(self, 'tree'):
+                try:
+                    print(f"[MM-REFRESH] Tree exists: {self.tree.winfo_exists()}")
+                except:
+                    print(f"[MM-REFRESH] Tree exists check failed")
+        
+        # Check for grey window state (no widgets in root)
+        if self.root.winfo_exists() and len(self.root.winfo_children()) == 0:
+            if DEBUG_MODE:
+                print(f"[ERROR] GREY WINDOW STATE DETECTED: root has 0 children!")
+            return
         
         # Safety check: ensure frame and widgets still exist
         try:
             if not self.winfo_exists():
-                print("[MM] Frame no longer exists, skipping refresh")
+                if DEBUG_MODE:
+                    print("[MM-REFRESH] Frame no longer exists, skipping refresh")
                 return
             # Check if tree widget exists - this is the critical check
             if not hasattr(self, 'tree') or not self.tree.winfo_exists():
-                print("[MM] Tree widget no longer exists, skipping refresh")
+                if DEBUG_MODE:
+                    print("[MM-REFRESH] Tree widget no longer exists, skipping refresh")
                 return
         except Exception as e:
-            print(f"[MM] Error checking widget existence: {e}")
+            if DEBUG_MODE:
+                print(f"[MM-REFRESH] Error checking widget existence: {e}")
             return
         
         if clear_filters:
@@ -975,7 +1034,12 @@ class InventoryApp(ctk.CTkFrame):
 
         # Open transaction window
         if self.controller:
-            self.controller.show_transaction_window(details, self)
+            # CRITICAL: Pass return_to so transaction window knows where to go back to
+            # Get the current InventoryApp frame name from controller
+            current_frame = self.controller.get_current_frame_name()
+            if DEBUG_MODE:
+                print(f"[MM-TREE] Product clicked, current frame={current_frame}")
+            self.controller.show_transaction_window(details, self, return_to=current_frame)
         else:
             # Fallback: use self as the return target (close window on back)
             win = tk.Toplevel(self)
@@ -1137,42 +1201,43 @@ class InventoryApp(ctk.CTkFrame):
     def on_frame_show(self):
         """Called when this frame is shown - refresh theme-dependent styles and validate state"""
         # CRITICAL DEBUGGING: Log state when frame is shown
-        print(f"[MM-LIFECYCLE] on_frame_show() CALLED - MM is now ACTIVE")
-        print(f"[MM-LIFECYCLE] Frame state:")
-        print(f"  MM exists: {self.winfo_exists()}")
-        print(f"  MM viewable: {self.winfo_viewable()}")
-        print(f"  MM geometry: {self.winfo_geometry()}")
+        if DEBUG_MODE:
+            print(f"[MM-SHOW] on_frame_show() CALLED - MM is now ACTIVE")
+            print(f"[MM-SHOW] Frame state:")
+            print(f"  MM exists: {self.winfo_exists()}")
+            print(f"  MM viewable: {self.winfo_viewable()}")
+            print(f"  MM geometry: {self.winfo_geometry()}")
+            print(f"  root children: {len(self.root.winfo_children())}")
         
-        # Ensure main_content is properly packed and visible
+        # Always ensure main_content is packed and visible
         try:
             if hasattr(self, 'main_content') and self.main_content.winfo_exists():
-                print(f"[MM-LIFECYCLE] main_content exists")
-                print(f"[MM-LIFECYCLE] main_content viewable: {self.main_content.winfo_viewable()}")
-                # Force main_content to be packed if it somehow got off-screen
-                if not self.main_content.winfo_viewable():
-                    print(f"[MM-LIFECYCLE] WARNING: main_content NOT viewable, attempting fix...")
-                    # Try to re-pack it or lift it
-                    try:
-                        self.main_content.lift()
-                        self.main_content.pack(fill="both", expand=True, pady=(170, 20), padx=20)
-                        print(f"[MM-LIFECYCLE] main_content fixed")
-                    except Exception:
-                        # Widget might already be packed, that's OK
-                        pass
+                if DEBUG_MODE:
+                    print(f"[MM-SHOW] main_content exists")
+                    print(f"[MM-SHOW] main_content viewable: {self.main_content.winfo_viewable()}")
+                self.main_content.lift()
+                self.main_content.pack(fill="both", expand=True, pady=(170, 20), padx=20)
+                if DEBUG_MODE:
+                    print(f"[MM-SHOW] main_content packed and lifted")
         except Exception as e:
-            print(f"[MM] Error validating main_content state: {e}")
+            if DEBUG_MODE:
+                print(f"[MM-SHOW] Error validating main_content state: {e}")
         
-        print(f"[MM-LIFECYCLE] Calling _setup_treeview_style()")
+        if DEBUG_MODE:
+            print(f"[MM-SHOW] Calling _setup_treeview_style()")
         self._setup_treeview_style()
         
         # CRITICAL FIX: Check if Admin panel made changes while MM was hidden.
         # Deferred refresh pattern: set in admin callback, execute here when frame is visible.
         if getattr(self, '_needs_refresh_on_show', False):
-            print(f"[MM-LIFECYCLE] DEFERRED REFRESH: Admin made changes, refreshing now that MM is visible")
+            if DEBUG_MODE:
+                print(f"[MM-SHOW] DEFERRED REFRESH: Admin made changes, refreshing now that MM is visible")
             self._needs_refresh_on_show = False
             self.refresh_product_list()
         else:
-            print(f"[MM-LIFECYCLE] No deferred refresh needed, calling refresh_product_list()")
+            if DEBUG_MODE:
+                print(f"[MM-SHOW] Calling refresh_product_list()")
             self.refresh_product_list()
         
-        print(f"[MM-LIFECYCLE] on_frame_show() COMPLETE")
+        if DEBUG_MODE:
+            print(f"[MM-SHOW] on_frame_show() COMPLETE")

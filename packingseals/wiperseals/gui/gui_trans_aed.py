@@ -1053,7 +1053,9 @@ class TransactionFormHandler:
                         controller = None
 
                     if controller:
-                        controller.show_transaction_window(details, main_app)
+                        # CRITICAL: Include return_to to ensure proper navigation
+                        current_frame = controller.get_current_frame_name() if controller else None
+                        controller.show_transaction_window(details, main_app, return_to=current_frame)
                 except Exception:
                     # Fallback: just close the form
                     pass

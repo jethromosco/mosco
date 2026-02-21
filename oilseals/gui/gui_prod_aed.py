@@ -371,7 +371,9 @@ class ProductFormHandler:
                                 'notes': ''
                             }
                         # Open transaction window with the correctly-saved (normalized) product
-                        self.controller.show_transaction_window(product_details, self.main_app)
+                        # CRITICAL: Include return_to to ensure proper navigation
+                        current_frame = self.controller.get_current_frame_name() if self.controller else None
+                        self.controller.show_transaction_window(product_details, self.main_app, return_to=current_frame)
                 except Exception:
                     # Swallow transaction window errors - product was still saved successfully
                     pass
