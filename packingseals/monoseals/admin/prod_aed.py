@@ -4,6 +4,7 @@ import sqlite3
 
 from ..database import connect_db
 from .brand_utils import canonicalize_brand
+from debug import DEBUG_MODE
 
 
 def parse_measurement(value):
@@ -384,6 +385,9 @@ class ProductFormLogic:
 								'brand': validated_data[4]
 							}
 							photos_dir = get_photos_directory()
+							
+							if DEBUG_MODE:
+								print(f"[PHOTO-ADMIN] Updated product - resolving photos_dir: {photos_dir}")
 							
 							# Build old filename pattern for MOS upload
 							safe_id = sanitize_dimension_for_filename(original_id)

@@ -6,6 +6,7 @@ import customtkinter as ctk
 
 from theme import theme
 from home_page import categories
+from debug import DEBUG_MODE
 from ..admin.products import ProductsLogic
 from .gui_transactions import TransactionTab
 # NOTE: ProductFormHandler import moved to dynamic import in _apply_selection()
@@ -662,10 +663,20 @@ class AdminPanel:
         if base_folder != 'oilseals':
             target_modules += packing_seals_modules
 
+        # CRITICAL FIX: Also patch DB_PATH in ui.transaction_window modules
+        # This ensures derive_category_folder_from_db_path() reads the CORRECT database path
+        # when get_photos_directory() is called during photo upload
+        db_path = getattr(db_module, 'DB_PATH', None)
+        
         for mod_name in target_modules:
             try:
                 m = importlib.import_module(mod_name)
                 setattr(m, 'connect_db', connect_fn)
+                # If this is a ui.transaction_window module, also update DB_PATH
+                if 'ui.transaction_window' in mod_name and db_path:
+                    setattr(m, 'DB_PATH', db_path)
+                    if DEBUG_MODE:
+                        print(f"[ADMIN-PATCH] Patched DB_PATH in {mod_name} to {db_path}")
             except Exception:
                 pass
 

@@ -4,9 +4,10 @@ from typing import Any, Dict, List, Tuple
 
 from PIL import Image
 
-from ..database import connect_db
+from ..database import connect_db, DB_PATH
 from ..admin.trans_aed import sanitize_dimension_for_filename
 from .mm import apply_stock_transaction, is_unknown_stock
+from debug import DEBUG_MODE
 
 
 def get_existing_image_base(details: Dict[str, Any]) -> str:
@@ -238,27 +239,106 @@ def is_photo_upload_allowed(details: Dict[str, Any]) -> bool:
     return details["brand"].upper() == "MOS"
 
 
+def derive_category_folder_from_db_path(db_path: str = None) -> str:
+    """
+    Derive the category folder path from the database file path.
+    This ensures photos are saved to the correct module folder even when categories are switched.
+    
+    CRITICAL FIX: This function ties photo folder resolution to the actual database in use,
+    not to the module where the function is called from.
+    
+    Args:
+        db_path: Full path to the database file. If None, uses current module's DB_PATH.
+    
+    Returns:
+        Category folder path (e.g., 'packingseals/wipermono', 'oilseals')
+    
+    Examples:
+        wipermono_mm_inventory.db -> packingseals/wipermono
+        wiperseals_mm_inventory.db -> packingseals/wiperseals
+        oilseals_mm_inventory.db -> oilseals
+    """
+    try:
+        if not db_path:
+            db_path = DB_PATH
+        
+        db_filename = os.path.basename(db_path)
+        if DEBUG_MODE:
+            print(f"[PHOTO-PATH] DB filename: {db_filename}")
+        
+        # Extract module name from database filename
+        # Format: {module}_mm_inventory.db or {module}_inventory.db
+        if db_filename.endswith('_mm_inventory.db'):
+            module_part = db_filename[:-16]  # Remove '_mm_inventory.db'
+        elif db_filename.endswith('_inventory.db'):
+            module_part = db_filename[:-13]  # Remove '_inventory.db'
+        else:
+            # Fallback: use current module's location
+            if DEBUG_MODE:
+                print(f"[PHOTO-PATH] Unknown DB filename format: {db_filename}")
+            return ""
+        
+        # Map database module name to category folder
+        if module_part == 'oilseals':
+            return 'oilseals'
+        elif module_part == 'monoseals':
+            return 'packingseals/monoseals'
+        elif module_part == 'wiperseals':
+            return 'packingseals/wiperseals'
+        elif module_part == 'wipermono':
+            return 'packingseals/wipermono'
+        else:
+            if DEBUG_MODE:
+                print(f"[PHOTO-PATH] Unknown module: {module_part}")
+            return ""
+    except Exception as e:
+        if DEBUG_MODE:
+            print(f"[PHOTO-PATH] Error deriving category folder: {e}")
+        return ""
+
+
 def get_photos_directory(category_folder: str = None) -> str:
     """
     Get the photos directory path.
     
+    CRITICAL FIX: Now dynamically derives category folder from active database path
+    to ensure photos are saved to correct module even when categories are switched.
+    
     Args:
-        category_folder: Optional category folder path (e.g., 'packingseals/monoseals').
-                        If provided, returns photos path for that category.
-                        If None, uses current module's location.
+        category_folder: Optional explicit category folder path (e.g., 'packingseals/wipermono').
+                        If provided, uses it directly.
+                        If None, automatically derives from the active database.
     
     Returns:
-        Path to the photos directory.
+        Full path to the photos directory.
     """
-    if category_folder:
-        # Category folder provided - construct path from that
-        # Ensure proper path handling
-        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        photos_path = os.path.join(base_path, category_folder.replace('.', os.sep), 'photos')
-        if os.path.exists(photos_path):
-            return photos_path
-    # Fallback to current module's location
-    return os.path.join(os.path.dirname(__file__), "..", "photos")
+    try:
+        # If explicit category folder not provided, derive from active DB
+        if not category_folder:
+            category_folder = derive_category_folder_from_db_path()
+        
+        if category_folder:
+            # Category folder derived/provided - construct absolute path
+            base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            photos_path = os.path.join(base_path, category_folder.replace('.', os.sep), 'photos')
+            
+            if DEBUG_MODE:
+                print(f"[PHOTO-PATH] Resolved category_folder={category_folder} -> {photos_path}")
+            
+            if os.path.exists(photos_path):
+                return photos_path
+            elif DEBUG_MODE:
+                print(f"[PHOTO-PATH] WARNING: Photos path does not exist: {photos_path}")
+        
+        # Fallback to current module's location (backward compat)
+        fallback_path = os.path.join(os.path.dirname(__file__), "..", "photos")
+        if DEBUG_MODE:
+            print(f"[PHOTO-PATH] Fallback: {fallback_path}")
+        return fallback_path
+    except Exception as e:
+        if DEBUG_MODE:
+            print(f"[PHOTO-PATH] Error in get_photos_directory: {e}")
+        return os.path.join(os.path.dirname(__file__), "..", "photos")
 
 
 def get_photo_path_by_type(details: Dict[str, Any]) -> str:

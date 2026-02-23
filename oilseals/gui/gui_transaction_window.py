@@ -1726,13 +1726,14 @@ class TransactionWindow(ctk.CTkFrame):
         try:
             ext = os.path.splitext(file_path)[1].lower()
             filename = create_safe_filename(self.details, ext)
-            # CRITICAL FIX: Get photos directory using category folder path
-            # This ensures images save to correct folder even when switching categories
-            category_folder = self._get_category_folder_path()
-            photos_dir = get_photos_directory(category_folder=category_folder)
+            # CRITICAL FIX: Get photos directory WITHOUT passing category_folder
+            # This forces get_photos_directory() to derive the folder from the ACTIVE database
+            # using derive_category_folder_from_db_path(), ensuring photos save to correct
+            # module even when categories are switched via AdminPanel
+            photos_dir = get_photos_directory()
             
             if DEBUG_MODE:
-                print(f"[IMAGE-UPLOAD] category_folder={category_folder}")
+                print(f"[IMAGE-UPLOAD] Deriving folder from active database via get_photos_directory()")
                 print(f"[IMAGE-UPLOAD] photos_dir={photos_dir}")
                 print(f"[IMAGE-UPLOAD] filename={filename}")
             
