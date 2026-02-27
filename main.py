@@ -6,6 +6,7 @@ import customtkinter as ctk
 from debug import DEBUG_MODE
 from app_controller import AppController
 from theme import theme
+from app_context import initialize_app_context
 
 if DEBUG_MODE:
     print("[DEBUG] DEBUG_MODE enabled - all lifecycle events will be logged")
@@ -14,6 +15,11 @@ if __name__ == "__main__":
     # Initialize theme (default dark) and CTk appearance
     theme.set_mode("dark")
     ctk.set_default_color_theme("blue")
+    
+    # Initialize centralized AppContext
+    app_context = initialize_app_context()
+    if DEBUG_MODE:
+        print("[DEBUG] AppContext initialized for application")
 
     if DEBUG_MODE:
         print(f"[DEBUG] Creating root Tk instance at id={id(ctk.CTk)}")

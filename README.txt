@@ -75,36 +75,38 @@ Smart Rules:
 - Works with any format (dashes, spaces, "x", "*", etc.)
 - If something's wrong, just paste using normal Ctrl+V for plain text
 
-CLOSEST SIZE OFFER/S - WHEN EXACT SIZE NOT FOUND
----------------------------------------------------
-Can't find the exact size? MOSCO shows you close alternatives!
+ALTERNATIVE OFFER/S - WHEN EXACT SIZE NOT FOUND
+-------------------------------------------------
+Can't find the exact size? MOSCO shows you alternative thicknesses!
 
 How It Works:
 1. Search for a specific size: ID=30, OD=40, THK=6
-2. If EXACT size not found:
-   * App searches for sizes within ±1 margin
-   * Shows products like: 29-39-5, 30-41-6, 29-40-7
-3. Status shows: "Exact size not available – CLOSEST SIZE OFFER/S"
+2. If EXACT match not found:
+   * ID and OD must match EXACTLY (no tolerance)
+   * TH searches within a ±2 range to show alternative thicknesses
+   * Shows products like: 30-40-4, 30-40-5, 30-40-7, 30-40-8 (same ID and OD, different thickness)
+3. Status header shows: "⚠ Exact size not available – ALTERNATIVE OFFER/S" in large bold text
 
 When This Helps:
 - You need 30-40-6 but it's out of stock
-- 29-40-6 or 30-39-6 might work instead
+- 30-40-5 or 30-40-7 might work instead (exact ID/OD, just different thickness)
 - No need to search manually!
 
 What Gets Shown:
-- Only closest alternatives (±1 margin)
-- Sorted by smallest difference to what you want
+- Products with EXACT ID and OD matching your search
+- TH values within ±2 of what you searched (e.g., search TH=6 shows TH 4, 5, 6, 7, 8)
 - Still respects all other filters (Brand, Type, Part Number)
 - Exact matches NOT shown (those would be in normal results)
 
 When It Doesn't Apply:
 - If you searched for Brand or Type, only exact matches show
-- Size-only search required for "closest" to activate
+- Size-only search required for alternative offer to activate
+- If no products exist with exact ID and OD, nothing is shown
 
 Example Scenario:
 Search: ID=30, OD=40, THK=6
-Database has: 29-40-6, 30-41-6, 29-39-5 (but NO 30-40-6)
-Result: Shows all three with message "Exact size not available – CLOSEST SIZE OFFER/S"
+Database has: 30-40-4, 30-40-5, 30-40-7, 30-40-8 (but NO 30-40-6 exactly)
+Result: Shows all four with header "⚠ Exact size not available – ALTERNATIVE OFFER/S"  (note: 29-40-6 and 30-41-6 would NOT appear because ID and OD must be exact)
 
 VIEWING PRODUCT DETAILS
 -----------------------
@@ -1048,6 +1050,12 @@ Latest Improvements:
   Consistent formatting across all modules
   Special rules for different transaction types
 
+✓ Alternative Offer Search Update
+  ID and OD now require an exact match — no range tolerance applied
+  TH uses a ±2 range to show nearby thickness alternatives
+  Alternative offer header is now large and bold for visibility
+  Shows: "⚠ Exact size not available – ALTERNATIVE OFFER/S"
+
 ✓ Import Cleanup
   More efficient code
   Faster startup time
@@ -1087,6 +1095,6 @@ Thank you for using MOSCO Inventory!
 Questions? Contact your system administrator.
 
 Version: Production (Multi-Module Support)
-Last Updated: February 21, 2026
+Last Updated: February 27, 2026
 
 ===================================================================

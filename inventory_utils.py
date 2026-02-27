@@ -14,7 +14,7 @@ existing functionality.
 import sys
 import os
 import re
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple
 
 # Optional logging support - can be toggled without breaking the app
 ENABLE_DEBUG_LOGGING = False

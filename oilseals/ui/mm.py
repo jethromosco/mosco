@@ -1,4 +1,3 @@
-import tkinter as tk
 from typing import Dict, List, Tuple, Any
 
 from ..database import connect_db

@@ -11,6 +11,10 @@ Key functions:
 import sqlite3
 from typing import Dict, List, Tuple, Any, Optional
 
+# Tolerance for thickness (TH) in closest size search
+# ID and OD must match exactly; only TH can vary by this tolerance
+TH_TOLERANCE = 2
+
 
 def _is_size_only_search(search_filters: Dict[str, str]) -> bool:
     """
@@ -88,15 +92,15 @@ def _get_closest_size_products(
     brand_filter: Optional[str] = None
 ) -> List[Tuple[Any, ...]]:
     """
-    Get products within ±1 margin of requested sizes, excluding exact matches.
+    Get products with exact ID/OD match and TH within ±2 range, excluding exact matches.
     
-    Margin is STRICTLY ±1 only. Query matches products where:
-    - ABS(id - id_search) <= 1 (if id_search provided)
-    - ABS(od - od_search) <= 1 (if od_search provided)
-    - ABS(th - th_search) <= 1 (if th_search provided)
-    - NOT exact match on all provided dimensions
+    Matching rules:
+    - ID must match EXACTLY (no tolerance) - if id_search provided
+    - OD must match EXACTLY (no tolerance) - if od_search provided
+    - TH can vary within ±TH_TOLERANCE (±2) - if th_search provided
+    - NOT exact match on ALL dimensions (excludes perfect matches)
     
-    Results sorted by total difference (ascending).
+    Results sorted by TH difference (ascending).
     
     Args:
         conn: SQLite database connection
@@ -115,24 +119,26 @@ def _get_closest_size_products(
     if id_search is None and od_search is None and th_search is None:
         return []
     
-    print(f"[SEARCH] Querying closest sizes: ID~{id_search}, OD~{od_search}, TH~{th_search}")
+    print(f"[SEARCH] Querying closest products: ID={id_search} (exact), OD={od_search} (exact), TH~{th_search} (±{TH_TOLERANCE})")
     
     # Build WHERE clause based on what's being searched
     where_parts = []
     params: List[Any] = []
     
+    # ID must match EXACTLY
     if id_search is not None:
-        # Match within ±1 margin
-        where_parts.append(f"(CAST(id AS REAL) >= ? AND CAST(id AS REAL) <= ?)")
-        params.extend([id_search - 1.0, id_search + 1.0])
+        where_parts.append(f"(CAST(id AS REAL) = ?)")
+        params.append(id_search)
     
+    # OD must match EXACTLY
     if od_search is not None:
-        where_parts.append(f"(CAST(od AS REAL) >= ? AND CAST(od AS REAL) <= ?)")
-        params.extend([od_search - 1.0, od_search + 1.0])
+        where_parts.append(f"(CAST(od AS REAL) = ?)")
+        params.append(od_search)
     
+    # TH can vary by ±TH_TOLERANCE
     if th_search is not None:
         where_parts.append(f"(CAST(th AS REAL) >= ? AND CAST(th AS REAL) <= ?)")
-        params.extend([th_search - 1.0, th_search + 1.0])
+        params.extend([th_search - TH_TOLERANCE, th_search + TH_TOLERANCE])
     
     # Add brand filter if specified
     if brand_filter:
@@ -167,27 +173,21 @@ def _get_closest_size_products(
         FROM products 
         WHERE {where_clause} AND {exact_match_clause}
         ORDER BY 
-            ABS(CAST(id AS REAL) - ?) + 
-            ABS(CAST(od AS REAL) - ?) + 
             ABS(CAST(th AS REAL) - ?)
         ASC
     """
     
-    # Add values for ORDER BY calculation
-    sort_params = [
-        id_search if id_search is not None else 0.0,
-        od_search if od_search is not None else 0.0,
-        th_search if th_search is not None else 0.0
-    ]
+    # Add values for ORDER BY calculation (only TH for sorting now)
+    sort_params = [th_search if th_search is not None else 0.0]
     
     try:
         cur = conn.cursor()
         cur.execute(query, params + sort_params)
         rows = cur.fetchall()
-        print(f"[SEARCH] Closest results found: {len(rows)}")
+        print(f"[SEARCH] Alternative products found: {len(rows)}")
         return rows
     except Exception as e:
-        print(f"[SEARCH] Error querying closest sizes: {e}")
+        print(f"[SEARCH] Error querying alternative products: {e}")
         return []
 
 
@@ -254,9 +254,9 @@ def search_products_with_closest(
     )
     
     if closest_products:
-        label = "Exact size not available – CLOSEST SIZE OFFER/S"
+        label = "Exact size not available – ALTERNATIVE OFFER/S (Thickness varies ±2)"
         return closest_products, True, label
     
-    print(f"[SEARCH] No close offers found")
+    print(f"[SEARCH] No alternative offers found")
     return [], False, None
 

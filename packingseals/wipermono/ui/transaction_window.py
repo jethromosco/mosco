@@ -8,6 +8,7 @@ from ..database import connect_db, DB_PATH
 from ..admin.trans_aed import sanitize_dimension_for_filename
 from .mm import apply_stock_transaction, is_unknown_stock
 from debug import DEBUG_MODE
+from photo_helpers import get_photo_folder, save_photo, get_photo_path, delete_old_images, rename_photo_if_needed, calculate_image_display_size, validate_image_file, create_safe_filename
 
 
 def get_existing_image_base(details: Dict[str, Any]) -> str:
@@ -239,227 +240,35 @@ def is_photo_upload_allowed(details: Dict[str, Any]) -> bool:
     return details["brand"].upper() == "MOS"
 
 
-def derive_category_folder_from_db_path(db_path: str = None) -> str:
-    """
-    Derive the category folder path from the database file path.
-    This ensures photos are saved to the correct module folder even when categories are switched.
-    
-    CRITICAL FIX: This function ties photo folder resolution to the actual database in use,
-    not to the module where the function is called from.
-    
-    Args:
-        db_path: Full path to the database file. If None, uses current module's DB_PATH.
-    
-    Returns:
-        Category folder path (e.g., 'packingseals/wipermono', 'oilseals')
-    
-    Examples:
-        wipermono_mm_inventory.db -> packingseals/wipermono
-        wiperseals_mm_inventory.db -> packingseals/wiperseals
-        oilseals_mm_inventory.db -> oilseals
-    """
-    try:
-        if not db_path:
-            db_path = DB_PATH
-        
-        db_filename = os.path.basename(db_path)
-        if DEBUG_MODE:
-            print(f"[PHOTO-PATH] DB filename: {db_filename}")
-        
-        # Extract module name from database filename
-        # Format: {module}_mm_inventory.db or {module}_inventory.db
-        if db_filename.endswith('_mm_inventory.db'):
-            module_part = db_filename[:-16]  # Remove '_mm_inventory.db'
-        elif db_filename.endswith('_inventory.db'):
-            module_part = db_filename[:-13]  # Remove '_inventory.db'
-        else:
-            # Fallback: use current module's location
-            if DEBUG_MODE:
-                print(f"[PHOTO-PATH] Unknown DB filename format: {db_filename}")
-            return ""
-        
-        # Map database module name to category folder
-        if module_part == 'oilseals':
-            return 'oilseals'
-        elif module_part == 'monoseals':
-            return 'packingseals/monoseals'
-        elif module_part == 'wiperseals':
-            return 'packingseals/wiperseals'
-        elif module_part == 'wipermono':
-            return 'packingseals/wipermono'
-        else:
-            if DEBUG_MODE:
-                print(f"[PHOTO-PATH] Unknown module: {module_part}")
-            return ""
-    except Exception as e:
-        if DEBUG_MODE:
-            print(f"[PHOTO-PATH] Error deriving category folder: {e}")
-        return ""
-
-
 def get_photos_directory(category_folder: str = None) -> str:
-    """
-    Get the photos directory path.
-    
-    CRITICAL FIX: Now dynamically derives category folder from active database path
-    to ensure photos are saved to correct module even when categories are switched.
-    
-    Args:
-        category_folder: Optional explicit category folder path (e.g., 'packingseals/wipermono').
-                        If provided, uses it directly.
-                        If None, automatically derives from the active database.
-    
-    Returns:
-        Full path to the photos directory.
-    """
-    try:
-        # If explicit category folder not provided, derive from active DB
-        if not category_folder:
-            category_folder = derive_category_folder_from_db_path()
-        
-        if category_folder:
-            # Category folder derived/provided - construct absolute path
-            base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-            photos_path = os.path.join(base_path, category_folder.replace('.', os.sep), 'photos')
-            
-            if DEBUG_MODE:
-                print(f"[PHOTO-PATH] Resolved category_folder={category_folder} -> {photos_path}")
-            
-            if os.path.exists(photos_path):
-                return photos_path
-            elif DEBUG_MODE:
-                print(f"[PHOTO-PATH] WARNING: Photos path does not exist: {photos_path}")
-        
-        # Fallback to current module's location (backward compat)
-        fallback_path = os.path.join(os.path.dirname(__file__), "..", "photos")
-        if DEBUG_MODE:
-            print(f"[PHOTO-PATH] Fallback: {fallback_path}")
-        return fallback_path
-    except Exception as e:
-        if DEBUG_MODE:
-            print(f"[PHOTO-PATH] Error in get_photos_directory: {e}")
-        return os.path.join(os.path.dirname(__file__), "..", "photos")
+    """DELEGATOR: Now uses centralized photo_helpers.get_photo_folder()."""
+    return get_photo_folder()
 
 
 def get_photo_path_by_type(details: Dict[str, Any]) -> str:
-    """
-    Get photo path based on product type and brand, ensuring dimensions are sanitized.
-    """
-    photos_dir = get_photos_directory()
-
-    # Sanitize dimensions
-    safe_id = sanitize_dimension_for_filename(details['id'])
-    safe_od = sanitize_dimension_for_filename(details['od'])
-    safe_th = sanitize_dimension_for_filename(details['th'])
-    safe_brand = details['brand'].replace('/', 'x').replace(' ', '_')
-
-    if details["brand"].upper() == "MOS":
-        for ext in [".jpg", ".jpeg", ".png"]:
-            path = os.path.join(photos_dir, f"{details['type']}-{safe_id}-{safe_od}-{safe_th}-{safe_brand}{ext}")
-            if os.path.exists(path):
-                return path
-        return ""
-    else:
-        for ext in [".jpg", ".png"]:
-            path = os.path.join(photos_dir, f"{details['type'].lower()}{ext}")
-            if os.path.exists(path):
-                return path
-        placeholder = os.path.join(photos_dir, "placeholder.png")
-        return placeholder if os.path.exists(placeholder) else ""
-
-
-def validate_image_file(file_path: str) -> bool:
-    """Validate if file is a supported image format"""
-    if not file_path:
-        return False
-    ext = os.path.splitext(file_path)[1].lower()
-    return ext in [".jpg", ".jpeg", ".png"]
+    """DELEGATOR: Now uses centralized photo_helpers.get_photo_path()."""
+    return get_photo_path(details) or ""
 
 
 def create_safe_filename(details: Dict[str, Any], extension: str) -> str:
-    """
-    Create safe filename for photo storage, ensuring dimensions are sanitized.
-    """
-    safe_id = sanitize_dimension_for_filename(details['id'])
-    safe_od = sanitize_dimension_for_filename(details['od'])
-    safe_th = sanitize_dimension_for_filename(details['th'])
-    safe_brand = details['brand'].replace('/', 'x').replace(' ', '_')
-    return f"{details['type']}-{safe_id}-{safe_od}-{safe_th}-{safe_brand}{extension}"
-
-
-def compress_and_save_image(source_path: str, target_path: str, max_size_mb: int = 5) -> bool:
-    """Compress and save image with size limit"""
-    try:
-        img = Image.open(source_path).convert("RGB")
-        quality = 95
-        max_size_bytes = max_size_mb * 1024 * 1024
-        
-        while True:
-            img.save(target_path, format="JPEG", quality=quality)
-            if os.path.getsize(target_path) <= max_size_bytes or quality <= 60:
-                break
-            quality -= 5
-        return True
-    except Exception:
-        return False
+    """DELEGATOR: Now uses centralized photo_helpers.create_safe_filename()."""
+    from photo_helpers import create_safe_filename as centralized_filename
+    return centralized_filename(details, extension)
 
 
 def delete_old_images(details: Dict[str, Any]) -> None:
-    """Delete old image files for a product.
-    
-    CRITICAL FIX: For MOS brand, includes brand in filename pattern.
-    For non-MOS brand, only looks for predefined images (which should NOT be deleted).
-    This ensures:
-    1. Old MOS uploaded images ARE deleted when switching away from MOS
-    2. Predefined non-MOS images are NEVER modified
-    """
-    photos_dir = get_photos_directory()
-    
-    # For MOS brand, try both with and without brand name (for backwards compatibility)
-    if details["brand"].upper() == "MOS":
-        safe_id = sanitize_dimension_for_filename(details['id'])
-        safe_od = sanitize_dimension_for_filename(details['od'])
-        safe_th = sanitize_dimension_for_filename(details['th'])
-        safe_brand = details['brand'].replace('/', 'x').replace(' ', '_')
-        
-        # Try MOS pattern: TYPE-ID-OD-TH-BRAND.ext
-        mos_base = f"{details['type']}-{safe_id}-{safe_od}-{safe_th}-{safe_brand}"
-        for old_ext in [".jpg", ".jpeg", ".png"]:
-            old_path = os.path.join(photos_dir, mos_base + old_ext)
-            if os.path.exists(old_path):
-                try:
-                    os.remove(old_path)
-                except Exception:
-                    pass
-    
-    # For non-MOS, NEVER delete anything - predefined images should not be touched
-    # This is critical to prevent accidentally modifying predefined images like db.jpg, tc.jpg, etc.
+    """DELEGATOR: Now uses centralized photo_helpers.delete_old_images()."""
+    from photo_helpers import delete_old_images as centralized_delete
+    centralized_delete(details)
+
+
+def compress_and_save_image(source_path: str, target_path: str, max_size_mb: int = 5) -> bool:
+    """DELEGATOR: Now uses centralized photo_helpers.compress_and_save_image()."""
+    from photo_helpers import compress_and_save_image as centralized_compress
+    return centralized_compress(source_path, target_path, max_size_mb)
 
 
 def calculate_image_display_size(image_path: str, max_width: int, max_height: int) -> Tuple[int, int]:
-    """Scale image to fill given box, maintaining aspect ratio.
-       Resize both up or down as needed to fill the box.
-    """
-    try:
-        img = Image.open(image_path)
-        orig_width, orig_height = img.size
-
-        width_ratio = max_width / orig_width
-        height_ratio = max_height / orig_height
-        scale_factor = max(width_ratio, height_ratio)  # Use max to fill window
-
-        new_width = int(orig_width * scale_factor)
-        new_height = int(orig_height * scale_factor)
-        return new_width, new_height
-    except Exception:
-        return max_width, max_height
-
-
-def create_thumbnail_size(image_path: str, max_size: int = 80) -> Tuple[int, int]:
-    """Create thumbnail size for image"""
-    try:
-        img = Image.open(image_path)
-        img.thumbnail((max_size, max_size))
-        return img.size
-    except Exception:
-        return max_size, max_size
+    """DELEGATOR: Now uses centralized photo_helpers.calculate_image_display_size()."""
+    from photo_helpers import calculate_image_display_size as centralized_size
+    return centralized_size(image_path, max_width, max_height)

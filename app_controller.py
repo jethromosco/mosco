@@ -1,11 +1,13 @@
 import customtkinter as ctk
 import importlib
-import pkgutil
 import os
+import sqlite3
+from typing import Optional
 from theme import theme
 from home_page import HomePage, CategoryPage, ComingSoonPage
 from inventory_context import InventoryContext, create_context, INVALID_CONTEXT
 from debug import DEBUG_MODE
+from app_context import get_app_context
 
 
 CATEGORY_FOLDER_MAP = {
@@ -64,6 +66,12 @@ class AppController:
             self.root.bind("<F11>", lambda e: self._toggle_fullscreen())
         except Exception:
             pass
+        
+        # Setup debug hotkey (Ctrl+Shift+T) to print context state
+        try:
+            self.root.bind("<Control-Shift-T>", lambda e: self._print_debug_context())
+        except Exception:
+            pass
 
         # Setup global mouse button bindings for back/forward navigation (Windows only)
         self._setup_global_mouse_bindings()
@@ -97,12 +105,148 @@ class AppController:
 
         self.show_frame("HomePage")
 
+    def _setup_app_context_for_category(
+        self,
+        category: str,
+        subcategory: Optional[str] = None,
+        unit: Optional[str] = None,
+        base_pkg: str = ""
+    ) -> bool:
+        """
+        Setup AppContext (database paths, photo folder) for a category.
+        
+        This should be called after InventoryApp is successfully loaded
+        to configure the centralized state.
+        
+        Args:
+            category: Category name
+            subcategory: Optional subcategory
+            unit: Optional unit (MM/INCH)
+            base_pkg: Base package path (e.g., 'oilseals', 'packingseals.monoseals')
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            from typing import Optional
+            
+            if DEBUG_MODE:
+                print(f"[CONTROLLER] Setting up AppContext for {category}")
+            
+            # Try to load database module to get DB path
+            db_module = None
+            db_path = ""
+            data_dir = ""
+            
+            # Build database module path
+            if base_pkg:
+                sub_folder = (subcategory or '') and subcategory.replace(' ', '').lower()
+                if sub_folder:
+                    # Try packingseals.subcategory.database (e.g., packingseals.monoseals.database)
+                    try:
+                        db_module = importlib.import_module(f"{base_pkg}.{sub_folder}.database")
+                        if DEBUG_MODE:
+                            print(f"[CONTROLLER] Loaded db module: {base_pkg}.{sub_folder}.database")
+                    except Exception:
+                        pass
+                
+                if not db_module:
+                    # Try base_pkg.database (e.g., oilseals.database)
+                    try:
+                        db_module = importlib.import_module(f"{base_pkg}.database")
+                        if DEBUG_MODE:
+                            print(f"[CONTROLLER] Loaded db module: {base_pkg}.database")
+                    except Exception:
+                        pass
+            
+            # Extract database paths from module
+            if db_module:
+                db_path = getattr(db_module, 'DB_PATH', "")
+                data_dir = getattr(db_module, 'DATA_DIR', "")
+                
+                if DEBUG_MODE:
+                    print(f"[CONTROLLER] DB_PATH: {db_path}")
+                    print(f"[CONTROLLER] DATA_DIR: {data_dir}")
+            
+            # Determine photo folder
+            photo_folder = ""
+            if db_path:
+                # Photos folder is typically at {category}/photos
+                # E.g., oilseals/photos, packingseals/monoseals/photos
+                try:
+                    # Extract category folder from db_path
+                    # db_path is like /path/to/mosco/oilseals/data/oilseals_mm_inventory.db
+                    # We want /path/to/mosco/oilseals/photos
+                    parts = db_path.replace('\\', '/').split('/')
+                    
+                    # Find 'data' in path and go up to get category root
+                    try:
+                        data_idx = parts.index('data')
+                        if data_idx >= 1:
+                            category_root = '/'.join(parts[:data_idx])
+                            photo_folder = os.path.join(category_root, 'photos')
+                    except (ValueError, IndexError):
+                        pass
+                    
+                    if DEBUG_MODE:
+                        print(f"[CONTROLLER] Photo folder: {photo_folder}")
+                except Exception as e:
+                    if DEBUG_MODE:
+                        print(f"[CONTROLLER] Error deriving photo folder: {e}")
+            
+            # Update AppContext with all information
+            context = get_app_context()
+            context.set_active_category(category, subcategory, unit)
+            
+            if db_path:
+                try:
+                    # Import sqlite3 and create connection
+                    import sqlite3
+                    conn = sqlite3.connect(db_path)
+                    context.set_database(db_path, conn)
+                except Exception as e:
+                    print(f"[ERROR-CONTEXT] Failed to connect to database: {e}")
+                    return False
+            
+            if photo_folder:
+                context.set_photo_folder(photo_folder)
+            
+            if DEBUG_MODE:
+                context._log_state("AppContext updated for category")
+            
+            return True
+        
+        except Exception as e:
+            print(f"[ERROR-CONTEXT] Error setting up AppContext: {e}")
+            return False
+
     def add_category_page(self, name, sub_data, return_to="HomePage"):
         frame = CategoryPage(self.container, self, name, sub_data, return_to=return_to)
         # Track the parent category for nested navigation
         frame.parent_category = self.current_category
         self.frames[name] = frame
         frame.place(x=0, y=0, relwidth=1, relheight=1)
+
+    def _print_debug_context(self):
+        """Print context state for debugging (triggered by Ctrl+Shift+T)."""
+        try:
+            app_context = get_app_context()
+            current_frame = self.get_current_frame_name()
+            
+            print("\n" + "="*60)
+            print("[DEBUG CONTEXT] Application State")
+            print("="*60)
+            print(f"Active Category    : {self.current_category or 'None'}")
+            print(f"Active Subcategory : {self.current_subcategory or 'None'}")
+            print(f"Active Unit        : {self.current_unit or 'None'}")
+            print(f"DB Path            : {app_context.db_path or 'Not configured'}")
+            print(f"Photo Folder       : {app_context.photo_folder or 'Not configured'}")
+            print(f"Active Window      : {current_frame or 'HomePage'}")
+            print(f"Current Section    : {self.current_section or 'None'}")
+            print(f"Current Action     : {self.current_action or 'None'}")
+            print("="*60 + "\n")
+        except Exception as e:
+            print(f"[ERROR] Error printing debug context: {e}")
 
     def _build_window_title(self):
         """Build dynamic window title based on current navigation context."""
@@ -494,6 +638,16 @@ class AppController:
                     
                     self.frames[frame_key] = frame
                     frame.place(x=0, y=0, relwidth=1, relheight=1)
+                    
+                    # CRITICAL: Setup AppContext with database and photo paths
+                    # This ensures all modules use centralized state for db and photos
+                    self._setup_app_context_for_category(
+                        category=category,
+                        subcategory=subcategory,
+                        unit=unit,
+                        base_pkg=base_pkg
+                    )
+                    
                     print(f"[CONTEXT] Created and placed InventoryApp frame (return_to={frame.return_to})")
                 except Exception as e:
                     print(f"[CONTEXT] Failed to create InventoryApp: {e}")

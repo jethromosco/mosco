@@ -110,10 +110,6 @@ class InventoryApp(ctk.CTkFrame):
         except Exception:
             pass
 
-    def _exit_fullscreen_or_clear_filters(self, event=None):
-        """Deprecated helper (previously handled Escape)."""
-        return None
-
     def _detect_category(self) -> str:
         """Detect category name from module path."""
         module_name = self.__class__.__module__
@@ -606,7 +602,7 @@ class InventoryApp(ctk.CTkFrame):
         self.status_label = ctk.CTkLabel(
             status_frame, 
             text="",
-            font=("Poppins", 20),  # Smaller font
+            font=("Poppins", 20),
             text_color=theme.get("text")
         )
         self.status_label.pack(side="top")
@@ -1025,17 +1021,33 @@ class InventoryApp(ctk.CTkFrame):
                 else:
                     self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, base_tag))
 
-            # Update status
+            # Update status label and font based on search result state
+            # Define fonts for different states
+            original_font = ("Poppins", 20)  # Original font for normal/empty states
+            bold_large_font = ("Poppins", 23, "bold")  # Alternative offer font: big and bold only
+            
             was_closest, custom_label = get_last_search_status_label()
+            
             if custom_label:
-                # Show custom label for closest size results
-                self.status_label.configure(text=custom_label)
+                # State B: Alternative offer results - big and bold only, no color/bg changes
+                self.status_label.configure(
+                    text=f"⚠ {custom_label}",
+                    font=bold_large_font
+                )
+            elif len(display_data) == 0:
+                # State C: No results - original font and format
+                status_text = self._get_status_label_text(0)
+                self.status_label.configure(
+                    text=status_text,
+                    font=original_font
+                )
             else:
-                # Show normal status label
+                # State A: Normal results found - original font and format
                 status_text = self._get_status_label_text(len(display_data))
-                if len(display_data) == 0:
-                    status_text = f"{status_text} (NO OFFER/S)"
-                self.status_label.configure(text=status_text)
+                self.status_label.configure(
+                    text=status_text,
+                    font=original_font
+                )
         except Exception as e:
             print(f"[MM] Error during refresh: {e}")
             import traceback
