@@ -6,6 +6,7 @@ from PIL import Image
 
 from theme import theme
 from home_page import ICON_PATH
+from inventory_utils import parse_size_from_text
 from ..ui.mm import (
     convert_mm_to_inches_display,
     build_products_display_data,
@@ -13,6 +14,7 @@ from ..ui.mm import (
     create_product_details,
     get_stock_tag,
     should_uppercase_field,
+    get_last_search_status_label,
 )
 from .gui_transaction_window import TransactionWindow
 
@@ -393,6 +395,10 @@ class InventoryApp(ctk.CTkFrame):
         if should_uppercase_field(key):
             entry.bind("<KeyPress>", lambda e: self.on_key_press(e, key))
 
+        # Smart paste for size fields (ID, OD, THK)
+        if key in ["id", "od", "th"]:
+            entry.bind("<Control-v>", lambda e: self._handle_smart_paste(e))
+
         # Auto-refresh on changes
         var.trace_add("write", lambda *args: self.refresh_product_list())
 
@@ -410,6 +416,41 @@ class InventoryApp(ctk.CTkFrame):
             entry.configure(border_color=theme.get("primary"), border_width=2, fg_color=theme.get("input_focus"))
         else:
             entry.configure(border_color=theme.get("border"), border_width=1, fg_color=theme.get("input"))
+
+    def _handle_smart_paste(self, event):
+        """Handle CTRL+V paste event with smart size parsing"""
+        try:
+            # Get clipboard content
+            clipboard_text = self.root.clipboard_get()
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"[PASTE] Error reading clipboard: {e}")
+            return "break"  # Prevent normal paste, return break to stop default behavior
+        
+        # Try to parse size from clipboard text
+        parsed = parse_size_from_text(clipboard_text)
+        
+        if parsed is None:
+            # Fallback to normal paste if parsing failed
+            if DEBUG_MODE:
+                print(f"[PASTE] Smart parse failed, falling back to normal paste")
+            try:
+                event.widget.insert(tk.INSERT, clipboard_text)
+            except Exception:
+                pass
+            return "break"
+        
+        # Auto-fill the three size fields
+        self.search_vars["id"].set(parsed["id"])
+        self.search_vars["od"].set(parsed["od"])
+        self.search_vars["th"].set(parsed["th"])
+        
+        if DEBUG_MODE:
+            print(f"[PASTE] Smart paste successful, fields updated and refresh triggered")
+        
+        # Trigger refresh automatically
+        self.refresh_product_list()
+        return "break"  # Prevent normal paste
 
     def _create_inch_label(self, parent, key, var):
         """Create inch conversion label for size fields"""
@@ -985,7 +1026,16 @@ class InventoryApp(ctk.CTkFrame):
                     self.tree.insert("", tk.END, values=display_item, tags=(alt_tag, base_tag))
 
             # Update status
-            self.status_label.configure(text=self._get_status_label_text(len(display_data)))
+            was_closest, custom_label = get_last_search_status_label()
+            if custom_label:
+                # Show custom label for closest size results
+                self.status_label.configure(text=custom_label)
+            else:
+                # Show normal status label
+                status_text = self._get_status_label_text(len(display_data))
+                if len(display_data) == 0:
+                    status_text = f"{status_text} (NO OFFER/S)"
+                self.status_label.configure(text=status_text)
         except Exception as e:
             print(f"[MM] Error during refresh: {e}")
             import traceback

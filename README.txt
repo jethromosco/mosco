@@ -47,6 +47,65 @@ Helpful Tips:
 - Searches are not case-sensitive
 - You can search by any part of the name
 
+SMART PASTE - QUICK SIZE ENTRY (MM SEARCH ONLY)
+-------------------------------------------------
+Copy & paste messy size text - MOSCO handles the rest!
+
+How It Works:
+1. Copy any messy size text like:
+   * "30mm ID x 40mm OD x 6 THK"
+   * "30-40-6"
+   * "TC 30 * 40 * 6 NOK"
+   * "40 - 30 - 6" (numbers in any order!)
+2. Click in any of the MM search boxes (ID, OD, or THK field)
+3. Press Ctrl + V (or Cmd + V)
+4. MOSCO automatically:
+   * Extracts all the numbers
+   * Figures out which is ID, OD, and THK
+   * Fills all three fields
+   * Refreshes the product list
+
+Example:
+- Copy: "30mm ID x 40mm OD x 6 THK"
+- Paste in any size field with Ctrl+V
+- Result: ID=30, OD=40, THK=6 (automatic!)
+
+Smart Rules:
+- Number sorting is automatic: Smallest=Thickness, Middle=ID, Largest=OD
+- Works with any format (dashes, spaces, "x", "*", etc.)
+- If something's wrong, just paste using normal Ctrl+V for plain text
+
+CLOSEST SIZE OFFER/S - WHEN EXACT SIZE NOT FOUND
+---------------------------------------------------
+Can't find the exact size? MOSCO shows you close alternatives!
+
+How It Works:
+1. Search for a specific size: ID=30, OD=40, THK=6
+2. If EXACT size not found:
+   * App searches for sizes within ±1 margin
+   * Shows products like: 29-39-5, 30-41-6, 29-40-7
+3. Status shows: "Exact size not available – CLOSEST SIZE OFFER/S"
+
+When This Helps:
+- You need 30-40-6 but it's out of stock
+- 29-40-6 or 30-39-6 might work instead
+- No need to search manually!
+
+What Gets Shown:
+- Only closest alternatives (±1 margin)
+- Sorted by smallest difference to what you want
+- Still respects all other filters (Brand, Type, Part Number)
+- Exact matches NOT shown (those would be in normal results)
+
+When It Doesn't Apply:
+- If you searched for Brand or Type, only exact matches show
+- Size-only search required for "closest" to activate
+
+Example Scenario:
+Search: ID=30, OD=40, THK=6
+Database has: 29-40-6, 30-41-6, 29-39-5 (but NO 30-40-6)
+Result: Shows all three with message "Exact size not available – CLOSEST SIZE OFFER/S"
+
 VIEWING PRODUCT DETAILS
 -----------------------
 Double-click any product row to open the full details window.

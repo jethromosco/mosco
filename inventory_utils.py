@@ -13,7 +13,8 @@ existing functionality.
 
 import sys
 import os
-from typing import Optional, Dict, Tuple
+import re
+from typing import Optional, Dict, Tuple, List
 
 # Optional logging support - can be toggled without breaking the app
 ENABLE_DEBUG_LOGGING = False
@@ -193,3 +194,73 @@ def safe_import_module(module_path: str):
     except Exception as e:
         log_error(f"Unexpected error importing {module_path}: {e}", e, "safe_import_module")
         return None
+
+def parse_size_from_text(text: str) -> Optional[Dict[str, str]]:
+    """
+    Parse size text (ID, OD, THK) from clipboard content.
+    
+    Extracts all numbers from messy text like:
+    - "30mm ID x 40mm OD x 6 THK"
+    - "30-40-6"
+    - "TC 30 * 40 * 6 NOK"
+    - "ID30 OD40 6"
+    - "30 40 6"
+    
+    Auto-detection rule:
+    - Thickness (THK) = smallest number
+    - OD = largest number
+    - ID = middle number
+    
+    Args:
+        text: Raw clipboard text containing size information
+    
+    Returns:
+        Dict with "id", "od", "th" keys mapped to string values (e.g., {"id": "30", "od": "40", "th": "6"})
+        Returns None if less than 3 numbers found or if parsing fails
+    """
+    if not text or not isinstance(text, str):
+        print(f"[PARSE] Invalid input: text is not a string")
+        return None
+    
+    # Extract all numbers (including decimals) from the text
+    # Regex pattern: matches integers and decimals, optionally preceded by a decimal point
+    pattern = r'\d+(?:\.\d+)?'
+    matches = re.findall(pattern, text.strip())
+    
+    if not matches:
+        print(f"[PARSE] Raw clipboard: {text[:80]}")
+        print(f"[PARSE] No numbers found")
+        return None
+    
+    # Convert to floats for sorting, keep original strings for return
+    numbers_with_originals = [(float(m), m) for m in matches]
+    
+    # Take first 3 valid numbers if more than 3 are found
+    if len(numbers_with_originals) > 3:
+        print(f"[PARSE] Found {len(numbers_with_originals)} numbers, taking first 3")
+        numbers_with_originals = numbers_with_originals[:3]
+    
+    if len(numbers_with_originals) < 3:
+        print(f"[PARSE] Raw clipboard: {text[:80]}")
+        print(f"[PARSE] Numbers found: {[m[0] for m in numbers_with_originals]} (need exactly 3)")
+        return None
+    
+    # Sort by numeric value
+    sorted_numbers = sorted(numbers_with_originals, key=lambda x: x[0])
+    
+    # Assign: smallest=thk, middle=id, largest=od
+    thk_str = sorted_numbers[0][1]
+    id_str = sorted_numbers[1][1]
+    od_str = sorted_numbers[2][1]
+    
+    result = {
+        "id": id_str,
+        "od": od_str,
+        "th": thk_str
+    }
+    
+    print(f"[PARSE] Raw clipboard: {text[:80]}")
+    print(f"[PARSE] Numbers found: {[m[0] for m in numbers_with_originals]}")
+    print(f"[PARSE] Assigned -> ID={id_str} OD={od_str} THK={thk_str}")
+    
+    return result

@@ -2,10 +2,15 @@ import tkinter as tk
 from typing import Dict, List, Tuple, Any
 
 from ..database import connect_db
+from utils.search_helpers import search_products_with_closest
 
 LOW_STOCK_THRESHOLD = 5
 OUT_OF_STOCK = 0
 UNKNOWN_STOCK = None  # Special marker for unknown/insufficient stock
+
+# Module-level flag to track if last search used closest alternatives
+_last_search_was_closest = False
+_last_search_status_label = None
 
 BRAND_GROUPS = {
     # Shared oil seal brands (used across categories)
@@ -255,12 +260,55 @@ def _build_query_and_params(search_filters: Dict[str, str]) -> Tuple[str, List[A
 
 
 def _fetch_products(search_filters: Dict[str, str]) -> List[Tuple[Any, ...]]:
+    """Fetch products with automatic fallback to closest sizes.
+    
+    Returns exact matches first. If none found and search is size-only,
+    returns closest alternatives (±1 margin).
+    
+    Sets module-level flags:
+    - _last_search_was_closest: True if showing closest alternatives
+    - _last_search_status_label: Custom label for closest results
+    """
+    global _last_search_was_closest, _last_search_status_label
+    
+    # Reset flags
+    _last_search_was_closest = False
+    _last_search_status_label = None
+    
+    # Get exact match products
     query, params = _build_query_and_params(search_filters)
     with connect_db() as conn:
         cur = conn.cursor()
         cur.execute(query, params)
-        rows = cur.fetchall()
-    return rows
+        exact_rows = cur.fetchall()
+        
+        # Use shared search logic to check for closest alternatives
+        brand_filter = (search_filters.get("brand") or "").strip() or None
+        results, is_closest, label = search_products_with_closest(
+            conn,
+            search_filters,
+            exact_rows,
+            brand_filter
+        )
+    
+    # Update module flags for the GUI to use
+    if is_closest:
+        _last_search_was_closest = True
+        _last_search_status_label = label
+        print(f"[MM-SEARCH] Using closest size alternatives")
+    
+    return results
+
+
+def get_last_search_status_label() -> Tuple[bool, str]:
+    """Get the status label override for last search.
+    
+    Returns:
+        Tuple of (was_closest_search, status_label_override)
+        - was_closest_search: True if showing closest alternatives
+        - status_label_override: Override text for status label ("Exact size not available...") or empty string
+    """
+    return _last_search_was_closest, _last_search_status_label or ""
 
 
 def _fetch_all_transactions() -> List[Tuple[Any, ...]]:
