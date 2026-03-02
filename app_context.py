@@ -114,9 +114,15 @@ class AppContext:
         """
         Set photo folder path.
         
+        CRITICAL: Normalizes path separators on Windows to prevent path joining issues.
+        
         Args:
             folder_path: Full path to photos directory
         """
+        # CRITICAL FIX: Normalize path separators immediately
+        if folder_path:
+            folder_path = os.path.normpath(folder_path)
+        
         if not os.path.exists(folder_path):
             try:
                 os.makedirs(folder_path, exist_ok=True)

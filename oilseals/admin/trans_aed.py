@@ -23,6 +23,14 @@ def format_currency(val):
 
 def save_fabrication_transaction(data):
     """Save a fabrication transaction (creates two records) - First fallback attempt"""
+    # DEBUG: Log save operation with current AppContext
+    try:
+        from app_context import get_app_context
+        context = get_app_context()
+        print(f"[DEBUG-SAVE] Adding transaction (fabrication) | Category: {context.active_category} | DB: {context.db_path}")
+    except Exception as e:
+        print(f"[DEBUG-SAVE] Could not log context: {e}")
+    
     try:
         conn = connect_db()
         cur = conn.cursor()

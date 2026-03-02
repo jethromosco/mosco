@@ -126,6 +126,17 @@ class ProductFormLogic:
 	
 	def add_product(self, data):
 		"""Add a new product to the database."""
+		# DEBUG: Log save operation with current AppContext
+		try:
+			from app_context import get_app_context
+			context = get_app_context()
+			print(f"[DEBUG-SAVE] Adding product | Category: {context.active_category} | SubCat: {context.active_subcategory} | DB: {context.db_path}")
+			if DEBUG_MODE:
+				print(f"[DEBUG-SAVE] Photo Folder: {context.photo_folder}")
+		except Exception as e:
+			if DEBUG_MODE:
+				print(f"[DEBUG-SAVE] Could not log context: {e}")
+		
 		# Validate data
 		is_valid, error_msg = self.validate_required_fields(data)
 		if not is_valid:

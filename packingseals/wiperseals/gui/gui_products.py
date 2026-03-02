@@ -1,12 +1,15 @@
 import importlib
 import tkinter as tk
 from tkinter import ttk
+import sqlite3
+import os
 
 import customtkinter as ctk
 
 from theme import theme
 from home_page import categories
 from debug import DEBUG_MODE
+from app_context import get_app_context
 from ..admin.products import ProductsLogic
 from .gui_transactions import TransactionTab
 # NOTE: ProductFormHandler import moved to dynamic import in _apply_selection()
@@ -667,6 +670,68 @@ class AdminPanel:
         # This ensures derive_category_folder_from_db_path() reads the CORRECT database path
         # when get_photos_directory() is called during photo upload
         db_path = getattr(db_module, 'DB_PATH', None)
+        
+        # ===================================================================
+        # CRITICAL FIX: Update AppContext with new database and photo folder
+        # This is the core fix for the data routing bug
+        # ===================================================================
+        try:
+            context = get_app_context()
+            
+            # Log the category change
+            if DEBUG_MODE:
+                print(f"[ADMIN-CATEGORY-SWITCH] Switching to: {cat} | Sub: {sub_norm} | Unit: {unit_norm}")
+                print(f"[ADMIN-CATEGORY-SWITCH] DB Path: {db_path}")
+            
+            # Step 1: Close old database connection if it exists and is different
+            if context.db_connection and context.db_path != db_path:
+                try:
+                    context.close_database()
+                    if DEBUG_MODE:
+                        print(f"[ADMIN-CATEGORY-SWITCH] Closed old DB connection")
+                except Exception as e:
+                    print(f"[ERROR] Failed to close old DB connection: {e}")
+            
+            # Step 2: Open new database connection
+            if db_path:
+                try:
+                    new_conn = sqlite3.connect(db_path)
+                    context.set_database(db_path, new_conn)
+                    if DEBUG_MODE:
+                        print(f"[ADMIN-CATEGORY-SWITCH] Opened new DB connection: {db_path}")
+                except Exception as e:
+                    print(f"[ERROR] Failed to open DB connection to {db_path}: {e}")
+                    return
+            
+            # Step 3: Update photo folder path
+            if db_path:
+                try:
+                    # Extract photo folder from db_path
+                    # db_path is like /path/to/mosco/packingseals/monoseals/data/monoseals_mm_inventory.db
+                    # We want /path/to/mosco/packingseals/monoseals/photos
+                    parts = db_path.replace('\\', '/').split('/')
+                    try:
+                        data_idx = parts.index('data')
+                        if data_idx >= 1:
+                            category_root = '/'.join(parts[:data_idx])
+                            photo_folder = os.path.join(category_root, 'photos')
+                            context.set_photo_folder(photo_folder)
+                            if DEBUG_MODE:
+                                print(f"[ADMIN-CATEGORY-SWITCH] Updated photo folder: {photo_folder}")
+                    except (ValueError, IndexError) as e:
+                        print(f"[ERROR] Failed to derive photo folder from path: {e}")
+                except Exception as e:
+                    print(f"[ERROR] Failed to update photo folder: {e}")
+            
+            # Step 4: Update category context
+            context.set_active_category(cat, sub_norm, unit_norm)
+            if DEBUG_MODE:
+                print(f"[ADMIN-CATEGORY-SWITCH] AppContext fully updated")
+                context._log_state("Category switched in Admin Panel")
+        
+        except Exception as e:
+            print(f"[ERROR] Critical AppContext update failed: {e}")
+            # Continue anyway - module patching is still in place as fallback
         
         for mod_name in target_modules:
             try:

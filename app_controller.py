@@ -185,6 +185,8 @@ class AppController:
                         if data_idx >= 1:
                             category_root = '/'.join(parts[:data_idx])
                             photo_folder = os.path.join(category_root, 'photos')
+                            # CRITICAL FIX: Normalize path separators (fixes Windows mixed / and \\ issue)
+                            photo_folder = os.path.normpath(photo_folder)
                     except (ValueError, IndexError):
                         pass
                     
@@ -639,15 +641,6 @@ class AppController:
                     self.frames[frame_key] = frame
                     frame.place(x=0, y=0, relwidth=1, relheight=1)
                     
-                    # CRITICAL: Setup AppContext with database and photo paths
-                    # This ensures all modules use centralized state for db and photos
-                    self._setup_app_context_for_category(
-                        category=category,
-                        subcategory=subcategory,
-                        unit=unit,
-                        base_pkg=base_pkg
-                    )
-                    
                     print(f"[CONTEXT] Created and placed InventoryApp frame (return_to={frame.return_to})")
                 except Exception as e:
                     print(f"[CONTEXT] Failed to create InventoryApp: {e}")
@@ -663,6 +656,26 @@ class AppController:
                     self.current_context = context
                     self.show_coming_soon(f"{category} {subcategory or ''} {unit or ''}".strip())
                     return context
+            else:
+                # EXISTING FRAME: Mark it for refresh when switching to this frame
+                # This ensures on_frame_show() will execute a full refresh with the new AppContext
+                frame = self.frames[frame_key]
+                if hasattr(frame, '_needs_refresh_on_show'):
+                    frame._needs_refresh_on_show = True
+                    if DEBUG_MODE:
+                        print(f"[CONTEXT] Set _needs_refresh_on_show=True on cached frame for category switch")
+            
+            # ===================================================================
+            # CRITICAL FIX FOR CONTEXT RESET BUG (NEW and EXISTING paths):
+            # Reset AppContext BEFORE showing the frame, so that on_frame_show()
+            # and all subsequent operations use the correct database connection.
+            # ===================================================================
+            self._setup_app_context_for_category(
+                category=category,
+                subcategory=subcategory,
+                unit=unit,
+                base_pkg=base_pkg
+            )
             
             self.show_frame(frame_key)
             # Update window title with current context

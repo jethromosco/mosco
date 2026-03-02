@@ -19,17 +19,24 @@ def sanitize_dimension_for_filename(value: Any) -> str:
     """
     Sanitize dimension value for use in filename.
     
-    Converts fractions and decimals to safe filename format.
+    Converts fractions (with /) and decimals to safe filename format.
+    CRITICAL: Must match category admin modules for consistency.
+    
+    Examples:
+        5/8 -> 5x8 (fractions converted to x)
+        5.5-6.5 -> 5.5-6.5 (ranges with dash preserved)
+        5.5/6.5 -> 5.5x6.5 (slash range to x)
     """
     try:
         val_str = str(value)
-        # Replace slashes with underscores for fractions
-        val_str = val_str.replace("/", "_")
+        # CRITICAL FIX: Replace slashes with 'x' (not underscore) for compatibility
+        # This matches the sanitization in category admin modules
+        val_str = val_str.replace("/", "x")
         # Remove spaces
         val_str = val_str.replace(" ", "")
         return val_str
     except Exception:
-        return str(value).replace("/", "_").replace(" ", "")
+        return str(value).replace("/", "x").replace(" ", "")
 
 
 def create_safe_filename(details: Dict[str, Any], extension: str) -> str:
@@ -60,12 +67,17 @@ def get_photo_folder() -> str:
     
     CRITICAL: Always reads from AppContext to ensure consistency
     when categories are switched.
+    CRITICAL: Normalizes path separators (fixes Windows mixed / and \\ issues)
     
     Returns:
-        Full path to photo folder
+        Full path to photo folder (normalized)
     """
     context = get_app_context()
     folder = context.photo_folder
+    
+    # CRITICAL FIX: Normalize path separators to prevent Windows path joining issues
+    if folder:
+        folder = os.path.normpath(folder)
     
     if DEBUG_MODE:
         print(f"[DEBUG-PHOTO] get_photo_folder() -> {folder}")
@@ -92,11 +104,14 @@ def save_photo(
         Tuple of (success: bool, message: str)
     """
     try:
+        context = get_app_context()
+        # DEBUG: Log save operation with current AppContext
+        print(f"[DEBUG-SAVE] Saving photo | Category: {context.active_category} | Folder: {context.photo_folder}")
+        
         if DEBUG_MODE:
             print(f"[DEBUG-PHOTO] Saving photo from {source_path}")
             print(f"[DEBUG-PHOTO] Details: {details}")
         
-        context = get_app_context()
         photo_folder = context.photo_folder
         
         if not photo_folder:
@@ -118,11 +133,14 @@ def save_photo(
             ext = '.jpg'
         
         safe_filename = create_safe_filename(details, ext)
+        # CRITICAL FIX: Normalize path separators before joining
+        photo_folder = os.path.normpath(photo_folder)
         target_path = os.path.join(photo_folder, safe_filename)
         
         if DEBUG_MODE:
             print(f"[DEBUG-PHOTO] Saving to: {target_path}")
             print(f"[DEBUG-PHOTO] Context.photo_folder: {context.photo_folder}")
+            print(f"[DEBUG-PHOTO] Normalized folder: {photo_folder}")
         
         # Compress and save
         if compress_and_save_image(source_path, target_path, max_size_mb):
@@ -146,6 +164,8 @@ def compress_and_save_image(
     """
     Compress and save image with size limit.
     
+    CRITICAL: Normalizes path separators on Windows to prevent path issues.
+    
     Args:
         source_path: Source image path
         target_path: Target image path
@@ -155,6 +175,9 @@ def compress_and_save_image(
         True if successful, False otherwise
     """
     try:
+        # CRITICAL FIX: Normalize path separators
+        target_path = os.path.normpath(target_path)
+        
         img = Image.open(source_path).convert("RGB")
         quality = 95
         max_size_bytes = max_size_mb * 1024 * 1024
@@ -178,6 +201,7 @@ def get_photo_path(details: Dict[str, Any]) -> Optional[str]:
     Get path to photo file for a product.
     
     Handles both MOS custom uploads and predefined brand images.
+    Implements case-insensitive filename matching and multiple extension variants.
     
     Args:
         details: Product details (type, id, od, th, brand)
@@ -188,7 +212,12 @@ def get_photo_path(details: Dict[str, Any]) -> Optional[str]:
     try:
         photo_folder = get_photo_folder()
         if not photo_folder:
+            if DEBUG_MODE:
+                print(f"[DEBUG-PHOTO] Photo folder not available")
             return None
+        
+        # CRITICAL FIX: Ensure path is normalized
+        photo_folder = os.path.normpath(photo_folder)
         
         brand = str(details.get('brand', '')).upper()
         
@@ -201,24 +230,70 @@ def get_photo_path(details: Dict[str, Any]) -> Optional[str]:
             
             base = f"{details.get('type', '')}-{safe_id}-{safe_od}-{safe_th}-{safe_brand}"
             
-            for ext in ['.jpg', '.jpeg', '.png']:
+            # CRITICAL FIX: Try multiple extensions (case variants) for better compatibility
+            for ext in ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG']:
                 candidate = os.path.join(photo_folder, base + ext)
+                if DEBUG_MODE:
+                    print(f"[DEBUG-PHOTO] Checking MOS: {candidate}")
                 if os.path.exists(candidate):
+                    if DEBUG_MODE:
+                        print(f"[DEBUG-PHOTO] MOS photo found: {candidate}")
                     return candidate
             
+            # CRITICAL FIX: Case-insensitive and underscore/x-insensitive fallback scan
+            # Handles old files that were saved with '_' instead of 'x' in dimensions
+            try:
+                if os.path.exists(photo_folder):
+                    # Normalize base for comparison (try both x and _)
+                    base_normalized = base.replace("x", "_").lower()
+                    
+                    for f in os.listdir(photo_folder):
+                        name, ext = os.path.splitext(f)
+                        # Normalize filename to allow x/_ interchangeability
+                        name_normalized = name.replace("x", "_").lower()
+                        
+                        if name_normalized == base_normalized and ext.lower() in ['.jpg', '.jpeg', '.png']:
+                            candidate = os.path.join(photo_folder, f)
+                            if DEBUG_MODE:
+                                print(f"[DEBUG-PHOTO] MOS photo found (flexible match): {candidate}")
+                            return candidate
+            except Exception as scan_err:
+                if DEBUG_MODE:
+                    print(f"[DEBUG-PHOTO] Flexible scan failed: {scan_err}")
+            
             if DEBUG_MODE:
-                print(f"[DEBUG-PHOTO] MOS photo not found for {base}")
+                print(f"[DEBUG-PHOTO] MOS photo not found for {base} in {photo_folder}")
             return None
         
-        # Non-MOS brand: predefined images (db.jpg, tc.jpg, nqk.jpg, nok.jpg, etc.)
+        # Non-MOS brand: predefined images (db.jpg, tc.jpg, nqk.jpg, nok.jpg, dh.jpg, etc.)
         product_type = str(details.get('type', '')).lower()
-        for ext in ['.jpg', '.png']:
+        
+        # CRITICAL FIX: Try multiple extensions for predefined photos
+        for ext in ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG']:
             candidate = os.path.join(photo_folder, product_type + ext)
+            if DEBUG_MODE:
+                print(f"[DEBUG-PHOTO] Checking predefined: {candidate}")
             if os.path.exists(candidate):
+                if DEBUG_MODE:
+                    print(f"[DEBUG-PHOTO] Predefined photo found: {candidate}")
                 return candidate
         
+        # CRITICAL FIX: Case-insensitive fallback for predefined photos
+        try:
+            if os.path.exists(photo_folder):
+                for f in os.listdir(photo_folder):
+                    name, ext = os.path.splitext(f)
+                    if name.lower() == product_type and ext.lower() in ['.jpg', '.jpeg', '.png']:
+                        candidate = os.path.join(photo_folder, f)
+                        if DEBUG_MODE:
+                            print(f"[DEBUG-PHOTO] Predefined photo found (case-insensitive): {candidate}")
+                        return candidate
+        except Exception as scan_err:
+            if DEBUG_MODE:
+                print(f"[DEBUG-PHOTO] Case-insensitive scan failed: {scan_err}")
+        
         if DEBUG_MODE:
-            print(f"[DEBUG-PHOTO] Predefined photo not found for type: {product_type}")
+            print(f"[DEBUG-PHOTO] Predefined photo not found for type: {product_type} in {photo_folder}")
         return None
     
     except Exception as e:
